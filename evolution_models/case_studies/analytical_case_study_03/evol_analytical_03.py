@@ -1,6 +1,6 @@
 """
 
-Title: Computes solution approximations to the coagulation equation.
+Title: Computes solution approximations to the general dynamic equation.
 Author: Vincent Russell
 Date: June 7, 2022
 
