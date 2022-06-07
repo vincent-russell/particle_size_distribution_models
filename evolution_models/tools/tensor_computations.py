@@ -33,7 +33,7 @@ def compute_M(N, Np, h):
 
 #######################################################
 # Computes matrix Q:
-def compute_Q(cond, N, Np, x_boundaries, phi, dphi, scale_type, anayltical_test_case):
+def compute_Q(cond, N, Np, x_boundaries, phi, dphi, scale_type):
     Q = np.zeros([N, N])  # Initialising
     for i in range(N):
         ell_i = floor(i / Np)  # ell-th element for phi_i
@@ -42,13 +42,7 @@ def compute_Q(cond, N, Np, x_boundaries, phi, dphi, scale_type, anayltical_test_
             ell_j = floor(j / Np)  # ell-th element for phi_j
             degree_j = j - ell_j * Np  # Degree of polynomial j
             if ell_i == ell_j:  # Non-zero if in same element
-                if anayltical_test_case:
-                    # Integrand in Q:
-                    def Q_integrand(x):
-                        v = np.exp(x)
-                        return (1 / v) * cond(v) * phi[i](x) * dphi[j](x)
-                    GLorder = floor((degree_i + degree_j + 1) / 2) + 3  # Order of integration of Gauss-Legendre quadrature
-                elif scale_type == 'log':  # Checking if using basis based on x = ln(v)
+                if scale_type == 'log':  # Checking if using basis based on x = ln(v)
                     # Integrand in Q:
                     def Q_integrand(x):
                         v = np.exp(x)
@@ -68,7 +62,7 @@ def compute_Q(cond, N, Np, x_boundaries, phi, dphi, scale_type, anayltical_test_
 #######################################################
 # Computes matrix R:
 @timer('condensation matrix R')
-def compute_R(cond, Ne, Np, N, x_boundaries, phi, inv_M, Q, boundary_zero, scale_type, anayltical_test_case):
+def compute_R(cond, Ne, Np, N, x_boundaries, phi, inv_M, Q, boundary_zero, scale_type):
     R = np.zeros([N, N])  # Initialising matrix R
     for ell in range(Ne):
         x_ell = x_boundaries[ell]  # x-values of element lower bound
@@ -83,12 +77,7 @@ def compute_R(cond, Ne, Np, N, x_boundaries, phi, inv_M, Q, boundary_zero, scale
         u1[:, 0] = phi_vector(x_ell_plus_1)  # Vector value
         u2[:, 0] = phi_vector(x_ell)  # Vector value
         u3[:, 0] = phi_vector_minus_1(x_ell)  # Vector value
-        if anayltical_test_case:
-            v_ell = np.exp(x_ell)  # Volume values of element lower bound
-            v_ell_plus_1 = np.exp(x_ell_plus_1)  # Volume values of element upper bound
-            R1_ell = (1 / v_ell_plus_1) * cond(v_ell_plus_1) * np.matmul(u1, np.transpose(u1))  # R1_ell computation
-            R2_ell = (1 / v_ell) * cond(v_ell) * np.matmul(u2, np.transpose(u3))  # R2_ell computation
-        elif scale_type == 'log':  # Checking if using basis based on x = ln(v)
+        if scale_type == 'log':  # Checking if using basis based on x = ln(v)
             Dp_ell = volume_to_diameter(np.exp(x_boundaries[ell]))  # Dp-values of element lower bound
             Dp_ell_plus_1 = volume_to_diameter(np.exp(x_boundaries[ell + 1]))  # Dp-values of element upper bound
             R1_ell = (3 / Dp_ell_plus_1) * cond(Dp_ell_plus_1) * np.matmul(u1, np.transpose(u1))  # R1_ell computation

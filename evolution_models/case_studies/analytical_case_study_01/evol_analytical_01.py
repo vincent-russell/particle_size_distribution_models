@@ -27,8 +27,6 @@ if __name__ == '__main__':
     # Setup and plotting:
     plot_animations = True  # Set to True to plot animations
     plot_images = False  # Set to True to plot images
-    load_coagulation = False  # Set to True to load coagulation tensors
-    save_coagulation = False  # Set to True to save coagulation tensors
 
     # Spatial domain:
     Dp_min = 0.1  # Minimum diameter of particles (micro m)
@@ -66,7 +64,7 @@ if __name__ == '__main__':
     boundary_zero = True
 
     # Condensation model I_Dp(Dp, t):
-    A = 0.001   # Condensation parameter
+    A = 0.001   # Condensation parameter (micro m^2 hour^{-1})
     def cond(Dp):
         return A / Dp
 
@@ -136,20 +134,21 @@ if __name__ == '__main__':
 
     # Parameters for size distribution animation:
     xscale = 'log'  # x-axis scaling ('linear' or 'log')
-    xticks = [0.1, 0.2, 0.4, 0.6, 0.8, 1]  # Plot x-tick labels
+    xticks = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]  # Plot x-tick labels
     xlimits = [d_plot[0], d_plot[-1]]  # Plot boundary limits for x-axis
     ylimits = [0, 3000]  # Plot boundary limits for y-axis
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution'  # Title for 1D animation plot
+    legend = ['Numerical solution approximation', 'Analytical solution']  # Adding legend to plot
     line_color = ['blue', 'green']  # Colors of lines in plot
-    legend = ['Numerical', 'Analytical']  # Legend in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
+    delay = 0  # Delay between frames in milliseconds
 
     # Size distribution animation:
     basic_tools.plot_1D_animation(d_plot, n_logDp_plot, plot_add=(Dp_analytical, n_logDp_analytical), xticks=xticks, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
-                                  delay=0, location=location, time=time, timetext=timetext, line_color=line_color, legend=legend, doing_mainloop=False)
+                                  delay=delay, location=location, time=time, timetext=timetext, line_color=line_color, legend=legend, doing_mainloop=False)
 
     # Mainloop and print:
     if plot_animations:

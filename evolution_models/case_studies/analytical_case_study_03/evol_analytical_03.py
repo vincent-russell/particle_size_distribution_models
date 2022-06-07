@@ -131,17 +131,18 @@ if __name__ == '__main__':
     xlimits = [v_analytical[0], v_analytical[-1]]  # Plot boundary limits for x-axis
     ylimits = [0, 6000]  # Plot boundary limits for y-axis
     xlabel = '$v$ ($\mu$m$^3$)'  # x-axis label for 1D animation plot
-    ylabel = '$\dfrac{dN}{d\ln(v)}$ cm$^{-3})$'  # y-axis label for 1D animation plot
+    ylabel = '$\dfrac{dN}{d\ln(v)}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution'  # Title for 1D animation plot
     legend = ['Numerical solution approximation', 'Analytical solution']  # Adding legend to plot
     line_color = ['blue', 'green']  # Colors of lines in plot
     line_style = ['solid', 'solid']  # Style of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
+    delay = 0  # Delay between frames in milliseconds
 
     # Size distribution animation:
     basic_tools.plot_1D_animation(v_plot, n_x_plot, plot_add=(v_analytical, n_x_analytical), xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
-                                  delay=0, location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, line_style=line_style, doing_mainloop=False)
+                                  delay=delay, location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, line_style=line_style, doing_mainloop=False)
 
     # Mainloop and print:
     if plot_animations:

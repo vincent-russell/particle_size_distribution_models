@@ -31,7 +31,6 @@ class GDE_evolution_model:
         print_lines()
         print('Initialising general dynamic equation evolution operator.')
         # Setup parameters:
-        self.analytical_test_case = get_kwarg_value(kwargs, 'analytical_test_case', False)  # Set to True for analytical test case
         self.scale_type = get_kwarg_value(kwargs, 'scale_type', 'linear')  # Size discretisation linear or log formulation ('linear' or 'log')
         self.boundary_zero = get_kwarg_value(kwargs, 'boundary_zero', True)  # Set to True for imposing boundary condition n(vmin, t) = 0
         # Time parameters:
@@ -91,8 +90,8 @@ class GDE_evolution_model:
         print('Adding', process, 'to model...')
         if process == 'condensation':
             self.cond = model
-            self.Q = compute_Q(self.cond, self.N, self.Np, self.x_boundaries, self.phi, self.dphi, self.scale_type, self.analytical_test_case)
-            self.R = compute_R(self.cond, self.Ne, self.Np, self.N, self.x_boundaries, self.phi, self.inv_M, self.Q, self.boundary_zero, self.scale_type, self.analytical_test_case)
+            self.Q = compute_Q(self.cond, self.N, self.Np, self.x_boundaries, self.phi, self.dphi, self.scale_type)
+            self.R = compute_R(self.cond, self.Ne, self.Np, self.N, self.x_boundaries, self.phi, self.inv_M, self.Q, self.boundary_zero, self.scale_type)
             self.f_cond = Condensation_evolution(self.R).eval
         elif process == 'source':
             self.sorc = model
@@ -126,7 +125,7 @@ class GDE_evolution_model:
                     data_filename = 'Coagulation_data_Ne=' + str(self.Ne) + '_Np=' + str(self.Np) + '_' + self.scale_type + '.npz'
                 else:
                     data_filename = 'Coagulation_data_Ne=' + str(self.Ne) + '_Np=' + str(self.Np) + '_' + self.scale_type + '_' + coagulation_suffix + '.npz'
-                pathname = 'data/' + data_filename
+                pathname = 'C:/Users/Vincent/OneDrive - The University of Auckland/Python/particle_size_distribution_models/evolution_models/data/' + data_filename
                 np.savez(pathname, B=self.B, C=self.C)
 
     # Function to add unknown process models to evolution model:

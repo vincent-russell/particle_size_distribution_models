@@ -202,6 +202,7 @@ def plot_1D_animation(x, *y, **kwargs):
     xlimits = get_kwarg_value(kwargs, 'xlimits', [min(x), max(x)])  # Plot boundary limits for x-axis
     ylimits = get_kwarg_value(kwargs, 'ylimits', [np.min(y[0]), np.max(y[0])])  # Plot boundary limits for y-axis
     xticks = get_kwarg_value(kwargs, 'xticks', None)  # Plot x-tick labels
+    xticklabels = get_kwarg_value(kwargs, 'xticklabels', xticks)  # Plot x-tick labels
     yticks = get_kwarg_value(kwargs, 'yticks', None)  # Plot y-tick labels
     xscale = get_kwarg_value(kwargs, 'xscale', 'linear')  # x-axis scaling ('linear' or 'log')
     yscale = get_kwarg_value(kwargs, 'yscale', 'linear')  # y-axis scaling ('linear' or 'log')
@@ -300,7 +301,7 @@ def plot_1D_animation(x, *y, **kwargs):
         ax.yaxis.set_label_coords(0.03, 1.02)
     ax.set_title(anim_title, fontsize=titlefontsize)  # Adds title
     if xticks is not None:
-        plt.setp(ax, xticks=xticks, xticklabels=xticks)  # Modifies x-tick labels
+        plt.setp(ax, xticks=xticks, xticklabels=xticklabels)  # Modifies x-tick labels
     if yticks is not None:
         plt.setp(ax, yticks=yticks, yticklabels=yticks)  # Modifies y-tick labels
     ax.grid()  # Adds a grid to the figure
