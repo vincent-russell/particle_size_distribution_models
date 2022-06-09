@@ -252,19 +252,9 @@ def compute_B_C(coag, N, Np, x_boundaries, x_Gauss, phi, scale_type):
     B = np.zeros([N, N, N])  # Initialising
     C = np.zeros([N, N, N])  # Initialising
 
-    # Function that does variable transformation check if doing log formulation:
-    def variable_log_transform_check(x):
-        if scale_type == 'log':
-            return np.exp(x)
-        else:
-            return x
-
     # Iterating over i-th matrix in tensor:
     print('Computing coagulation tensors B and C...')
     for i in tqdm(range(N)):
-
-        # Check if variable is in linear or log scale:
-        v_i = variable_log_transform_check(x_Gauss[i])
 
         # Determining upper limit of B integral and condition check for non-zero integral from limit value:
         if scale_type == 'log':
@@ -278,10 +268,6 @@ def compute_B_C(coag, N, Np, x_boundaries, x_Gauss, phi, scale_type):
             # Element and degree of phi_k:
             ell_k = floor(k / Np)  # ell-th element for phi_k
             degree_k = k - ell_k * Np  # Degree of polynomial k
-
-            # Check if variable is in linear or log scale:
-            v_k = variable_log_transform_check(x_boundaries[ell_k])
-            v_k_plus_1 = variable_log_transform_check(x_boundaries[ell_k + 1])
 
             # Check if B integral will be non-zero due to limit condition:
             B_nonzero_from_lim = True  # Default value
@@ -302,28 +288,22 @@ def compute_B_C(coag, N, Np, x_boundaries, x_Gauss, phi, scale_type):
 
                 # Continuing if limit conditions for B^i_j,k is true:
                 if B_nonzero_from_lim:
-                    # Check if variable is in linear or log scale:
-                    v_j = variable_log_transform_check(x_boundaries[ell_j])
-                    v_j_plus_1 = variable_log_transform_check(x_boundaries[ell_j + 1])
-                    # Conditions such that phi_j is non-zero (i.e. v^j <= v^i - q <= v^{j + 1} for any q in [v^k, v^{k + 1}]):
-                    condition_1 = v_j <= v_i - v_k_plus_1
-                    condition_2 = v_i - v_k <= v_j_plus_1
-                    # Computing entries for B^i_j,k given either condition is true:
-                    if condition_1 or condition_2:
-                        # Evaluating integrals and checking if doing log formulation:
-                        if scale_type == 'log':
-                            # Integrand in B_log:
-                            def B_log_integrand(y):
-                                xi_y = np.log(abs(np.exp(x_Gauss[i]) - np.exp(y)))
-                                return coag(xi_y, y) * phi[j](xi_y) * phi[k](y) * np.exp(y)
-                            GLorder_B = floor((degree_j + degree_k + 1) / 2) + 3  # Order of integration of Gauss-Legendre quadrature
-                            B[i, j, k] = np.exp(-x_Gauss[i]) * (1 / 2) * GLnpt(B_log_integrand, x_boundaries[ell_k], B_lim, GLorder_B)
-                        else:
-                            # Integrand in B:
-                            def B_integrand(q):
-                                return coag(x_Gauss[i] - q, q) * phi[j](x_Gauss[i] - q) * phi[k](q)
-                            GLorder_B = floor((degree_j + degree_k + 1) / 2) + 2  # Order of integration of Gauss-Legendre quadrature
-                            B[i, j, k] = (1 / 2) * GLnpt(B_integrand, x_boundaries[ell_k], B_lim, GLorder_B)
+                # Computing entries for B^i_j,k:
+                    # Evaluating integrals and checking if doing log formulation:
+                    if scale_type == 'log':
+                        # Integrand in B_log:
+                        def B_log_integrand(y):
+                            xi_y = np.log(abs(np.exp(x_Gauss[i]) - np.exp(y)))
+                            cst = 1 / (np.exp(x_Gauss[i]) - np.exp(y))
+                            return cst * coag(xi_y, y) * phi[j](xi_y) * phi[k](y)
+                        GLorder_B = floor((degree_j + degree_k + 1) / 2) + 3  # Order of integration of Gauss-Legendre quadrature
+                        B[i, j, k] = (np.exp(x_Gauss[i]) / 2) * GLnpt(B_log_integrand, x_boundaries[ell_k], B_lim, GLorder_B)
+                    else:
+                        # Integrand in B:
+                        def B_integrand(w):
+                            return coag(x_Gauss[i] - w, w) * phi[j](x_Gauss[i] - w) * phi[k](w)
+                        GLorder_B = floor((degree_j + degree_k + 1) / 2) + 2  # Order of integration of Gauss-Legendre quadrature
+                        B[i, j, k] = (1 / 2) * GLnpt(B_integrand, x_boundaries[ell_k], B_lim, GLorder_B)
 
                 # Computing entries for C^i:
                 if phi[j](x_Gauss[i]) != 0:
@@ -331,13 +311,13 @@ def compute_B_C(coag, N, Np, x_boundaries, x_Gauss, phi, scale_type):
                     if scale_type == 'log':
                         # Integrand in C_log:
                         def C_log_integrand(y):
-                            return coag(x_Gauss[i], y) * phi[k](y) * np.exp(y)
+                            return coag(x_Gauss[i], y) * phi[k](y)
                         GLorder_C = floor((degree_k + 1) / 2) + 3  # Order of integration of Gauss-Legendre quadrature
-                        C[i, j, k] = np.exp(-x_Gauss[i]) * phi[j](x_Gauss[i]) * GLnpt(C_log_integrand, x_boundaries[ell_k], x_boundaries[ell_k + 1], GLorder_C)
+                        C[i, j, k] = phi[j](x_Gauss[i]) * GLnpt(C_log_integrand, x_boundaries[ell_k], x_boundaries[ell_k + 1], GLorder_C)
                     else:
                         # Integrand in C:
-                        def C_integrand(q):
-                            return coag(x_Gauss[i], q) * phi[k](q)
+                        def C_integrand(w):
+                            return coag(x_Gauss[i], w) * phi[k](w)
                         GLorder_C = floor((degree_k + 1) / 2) + 2  # Order of integration of Gauss-Legendre quadrature
                         C[i, j, k] = phi[j](x_Gauss[i]) * GLnpt(C_integrand, x_boundaries[ell_k], x_boundaries[ell_k + 1], GLorder_C)
 

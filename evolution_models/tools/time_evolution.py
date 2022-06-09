@@ -152,7 +152,7 @@ class Coagulation_evolution:
     def __init__(self, F):
         self.N = F.N  # Discretisation
         self.A = F.A  # Matrix A
-        self.BC = (1 / 2) * F.B - F.C  # Tensors B and C
+        self.BC = F.B - F.C  # Tensors B and C
 
     # Evaluation:
     def eval(self, alpha):

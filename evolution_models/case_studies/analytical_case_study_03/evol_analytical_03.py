@@ -1,6 +1,6 @@
 """
 
-Title: Computes solution approximations to the general dynamic equation.
+Title: Computes solution approximations to the coagulation equation.
 Author: Vincent Russell
 Date: June 7, 2022
 
@@ -31,8 +31,8 @@ if __name__ == '__main__':
     save_coagulation = False  # Set to True to save coagulation tensors
 
     # Spatial domain:
-    vmin = 1e-8  # Minimum volume of particles (micro m^3)
-    vmax = 1e-2  # Maximum volume of particles (micro m^3)
+    vmin = 1e-6  # Minimum volume of particles (micro m^3)
+    vmax = 1e-3  # Maximum volume of particles (micro m^3)
     xmin = np.log(vmin)  # Lower limit in log-size
     xmax = np.log(vmax)  # Upper limit in log-size
 
@@ -42,27 +42,24 @@ if __name__ == '__main__':
     NT = int(T / dt)  # Total number of time steps
 
     # Size distribution discretisation:
-    Ne = 20  # Number of elements
+    Ne = 10  # Number of elements
     Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
     N = Ne * Np  # Total degrees of freedom
 
-    # Initial condition n_0(v) = n(v, 0):
+    # Initial condition n_v(v, 0):
     N_0 = 1e4  # Total initial number of particles (particles per cm^3)
-    v_0 = 2e-6  # Mean initial volume (micro m^3)
+    v_0 = 2e-5  # Mean initial volume (micro m^3)
+    def initial_condition_v(v):
+        return ((N_0 * v) / (v_0 ** 2)) * np.exp(-v / v_0)
     def initial_condition(x):
         v = np.exp(x)
-        return ((N_0 * v) / v_0) * np.exp(-v / v_0)
+        return v * initial_condition_v(v)
 
     # Set to True for imposing boundary condition n(vmin, t) = 0:
     boundary_zero = True
 
-    # Condensation model:
-    I_0 = 9e-2  # Condensation parameter (hour^-1)
-    def cond(v):
-        return I_0 * v
-
     # Coagulation model:
-    beta_0 = 2.5e-6 * 1e-9  # Coagulation parameter (cm^3 hour^-1)
+    beta_0 = 8e-6  # Coagulation parameter (cm^3 hour^-1)
     def coag(*_):
         return beta_0
 
@@ -74,8 +71,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing evolution model:
-    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', analytical_test_case=True)  # Initialising evolution model
-    F.add_process('condensation', cond)  # Adding condensation to evolution model
+    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
     F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation)  # Adding coagulation to evolution model
     F.compile(time_integrator='rk4')  # Compiling evolution model and adding time integrator
 
@@ -99,17 +95,17 @@ if __name__ == '__main__':
     #######################################################
     # Computing analytical solution:
     print('Computing analytical solution...')
-    x_analytical = np.linspace(xmin, xmax)  # Log-discretisation for analytical solution
+    x_analytical = np.linspace(xmin, xmax, 200)  # Log-discretisation for analytical solution
     v_analytical = np.exp(x_analytical)  # Discretisation for analytical solution
     n_v_analytical = np.zeros([len(v_analytical), NT])  # Initialising
     n_x_analytical = np.zeros([len(v_analytical), NT])  # Initialising
     for k in range(1, NT):  # Iterating over time
-        N_t = (2 * N_0) / (2 + (beta_0 * N_0 * t[k]))  # Total number of particles at time t
-        M_t = N_0 * v_0 * np.exp(I_0 * t[k])  # Total volume of particles at time t
-        A = (N_t ** 2) / (M_t * np.sqrt(1 - (N_t / N_0)))
+        M_T = (2 * N_0) / (2 + (beta_0 * N_0 * t[k]))
+        N_T = 1 - (M_T / N_0)
         for i in range(len(v_analytical)):  # Iterating over volume
-            B = (N_0 * v_analytical[i]) / M_t
-            C = B * np.sqrt(1 - (N_t / N_0))
+            A = ((1 - N_T) ** 2 / np.sqrt(N_T)) * (N_0 / v_0)
+            B = v_analytical[i] / v_0
+            C = (v_analytical[i] * np.sqrt(N_T)) / v_0
             n_v_analytical[i, k] = A * np.exp(-B) * np.sinh(C)
             n_x_analytical[i, k] = n_v_analytical[i, k] * v_analytical[i]
 
@@ -128,8 +124,10 @@ if __name__ == '__main__':
 
     # Parameters for size distribution animation:
     xscale = 'log'  # x-axis scaling ('linear' or 'log')
-    xlimits = [v_analytical[0], v_analytical[-1]]  # Plot boundary limits for x-axis
-    ylimits = [0, 6000]  # Plot boundary limits for y-axis
+    xticks = [1e-6, 1e-5, 1e-4, 1e-3]  # Plot x-tick labels
+    xticklabels = ['$10^{-6}$', '$10^{-5}$', '$10^{-4}$', '$10^{-3}$']  # Plot x-tick labels
+    xlimits = [vmin, vmax]  # Plot boundary limits for x-axis
+    ylimits = [-3000, 6000]  # Plot boundary limits for y-axis
     xlabel = '$v$ ($\mu$m$^3$)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{d\ln(v)}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution'  # Title for 1D animation plot
@@ -141,11 +139,27 @@ if __name__ == '__main__':
     delay = 0  # Delay between frames in milliseconds
 
     # Size distribution animation:
-    basic_tools.plot_1D_animation(v_plot, n_x_plot, plot_add=(v_analytical, n_x_analytical), xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
+    basic_tools.plot_1D_animation(v_plot, n_x_plot, plot_add=(v_analytical, n_x_analytical), xticks=xticks, xticklabels=xticklabels, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
                                   delay=delay, location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, line_style=line_style, doing_mainloop=False)
 
     # Mainloop and print:
     if plot_animations:
         print('Plotting animations...')
         mainloop()  # Runs tkinter GUI for plots and animations
+
+
+    #######################################################
+    # Static plots:
+    import matplotlib.pyplot as plt
+
+    plt.plot(v_plot, n_x_plot[:, -1], 'b')
+    plt.plot(v_plot, n_x_plot[:, 480], 'b')
+    plt.plot(v_plot, n_x_plot[:, 1], 'b')
+    plt.plot(v_analytical, n_x_analytical[:, -1], 'g')
+    plt.plot(v_analytical, n_x_analytical[:, 480], 'g')
+    plt.plot(v_analytical, n_x_analytical[:, 1], 'g')
+    plt.xscale(xscale)
+    plt.xlim(xlimits)
+    plt.ylim(ylimits)
+    plt.grid()
 
