@@ -31,8 +31,8 @@ if __name__ == '__main__':
     save_coagulation = False  # Set to True to save coagulation tensors
 
     # Spatial domain:
-    vmin = 1e-6  # Minimum volume of particles (micro m^3)
-    vmax = 1e-3  # Maximum volume of particles (micro m^3)
+    vmin = 1e-7  # Minimum volume of particles (micro m^3)
+    vmax = 1e-2  # Maximum volume of particles (micro m^3)
     xmin = np.log(vmin)  # Lower limit in log-size
     xmax = np.log(vmax)  # Upper limit in log-size
 
@@ -124,10 +124,10 @@ if __name__ == '__main__':
 
     # Parameters for size distribution animation:
     xscale = 'log'  # x-axis scaling ('linear' or 'log')
-    xticks = [1e-6, 1e-5, 1e-4, 1e-3]  # Plot x-tick labels
-    xticklabels = ['$10^{-6}$', '$10^{-5}$', '$10^{-4}$', '$10^{-3}$']  # Plot x-tick labels
+    xticks = [1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2]  # Plot x-tick labels
+    xticklabels = ['$10^{-7}$', '$10^{-6}$', '$10^{-5}$', '$10^{-4}$', '$10^{-3}$', '$10^{-2}$']  # Plot x-tick labels
     xlimits = [vmin, vmax]  # Plot boundary limits for x-axis
-    ylimits = [-3000, 6000]  # Plot boundary limits for y-axis
+    ylimits = [0, 6000]  # Plot boundary limits for y-axis
     xlabel = '$v$ ($\mu$m$^3$)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{d\ln(v)}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution'  # Title for 1D animation plot
@@ -146,20 +146,4 @@ if __name__ == '__main__':
     if plot_animations:
         print('Plotting animations...')
         mainloop()  # Runs tkinter GUI for plots and animations
-
-
-    #######################################################
-    # Static plots:
-    import matplotlib.pyplot as plt
-
-    plt.plot(v_plot, n_x_plot[:, -1], 'b')
-    plt.plot(v_plot, n_x_plot[:, 480], 'b')
-    plt.plot(v_plot, n_x_plot[:, 1], 'b')
-    plt.plot(v_analytical, n_x_analytical[:, -1], 'g')
-    plt.plot(v_analytical, n_x_analytical[:, 480], 'g')
-    plt.plot(v_analytical, n_x_analytical[:, 1], 'g')
-    plt.xscale(xscale)
-    plt.xlim(xlimits)
-    plt.ylim(ylimits)
-    plt.grid()
 

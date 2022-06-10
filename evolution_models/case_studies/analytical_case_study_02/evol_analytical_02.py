@@ -139,19 +139,3 @@ if __name__ == '__main__':
         print('Plotting animations...')
         mainloop()  # Runs tkinter GUI for plots and animations
 
-
-    #######################################################
-    # Static plots:
-    import matplotlib.pyplot as plt
-
-    plt.plot(v_plot, n_v_plot[:, -1], 'b')
-    plt.plot(v_plot, n_v_plot[:, 480], 'b')
-    plt.plot(v_plot, n_v_plot[:, 1], 'b')
-    plt.plot(v_analytical, n_v_analytical[:, -1], 'g')
-    plt.plot(v_analytical, n_v_analytical[:, 480], 'g')
-    plt.plot(v_analytical, n_v_analytical[:, 1], 'g')
-    plt.xscale(xscale)
-    plt.xlim(xlimits)
-    plt.ylim(ylimits)
-    plt.grid()
-

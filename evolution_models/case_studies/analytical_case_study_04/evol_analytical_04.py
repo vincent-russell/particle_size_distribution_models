@@ -27,7 +27,7 @@ if __name__ == '__main__':
     # Setup and plotting:
     plot_animations = True  # Set to True to plot animations
     plot_images = False  # Set to True to plot images
-    load_coagulation = False  # Set to True to load coagulation tensors
+    load_coagulation = True  # Set to True to load coagulation tensors
     save_coagulation = False  # Set to True to save coagulation tensors
 
     # Spatial domain:
@@ -46,23 +46,29 @@ if __name__ == '__main__':
     Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
     N = Ne * Np  # Total degrees of freedom
 
-    # Initial condition n_0(v) = n(v, 0):
+    # Initial condition n_v(v, 0):
     N_0 = 1e4  # Total initial number of particles (particles per cm^3)
     v_0 = 2e-6  # Mean initial volume (micro m^3)
+    def initial_condition_v(v):
+        return ((N_0 * v) / (v_0 ** 2)) * np.exp(-v / v_0)
     def initial_condition(x):
         v = np.exp(x)
-        return ((N_0 * v) / v_0) * np.exp(-v / v_0)
+        return v * initial_condition_v(v)
 
     # Set to True for imposing boundary condition n(vmin, t) = 0:
     boundary_zero = True
 
     # Condensation model:
     I_0 = 9e-2  # Condensation parameter (hour^-1)
-    def cond(v):
+    def cond_v(v):
         return I_0 * v
+    def cond(Dp):
+        v = basic_tools.diameter_to_volume(Dp)
+        cst = 2 / (np.pi * Dp ** 2)
+        return cst * cond_v(v)
 
     # Coagulation model:
-    beta_0 = 2.5e-6 * 1e-9  # Coagulation parameter (cm^3 hour^-1)
+    beta_0 = 2.5e-6  # Coagulation parameter (cm^3 hour^-1)
     def coag(*_):
         return beta_0
 
@@ -99,7 +105,7 @@ if __name__ == '__main__':
     #######################################################
     # Computing analytical solution:
     print('Computing analytical solution...')
-    x_analytical = np.linspace(xmin, xmax)  # Log-discretisation for analytical solution
+    x_analytical = np.linspace(xmin, xmax, 200)  # Log-discretisation for analytical solution
     v_analytical = np.exp(x_analytical)  # Discretisation for analytical solution
     n_v_analytical = np.zeros([len(v_analytical), NT])  # Initialising
     n_x_analytical = np.zeros([len(v_analytical), NT])  # Initialising
