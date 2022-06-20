@@ -1,6 +1,6 @@
 """
 
-Title: Computes solution approximations to the coagulation equation.
+Title: Computes solution approximations to the condensation equation in log-space.
 Author: Vincent Russell
 Date: June 7, 2022
 
@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from evolution_models.tools import GDE_evolution_model
+from evolution_models.tools import GDE_evolution_model, change_basis_x_to_logDp, change_basis_ln_to_linear, change_basis_volume_to_diameter
 
 
 #######################################################
@@ -26,13 +26,14 @@ if __name__ == '__main__':
     # Parameters:
     # Setup and plotting:
     plot_animations = True  # Set to True to plot animations
-    plot_images = False  # Set to True to plot images
-    load_coagulation = False  # Set to True to load coagulation tensors
-    save_coagulation = False  # Set to True to save coagulation tensors
 
     # Spatial domain:
-    vmin = 0.01  # Minimum volume of particles (micro m^3)
-    vmax = 1  # Maximum volume of particles (micro m^3)
+    Dp_min = 0.1  # Minimum diameter of particles (micro m)
+    Dp_max = 1  # Maximum diameter of particles (micro m)
+    vmin = basic_tools.diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
+    vmax = basic_tools.diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
+    xmin = np.log(vmin)  # Lower limit in log-size
+    xmax = np.log(vmax)  # Upper limit in log-size
 
     # Time domain:
     dt = 0.1  # Time step (hours)
@@ -40,23 +41,31 @@ if __name__ == '__main__':
     NT = int(T / dt)  # Total number of time steps
 
     # Size distribution discretisation:
-    Ne = 10  # Number of elements
+    Ne = 50  # Number of elements
     Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
     N = Ne * Np  # Total degrees of freedom
 
-    # Initial condition n_v(v, 0):
-    N_0 = 1e3  # Total initial number of particles (particles per cm^3)
-    v_0 = 0.15  # Mean initial volume (micro m^3)
-    def initial_condition(v):
-        return ((N_0 * v) / (v_0 ** 2)) * np.exp(-v / v_0)
+    # Initial condition n_Dp(Dp, 0):
+    N_0 = 180  # Amplitude of initial condition gaussian
+    d_mean = 0.3  # Mean of initial condition gaussian
+    sigma_g = 1.2  # Standard deviation of initial condition gaussian
+    def initial_condition_Dp(Dp):
+        amp = N_0 / (np.sqrt(2 * np.pi) * Dp * np.log(sigma_g))
+        cst = (np.log(Dp / d_mean) ** 2) / (2 * np.log(sigma_g) ** 2)
+        return amp * np.exp(-cst)
+    def initial_condition(x):
+        v = np.exp(x)
+        Dp = basic_tools.volume_to_diameter(v)
+        cst = v * (2 / (np.pi * Dp ** 2))
+        return cst * initial_condition_Dp(Dp)
 
     # Set to True for imposing boundary condition n(vmin, t) = 0:
     boundary_zero = True
 
-    # Coagulation model:
-    beta_0 = 1e-5  # Coagulation parameter (cm^3 hour^-1)
-    def coag(*_):
-        return beta_0
+    # Condensation model I_Dp(Dp, t):
+    A = 0.001   # Condensation parameter (micro m^2 hour^{-1})
+    def cond(Dp):
+        return A / Dp
 
 
     #######################################################
@@ -66,8 +75,8 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing evolution model:
-    F = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero)  # Initialising evolution model
-    F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation)  # Adding coagulation to evolution model
+    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
+    F.add_process('condensation', cond)  # Adding condensation to evolution model
     F.compile(time_integrator='rk4')  # Compiling evolution model and adding time integrator
 
 
@@ -84,22 +93,30 @@ if __name__ == '__main__':
 
     #######################################################
     # Computing plotting discretisation:
-    _, v_plot, n_v_plot, _ = F.get_nplot_discretisation(alpha)  # Computing plotting discretisation
+    d_plot, v_plot, n_x_plot, _ = F.get_nplot_discretisation(alpha)  # Computing plotting discretisation
+    x_plot = np.log(v_plot)  # ln(v)-spaced plotting discretisation
+    n_v_plot = change_basis_ln_to_linear(n_x_plot, v_plot)
+    n_Dp_plot = change_basis_volume_to_diameter(n_v_plot, d_plot)
+    n_logDp_plot = change_basis_x_to_logDp(n_x_plot, v_plot, d_plot)  # Computing log_10(D_p)-based size distribution
 
 
     #######################################################
     # Computing analytical solution:
     print('Computing analytical solution...')
-    v_analytical = np.linspace(vmin, vmax, 200)  # Discretisation for analytical solution
+    x_analytical = np.linspace(xmin, xmax, 200)  # Log-discretisation
+    v_analytical = np.exp(x_analytical)  # Volume discretisation
+    Dp_analytical = basic_tools.volume_to_diameter(v_analytical)  # Diameter discretisation
+    n_x_analytical = np.zeros([len(v_analytical), NT])  # Initialising
     n_v_analytical = np.zeros([len(v_analytical), NT])  # Initialising
+    n_Dp_analytical = np.zeros([len(v_analytical), NT])  # Initialising
+    n_logDp_analytical = np.zeros([len(v_analytical), NT])  # Initialising
     for k in range(1, NT):  # Iterating over time
-        M_T = (2 * N_0) / (2 + (beta_0 * N_0 * t[k]))
-        N_T = 1 - (M_T / N_0)
         for i in range(len(v_analytical)):  # Iterating over volume
-            A = ((1 - N_T) ** 2 / np.sqrt(N_T)) * (N_0 / v_0)
-            B = v_analytical[i] / v_0
-            C = (v_analytical[i] * np.sqrt(N_T)) / v_0
-            n_v_analytical[i, k] = A * np.exp(-B) * np.sinh(C)
+            cst = (Dp_analytical[i] ** 2) - (2 * A * t[k])
+            B = (Dp_analytical[i] * N_0) / (np.sqrt(2 * np.pi) * np.log(sigma_g) * cst)
+            C = (np.log(np.sqrt(cst) / d_mean) ** 2) / (2 * np.log(sigma_g) ** 2)
+            n_Dp_analytical[i, k] = B * np.exp(-C)
+            n_logDp_analytical[i, k] = (1 / np.log10(np.e)) * Dp_analytical[i] * n_Dp_analytical[i, k]
 
 
     #######################################################
@@ -115,24 +132,23 @@ if __name__ == '__main__':
     location = 'Home'  # Set to 'Uni', 'Home', or 'Middle' (default)
 
     # Parameters for size distribution animation:
-    xscale = 'linear'  # x-axis scaling ('linear' or 'log')
-    xticks = [0.01, 0.5, 1]  # Plot x-tick labels
-    xticklabels = ['0.01', '0.5', '1']  # Plot x-tick labels
-    xlimits = [vmin, vmax]  # Plot boundary limits for x-axis
-    ylimits = [-500, 2500]  # Plot boundary limits for y-axis
-    xlabel = '$v$ ($\mu$m$^3$)'  # x-axis label for 1D animation plot
-    ylabel = '$\dfrac{dN}{dv}$'  # y-axis label for 1D animation plot
+    xscale = 'log'  # x-axis scaling ('linear' or 'log')
+    xticks = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]  # Plot x-tick labels
+    xlimits = [d_plot[0], d_plot[-1]]  # Plot boundary limits for x-axis
+    ylimits = [0, 3000]  # Plot boundary limits for y-axis
+    xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
+    ylabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution'  # Title for 1D animation plot
     legend = ['Numerical solution approximation', 'Analytical solution']  # Adding legend to plot
+    legend_position = 'upper left'  # Position of legend
     line_color = ['blue', 'green']  # Colors of lines in plot
-    line_style = ['solid', 'solid']  # Style of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
     delay = 0  # Delay between frames in milliseconds
 
     # Size distribution animation:
-    basic_tools.plot_1D_animation(v_plot, n_v_plot, plot_add=(v_analytical, n_v_analytical), xticks=xticks, xticklabels=xticklabels, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
-                                  delay=delay, location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, line_style=line_style, doing_mainloop=False)
+    basic_tools.plot_1D_animation(d_plot, n_logDp_plot, plot_add=(Dp_analytical, n_logDp_analytical), xticks=xticks, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
+                                  delay=delay, location=location, time=time, timetext=timetext, line_color=line_color, legend=legend, legend_position=legend_position, doing_mainloop=False)
 
     # Mainloop and print:
     if plot_animations:

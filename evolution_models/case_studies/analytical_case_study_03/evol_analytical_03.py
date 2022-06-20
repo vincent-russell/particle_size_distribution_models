@@ -26,15 +26,12 @@ if __name__ == '__main__':
     # Parameters:
     # Setup and plotting:
     plot_animations = True  # Set to True to plot animations
-    plot_images = False  # Set to True to plot images
     load_coagulation = False  # Set to True to load coagulation tensors
     save_coagulation = False  # Set to True to save coagulation tensors
 
     # Spatial domain:
-    vmin = 1e-7  # Minimum volume of particles (micro m^3)
-    vmax = 1e-2  # Maximum volume of particles (micro m^3)
-    xmin = np.log(vmin)  # Lower limit in log-size
-    xmax = np.log(vmax)  # Upper limit in log-size
+    vmin = 0.01  # Minimum volume of particles (micro m^3)
+    vmax = 1  # Maximum volume of particles (micro m^3)
 
     # Time domain:
     dt = 0.1  # Time step (hours)
@@ -47,19 +44,16 @@ if __name__ == '__main__':
     N = Ne * Np  # Total degrees of freedom
 
     # Initial condition n_v(v, 0):
-    N_0 = 1e4  # Total initial number of particles (particles per cm^3)
-    v_0 = 2e-5  # Mean initial volume (micro m^3)
-    def initial_condition_v(v):
+    N_0 = 1e3  # Total initial number of particles (particles per cm^3)
+    v_0 = 0.15  # Mean initial volume (micro m^3)
+    def initial_condition(v):
         return ((N_0 * v) / (v_0 ** 2)) * np.exp(-v / v_0)
-    def initial_condition(x):
-        v = np.exp(x)
-        return v * initial_condition_v(v)
 
     # Set to True for imposing boundary condition n(vmin, t) = 0:
     boundary_zero = True
 
     # Coagulation model:
-    beta_0 = 8e-6  # Coagulation parameter (cm^3 hour^-1)
+    beta_0 = 1e-5  # Coagulation parameter (cm^3 hour^-1)
     def coag(*_):
         return beta_0
 
@@ -71,7 +65,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing evolution model:
-    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
+    F = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero)  # Initialising evolution model
     F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation)  # Adding coagulation to evolution model
     F.compile(time_integrator='rk4')  # Compiling evolution model and adding time integrator
 
@@ -89,16 +83,14 @@ if __name__ == '__main__':
 
     #######################################################
     # Computing plotting discretisation:
-    _, v_plot, n_x_plot, _ = F.get_nplot_discretisation(alpha)  # Computing plotting discretisation
+    _, v_plot, n_v_plot, _ = F.get_nplot_discretisation(alpha)  # Computing plotting discretisation
 
 
     #######################################################
     # Computing analytical solution:
     print('Computing analytical solution...')
-    x_analytical = np.linspace(xmin, xmax, 200)  # Log-discretisation for analytical solution
-    v_analytical = np.exp(x_analytical)  # Discretisation for analytical solution
+    v_analytical = np.linspace(vmin, vmax, 200)  # Discretisation for analytical solution
     n_v_analytical = np.zeros([len(v_analytical), NT])  # Initialising
-    n_x_analytical = np.zeros([len(v_analytical), NT])  # Initialising
     for k in range(1, NT):  # Iterating over time
         M_T = (2 * N_0) / (2 + (beta_0 * N_0 * t[k]))
         N_T = 1 - (M_T / N_0)
@@ -107,7 +99,6 @@ if __name__ == '__main__':
             B = v_analytical[i] / v_0
             C = (v_analytical[i] * np.sqrt(N_T)) / v_0
             n_v_analytical[i, k] = A * np.exp(-B) * np.sinh(C)
-            n_x_analytical[i, k] = n_v_analytical[i, k] * v_analytical[i]
 
 
     #######################################################
@@ -123,13 +114,13 @@ if __name__ == '__main__':
     location = 'Home'  # Set to 'Uni', 'Home', or 'Middle' (default)
 
     # Parameters for size distribution animation:
-    xscale = 'log'  # x-axis scaling ('linear' or 'log')
-    xticks = [1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2]  # Plot x-tick labels
-    xticklabels = ['$10^{-7}$', '$10^{-6}$', '$10^{-5}$', '$10^{-4}$', '$10^{-3}$', '$10^{-2}$']  # Plot x-tick labels
+    xscale = 'linear'  # x-axis scaling ('linear' or 'log')
+    xticks = [0.01, 0.25, 0.5, 0.75, 1]  # Plot x-tick labels
+    xticklabels = ['0.01', '0.25', '0.5', '0.75', '1']  # Plot x-tick labels
     xlimits = [vmin, vmax]  # Plot boundary limits for x-axis
-    ylimits = [0, 6000]  # Plot boundary limits for y-axis
+    ylimits = [0, 2500]  # Plot boundary limits for y-axis
     xlabel = '$v$ ($\mu$m$^3$)'  # x-axis label for 1D animation plot
-    ylabel = '$\dfrac{dN}{d\ln(v)}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
+    ylabel = '$\dfrac{dN}{dv}$ ($\mu$m$^{-3}$ cm$^{-3}$)'  # y-axis label for 1D animation plot
     title = 'Size distribution'  # Title for 1D animation plot
     legend = ['Numerical solution approximation', 'Analytical solution']  # Adding legend to plot
     line_color = ['blue', 'green']  # Colors of lines in plot
@@ -139,7 +130,7 @@ if __name__ == '__main__':
     delay = 0  # Delay between frames in milliseconds
 
     # Size distribution animation:
-    basic_tools.plot_1D_animation(v_plot, n_x_plot, plot_add=(v_analytical, n_x_analytical), xticks=xticks, xticklabels=xticklabels, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
+    basic_tools.plot_1D_animation(v_plot, n_v_plot, plot_add=(v_analytical, n_v_analytical), xticks=xticks, xticklabels=xticklabels, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
                                   delay=delay, location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, line_style=line_style, doing_mainloop=False)
 
     # Mainloop and print:

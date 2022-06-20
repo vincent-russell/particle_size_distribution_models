@@ -1,6 +1,6 @@
 """
 
-Title: Computes solution approximations to the condensation equation.
+Title: Computes solution approximations to the condensation equation in log-space.
 Author: Vincent Russell
 Date: June 7, 2022
 
@@ -26,7 +26,6 @@ if __name__ == '__main__':
     # Parameters:
     # Setup and plotting:
     plot_animations = True  # Set to True to plot animations
-    plot_images = False  # Set to True to plot images
 
     # Spatial domain:
     Dp_min = 0.1  # Minimum diameter of particles (micro m)
@@ -78,7 +77,7 @@ if __name__ == '__main__':
     # Constructing evolution model:
     F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
     F.add_process('condensation', cond)  # Adding condensation to evolution model
-    F.compile(time_integrator='euler')  # Compiling evolution model and adding time integrator
+    F.compile(time_integrator='rk4')  # Compiling evolution model and adding time integrator
 
 
     #######################################################
@@ -141,6 +140,7 @@ if __name__ == '__main__':
     ylabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution'  # Title for 1D animation plot
     legend = ['Numerical solution approximation', 'Analytical solution']  # Adding legend to plot
+    legend_position = 'upper left'  # Position of legend
     line_color = ['blue', 'green']  # Colors of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
@@ -148,7 +148,7 @@ if __name__ == '__main__':
 
     # Size distribution animation:
     basic_tools.plot_1D_animation(d_plot, n_logDp_plot, plot_add=(Dp_analytical, n_logDp_analytical), xticks=xticks, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
-                                  delay=delay, location=location, time=time, timetext=timetext, line_color=line_color, legend=legend, doing_mainloop=False)
+                                  delay=delay, location=location, time=time, timetext=timetext, line_color=line_color, legend=legend, legend_position=legend_position, doing_mainloop=False)
 
     # Mainloop and print:
     if plot_animations:
