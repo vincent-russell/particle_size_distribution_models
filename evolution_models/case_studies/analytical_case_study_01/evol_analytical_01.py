@@ -1,6 +1,6 @@
 """
 
-Title: Computes solution approximations to the condensation equation in log-space.
+Title: Computes solution approximations to the condensation equation.
 Author: Vincent Russell
 Date: June 7, 2022
 
@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from evolution_models.tools import GDE_evolution_model, change_basis_x_to_logDp, change_basis_ln_to_linear, change_basis_volume_to_diameter
+from evolution_models.tools import GDE_evolution_model, change_basis_linear_to_log, change_basis_volume_to_diameter
 
 
 #######################################################
@@ -32,8 +32,6 @@ if __name__ == '__main__':
     Dp_max = 1  # Maximum diameter of particles (micro m)
     vmin = basic_tools.diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
     vmax = basic_tools.diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
-    xmin = np.log(vmin)  # Lower limit in log-size
-    xmax = np.log(vmax)  # Upper limit in log-size
 
     # Time domain:
     dt = 0.1  # Time step (hours)
@@ -41,7 +39,7 @@ if __name__ == '__main__':
     NT = int(T / dt)  # Total number of time steps
 
     # Size distribution discretisation:
-    Ne = 50  # Number of elements
+    Ne = 100  # Number of elements
     Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
     N = Ne * Np  # Total degrees of freedom
 
@@ -53,10 +51,9 @@ if __name__ == '__main__':
         amp = N_0 / (np.sqrt(2 * np.pi) * Dp * np.log(sigma_g))
         cst = (np.log(Dp / d_mean) ** 2) / (2 * np.log(sigma_g) ** 2)
         return amp * np.exp(-cst)
-    def initial_condition(x):
-        v = np.exp(x)
+    def initial_condition(v):
         Dp = basic_tools.volume_to_diameter(v)
-        cst = v * (2 / (np.pi * Dp ** 2))
+        cst = 2 / (np.pi * Dp ** 2)
         return cst * initial_condition_Dp(Dp)
 
     # Set to True for imposing boundary condition n(vmin, t) = 0:
@@ -75,7 +72,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing evolution model:
-    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
+    F = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero)  # Initialising evolution model
     F.add_process('condensation', cond)  # Adding condensation to evolution model
     F.compile(time_integrator='rk4')  # Compiling evolution model and adding time integrator
 
@@ -93,21 +90,17 @@ if __name__ == '__main__':
 
     #######################################################
     # Computing plotting discretisation:
-    d_plot, v_plot, n_x_plot, _ = F.get_nplot_discretisation(alpha)  # Computing plotting discretisation
+    d_plot, v_plot, n_v_plot, _ = F.get_nplot_discretisation(alpha)  # Computing plotting discretisation
     x_plot = np.log(v_plot)  # ln(v)-spaced plotting discretisation
-    n_v_plot = change_basis_ln_to_linear(n_x_plot, v_plot)
     n_Dp_plot = change_basis_volume_to_diameter(n_v_plot, d_plot)
-    n_logDp_plot = change_basis_x_to_logDp(n_x_plot, v_plot, d_plot)  # Computing log_10(D_p)-based size distribution
+    n_logDp_plot = change_basis_linear_to_log(n_Dp_plot, d_plot)
 
 
     #######################################################
     # Computing analytical solution:
     print('Computing analytical solution...')
-    x_analytical = np.linspace(xmin, xmax, 200)  # Log-discretisation
-    v_analytical = np.exp(x_analytical)  # Volume discretisation
+    v_analytical = np.linspace(vmin, vmax, 200)  # Volume discretisation
     Dp_analytical = basic_tools.volume_to_diameter(v_analytical)  # Diameter discretisation
-    n_x_analytical = np.zeros([len(v_analytical), NT])  # Initialising
-    n_v_analytical = np.zeros([len(v_analytical), NT])  # Initialising
     n_Dp_analytical = np.zeros([len(v_analytical), NT])  # Initialising
     n_logDp_analytical = np.zeros([len(v_analytical), NT])  # Initialising
     for k in range(1, NT):  # Iterating over time

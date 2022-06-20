@@ -97,7 +97,7 @@ if __name__ == '__main__':
     x_plot = np.log(v_plot)  # ln(v)-spaced plotting discretisation
     n_v_plot = change_basis_ln_to_linear(n_x_plot, v_plot)
     n_Dp_plot = change_basis_volume_to_diameter(n_v_plot, d_plot)
-    n_logDp_plot = change_basis_x_to_logDp(n_x_plot, v_plot, d_plot)  # Computing log_10(D_p)-based size distribution
+    n_logDp_plot = change_basis_x_to_logDp(n_x_plot, v_plot, d_plot)
 
 
     #######################################################
@@ -106,8 +106,6 @@ if __name__ == '__main__':
     x_analytical = np.linspace(xmin, xmax, 200)  # Log-discretisation
     v_analytical = np.exp(x_analytical)  # Volume discretisation
     Dp_analytical = basic_tools.volume_to_diameter(v_analytical)  # Diameter discretisation
-    n_x_analytical = np.zeros([len(v_analytical), NT])  # Initialising
-    n_v_analytical = np.zeros([len(v_analytical), NT])  # Initialising
     n_Dp_analytical = np.zeros([len(v_analytical), NT])  # Initialising
     n_logDp_analytical = np.zeros([len(v_analytical), NT])  # Initialising
     for k in range(1, NT):  # Iterating over time
