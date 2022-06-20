@@ -1,6 +1,6 @@
 """
 
-Title: Computes solution approximations to the general dynamic equation in log=space.
+Title: Computes solution approximations to the general dynamic equation in log-space.
 Author: Vincent Russell
 Date: June 7, 2022
 
