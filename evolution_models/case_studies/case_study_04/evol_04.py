@@ -17,7 +17,7 @@ from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from evolution_models.tools import Fuchs_Brownian, GDE_evolution_model, change_basis_x_to_logDp, change_basis_x_to_logDp_sorc
+from evolution_models.tools import Fuchs_Brownian, GDE_evolution_model, GDE_Jacobian, change_basis_x_to_logDp, change_basis_x_to_logDp_sorc
 
 
 #######################################################
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     xmax = np.log(vmax)  # Upper limit in log-size
 
     # Time domain:
-    dt = (1 / 60) * 1  # Time step (hours)
+    dt = (1 / 60) * 10  # Time step (hours)
     T = 24  # End time (hours)
     NT = int(T / dt)  # Total number of time steps
 
@@ -104,17 +104,39 @@ if __name__ == '__main__':
     F.add_process('deposition', depo)  # Adding deposition to evolution model
     F.add_process('source', sorc)  # Adding source to evolution model
     F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
-    F.compile(time_integrator='euler')  # Compiling evolution model and adding time integrator
+    F.compile()  # Compiling evolution model
 
 
     #######################################################
-    # Computing time evolution of model:
-    print('Computing time evolution...')
+    # Constructing Jacobian of size distribution evolution model:
+    J_F = GDE_Jacobian(F)  # Evolution Jacobian
+
+
+    #######################################################
+    # Computing initial condition:
     alpha = np.zeros([N, NT])  # Initialising alpha = [alpha_0, alpha_1, ..., alpha_NT]
     alpha[:, 0] = F.compute_coefficients('alpha', initial_condition)  # Computing alpha coefficients from initial condition function
+
+
+    #######################################################
+    # Function to compute evolution operator using Crank-Nicolson method:
+    def compute_evolution_operator(alpha_star, t_star):
+        J_star = J_F.eval_d_alpha(alpha_star, t_star)  # Computing J_star
+        F_star = F.eval(alpha_star, t_star) - np.matmul(J_star, alpha_star)  # Computing F_star
+        matrix_multiplier = np.linalg.inv(np.eye(N) - (dt / 2) * J_star)  # Computing matrix multiplier for evolution operator and additive vector
+        F_evolution = np.matmul(matrix_multiplier, (np.eye(N) + (dt / 2) * J_star))  # Computing evolution operator
+        b_evolution = np.matmul(matrix_multiplier, (dt * F_star))  # Computing evolution additive vector
+        return F_evolution, b_evolution
+
+
+    #######################################################
+    # Computing time evolution of model using Crank-Nicolson method:
+    print('Computing time evolution...')
     t = np.zeros(NT)  # Initialising time array
+    F_evolution, b_evolution = compute_evolution_operator(alpha[:, 0], t[0])  # Computing evolution operator from initial condition
     for k in tqdm(range(NT - 1)):  # Iterating over time
-        alpha[:, k + 1] = F.eval(alpha[:, k], t[k])  # Time evolution computation
+        F_evolution, b_evolution = compute_evolution_operator(alpha[:, k], t[k])  # Computing evolution operator F and vector b
+        alpha[:, k + 1] = np.matmul(F_evolution, alpha[:, k]) + b_evolution  # Time evolution computation
         t[k + 1] = (k + 1) * dt  # Time (hours)
 
 
