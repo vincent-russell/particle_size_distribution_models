@@ -100,7 +100,7 @@ if __name__ == '__main__':
     F.add_process('deposition', depo)  # Adding deposition to evolution model
     F.add_process('source', sorc)  # Adding source to evolution model
     F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
-    F.compile(time_integrator='rk4')  # Compiling evolution model and adding time integrator
+    F.compile(time_integrator='euler')  # Compiling evolution model and adding time integrator
 
 
     #######################################################
