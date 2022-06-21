@@ -52,11 +52,10 @@ if __name__ == '__main__':
 
     # Initial condition n_0(v) = n(v, 0):
     N_0 = 300  # Amplitude of initial condition gaussian
-    v_0 = basic_tools.diameter_to_volume(3)  # Mean of initial condition gaussian
-    v_1 = basic_tools.diameter_to_volume(6)  # Mean of initial condition gaussian
+    v_0 = basic_tools.diameter_to_volume(4)  # Mean of initial condition gaussian
     sigma_0 = 15  # Standard deviation of initial condition gaussian
     def initial_condition(v):
-        return basic_tools.gaussian(v, N_0, v_0, sigma_0) + 0.5 * basic_tools.gaussian(v, N_0, v_1, sigma_0)
+        return basic_tools.gaussian(v, N_0, v_0, sigma_0)
 
     # Set to True for imposing boundary condition n(vmin, t) = 0:
     boundary_zero = True
