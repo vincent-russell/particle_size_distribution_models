@@ -15,7 +15,7 @@ from basic_tools import diameter_to_volume
 # Physical constants, standard atmospheric conditions, and assumed parameters:
 kb = 1.38064852e-23  # Boltzmann constant (units m^2 kg s^-2 K^-1)
 T = 298  # Room temperature, equal to 25 degrees Celcius (units K)
-rho = 0.001 * 1e6  # Aerosol particle density (kg m^-3)
+rho = 2000  # Aerosol particle density (kg m^-3)
 mean_free_path = 0.0686 * 1e-6  # Mean free path of air at 298 K and atmospheric pressure (units m)
 mu = 1.83e-5  # Viscosity of air at 298 K and atmospheric pressure (units kg m^-1 s^-1)
 
@@ -84,6 +84,6 @@ def Fuchs_Brownian(Dp_1, Dp_2):
     beta = ((Dp_1 + Dp_2) / (Dp_1 + Dp_2 + g12) + (8 * (D1 + D2)) / (c12 * (Dp_1 + Dp_2))) ** -1
     # Output:
     output = 2 * pi * (D1 + D2) * (Dp_1 + Dp_2) * beta
-    # Change output units from m^3 s^-1 to cm^3 s^-1:
-    output = output * 1e6
+    # Change output units from m^3 s^-1 to cm^3 hr^-1:
+    output = output * 3.6e9
     return output

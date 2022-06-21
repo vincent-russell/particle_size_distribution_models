@@ -1,8 +1,8 @@
 """
 
-Title: Computes solution approximations to the general dynamic equation of aerosols using linearised Crank-Nicolson method
+Title: Computes solution approximations to the general dynamic equation of aerosols
 Author: Vincent Russell
-Date: March 7, 2022
+Date: June 22, 2022
 
 """
 
@@ -11,13 +11,12 @@ Date: March 7, 2022
 # Modules:
 import numpy as np
 import time as tm
-import matplotlib.pyplot as plt
 from tkinter import mainloop
 from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from evolution_models.tools import Fuchs_Brownian, GDE_evolution_model, GDE_Jacobian, change_basis_volume_to_diameter, change_basis_volume_to_diameter_sorc
+from evolution_models.tools import Fuchs_Brownian, GDE_evolution_model, GDE_Jacobian, change_basis_volume_to_diameter
 
 
 #######################################################
@@ -28,56 +27,53 @@ if __name__ == '__main__':
 
     # Setup and plotting:
     plot_animations = True  # Set to True to plot animations
-    plot_nucleation = True  # Set to True to plot nucleation plot
-    plot_images = True  # Set to True to plot images
+    plot_images = False  # Set to True to plot images
     load_coagulation = True  # Set to True to load coagulation tensors
     save_coagulation = False  # Set to True to save coagulation tensors
+    coagulation_suffix = '1_to_10_micro_metres'  # Suffix of saved coagulation tensors file
 
     # Spatial domain:
     Dp_min = 1  # Minimum diameter of particles (micro m)
-    Dp_max = 5  # Maximum diameter of particles (micro m)
+    Dp_max = 10  # Maximum diameter of particles (micro m)
     vmin = basic_tools.diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
     vmax = basic_tools.diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
 
     # Time domain:
     dt = (1 / 60) * 20  # Time step (hours)
-    T = 24  # End time (hours)
+    T = 96  # End time (hours)
     NT = int(T / dt)  # Total number of time steps
 
     # Size distribution discretisation:
-    Ne = 32  # Number of elements
+    Ne = 50  # Number of elements
     Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
     N = Ne * Np  # Total degrees of freedom
 
     # Initial condition n_0(v) = n(v, 0):
-    N_0 = 1e3  # Amplitude of initial condition gaussian
-    v_0 = 10  # Mean of initial condition gaussian
-    sigma_0 = 2.5  # Standard deviation of initial condition gaussian
+    N_0 = 300  # Amplitude of initial condition gaussian
+    N_1 = 150  # Amplitude of initial condition gaussian
+    v_0 = basic_tools.diameter_to_volume(3)  # Mean of initial condition gaussian
+    v_1 = basic_tools.diameter_to_volume(6)  # Mean of initial condition gaussian
+    sigma_0 = 7  # Standard deviation of initial condition gaussian
+    sigma_1 = 15  # Standard deviation of initial condition gaussian
     def initial_condition(v):
-        return basic_tools.gaussian(v, N_0, v_0, sigma_0)
+        return basic_tools.gaussian(v, N_0, v_0, sigma_0) + basic_tools.gaussian(v, N_1, v_1, sigma_1)
 
     # Set to True for imposing boundary condition n(vmin, t) = 0:
     boundary_zero = True
 
     # Condensation model I_Dp(Dp, t):
-    I_0 = 0.05  # Condensation parameter constant
-    I_1 = 1  # Condensation parameter inverse quadratic
+    I_0 = 0.02  # Condensation parameter constant
+    I_1 = 0.2  # Condensation parameter inverse quadratic
     def cond(Dp):
         return I_0 + I_1 / (Dp ** 2)
 
     # Deposition model d(Dp, t):
-    d_0 = 1  # Deposition parameter constant
-    d_1 = -0.6  # Deposition parameter linear
-    d_2 = -(d_1 / 2) / 3  # Deposition parameter quadratic
+    depo_Dpmin = 5  # Deposition parameter; diameter at which minimum
+    d_0 = 0.06  # Deposition parameter constant
+    d_1 = -0.02  # Deposition parameter linear
+    d_2 = -d_1 / (2 * depo_Dpmin)  # Deposition parameter quadratic
     def depo(Dp):
         return d_0 + d_1 * Dp + d_2 * Dp ** 2  # Quadratic model output
-
-    # Source (nucleation event) model:
-    N_s = 2e3  # Amplitude of gaussian nucleation event
-    t_s = 8  # Mean time of gaussian nucleation event
-    sigma_s = 1.5  # Standard deviation time of gaussian nucleation event
-    def sorc(t):  # Source (nucleation) at vmin
-        return basic_tools.gaussian(t, N_s, t_s, sigma_s)  # Gaussian source (nucleation event) model output
 
     # Coagulation model:
     def coag(v_x, v_y):
@@ -96,8 +92,7 @@ if __name__ == '__main__':
     F = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero)  # Initialising evolution model
     F.add_process('condensation', cond)  # Adding condensation to evolution model
     F.add_process('deposition', depo)  # Adding deposition to evolution model
-    F.add_process('source', sorc)  # Adding source to evolution model
-    F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation)  # Adding coagulation to evolution model
+    F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F.compile()  # Compiling evolution model
 
 
@@ -145,13 +140,10 @@ if __name__ == '__main__':
     Nplot = len(d_plot)  # Length of size discretisation
     cond_Dp_plot = np.zeros([Nplot, NT])  # Initialising volume-based condensation rate
     depo_plot = np.zeros([Nplot, NT])  # Initialising deposition rate
-    sorc_v_plot = np.zeros(NT)  # Initialising volume-based source (nucleation) rate
     for k in range(NT):
-        sorc_v_plot[k] = sorc(t[k])  # Computing volume-based nucleation rate
         for i in range(Nplot):
             cond_Dp_plot[i, k] = cond(d_plot[i])  # Computing volume-based condensation rate
             depo_plot[i, k] = depo(d_plot[i])  # Computing deposition rate
-    sorc_Dp_plot = change_basis_volume_to_diameter_sorc(sorc_v_plot, Dp_min)  # Computing diameter-based nucleation rate
 
 
     #######################################################
@@ -169,16 +161,17 @@ if __name__ == '__main__':
     # Parameters for size distribution animation:
     xscale = 'linear'  # x-axis scaling ('linear' or 'log')
     xlimits = [d_plot[0], d_plot[-1]]  # Plot boundary limits for x-axis
-    ylimits = [0, 12000]  # Plot boundary limits for y-axis
+    ylimits = [0, 10000]  # Plot boundary limits for y-axis
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution'  # Title for 1D animation plot
     line_color = ['blue']  # Colors of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
+    delay = 30  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
-    ylimits_cond = [0, 2]  # Plot boundary limits for y-axis
+    ylimits_cond = [0, 0.3]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate'  # Title for plot
@@ -186,7 +179,7 @@ if __name__ == '__main__':
     line_color_cond = ['blue']  # Colors of lines in plot
 
     # Parameters for deposition plot:
-    ylimits_depo = [0, 1]  # Plot boundary limits for y-axis
+    ylimits_depo = [0, 0.1]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate'  # Title for plot
@@ -195,7 +188,7 @@ if __name__ == '__main__':
 
     # Size distribution animation:
     basic_tools.plot_1D_animation(d_plot, n_Dp_plot, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
-                                  location=location, time=time, timetext=timetext, line_color=line_color, doing_mainloop=False)
+                                  delay=delay, location=location, time=time, timetext=timetext, line_color=line_color, doing_mainloop=False)
 
     # Condensation rate animation:
     basic_tools.plot_1D_animation(d_plot, cond_Dp_plot, xlimits=xlimits, ylimits=ylimits_cond, xscale=xscale, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
@@ -212,21 +205,6 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Plotting nucleation rate:
-    if plot_nucleation:
-        print('Plotting nucleation...')
-        figJ, axJ = plt.subplots(figsize=(8.00, 5.00), dpi=100)
-        plt.plot(time, sorc_Dp_plot, color='blue')
-        axJ.set_xlim([0, T])
-        axJ.set_ylim([0, 3500])
-        axJ.set_xlabel('$t$ (hour)', fontsize=12)
-        axJ.set_ylabel('$J(t)$ \n $(\mu$m$^{-1}$cm$^{-3}$ hour$^{-1}$)', fontsize=12, rotation=0)
-        axJ.yaxis.set_label_coords(-0.015, 1.02)
-        axJ.set_title('Nucleation rate', fontsize=12)
-        axJ.grid()
-
-
-    #######################################################
     # Images:
 
     # Parameters for size distribution images:
@@ -236,7 +214,7 @@ if __name__ == '__main__':
     ylabelcoords = (-0.06, 1.05)  # y-axis label coordinates
     title_image = 'Size distribution'  # Title for image
     image_min = 100  # Minimum of image colour
-    image_max = 12000  # Maximum of image colour
+    image_max = 10000  # Maximum of image colour
     cmap = 'jet'  # Colour map of image
     cbarlabel = '$\dfrac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$'  # Label of colour bar
     cbarticks = [100, 1000, 10000]  # Ticks of colorbar

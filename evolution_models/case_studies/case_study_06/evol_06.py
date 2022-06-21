@@ -11,13 +11,12 @@ Date: Auguest 03, 2021
 # Modules:
 import numpy as np
 import time as tm
-import matplotlib.pyplot as plt
 from tkinter import mainloop
 from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from evolution_models.tools import Fuchs_Brownian, GDE_evolution_model, GDE_Jacobian, change_basis_x_to_logDp, change_basis_x_to_logDp_sorc
+from evolution_models.tools import Fuchs_Brownian, GDE_evolution_model, GDE_Jacobian, change_basis_x_to_logDp
 
 
 #######################################################
@@ -28,11 +27,10 @@ if __name__ == '__main__':
 
     # Setup and plotting:
     plot_animations = True  # Set to True to plot animations
-    plot_nucleation = False  # Set to True to plot nucleation plot
-    plot_images = True  # Set to True to plot images
+    plot_images = False  # Set to True to plot images
     load_coagulation = True  # Set to True to load coagulation tensors
     save_coagulation = False  # Set to True to save coagulation tensors
-    coagulation_suffix = 'case_02'  # Suffix of saved coagulation tensors file
+    coagulation_suffix = 'CSTAR'  # Suffix of saved coagulation tensors file
 
     # Spatial domain:
     Dp_min = 0.0146  # Minimum diameter of particles (micro m)
@@ -75,13 +73,6 @@ if __name__ == '__main__':
     def depo(Dp):
         return d_cst + d_linear * Dp
 
-    # Source (nucleation event) model:
-    N_s = 0  # Amplitude of gaussian nucleation event
-    t_s = 1  # Mean time of gaussian nucleation event
-    sigma_s = 1   # Standard deviation time of gaussian nucleation event
-    def sorc(t):  # Source (nucleation) at xmin
-        return basic_tools.gaussian(t, N_s, t_s, sigma_s)  # Gaussian source (nucleation event) model output
-
     # Coagulation model:
     def coag(x, y):
         v_x = np.exp(x)  # Volume of particle x (micro m^3)
@@ -101,7 +92,6 @@ if __name__ == '__main__':
     F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
     F.add_process('condensation', cond)  # Adding condensation to evolution model
     F.add_process('deposition', depo)  # Adding deposition to evolution model
-    F.add_process('source', sorc)  # Adding source to evolution model
     F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F.compile()  # Compiling evolution model
 
@@ -151,13 +141,10 @@ if __name__ == '__main__':
     Nplot = len(d_plot)  # Length of size discretisation
     cond_Dp_plot = np.zeros([Nplot, NT])  # Initialising ln(volume)-based condensation rate
     depo_plot = np.zeros([Nplot, NT])  # Initialising deposition rate
-    sorc_x_plot = np.zeros(NT)  # Initialising ln(volume)-based source (nucleation) rate
     for k in range(NT):
-        sorc_x_plot[k] = sorc(t[k])  # Computing ln(volume)-based nucleation rate
         for i in range(Nplot):
             cond_Dp_plot[i, k] = cond(d_plot[i])  # Computing ln(volume)-based condensation rate
             depo_plot[i, k] = depo(d_plot[i])  # Computing deposition rate
-    sorc_logDp_plot = change_basis_x_to_logDp_sorc(sorc_x_plot, vmin, Dp_min)  # Computing log_10(D_p)-based nucleation rate
 
 
     #######################################################
@@ -218,21 +205,6 @@ if __name__ == '__main__':
     if plot_animations:
         print('Plotting animations...')
         mainloop()  # Runs tkinter GUI for plots and animations
-
-
-    #######################################################
-    # Plotting nucleation rate:
-    if plot_nucleation:
-        print('Plotting nucleation...')
-        figJ, axJ = plt.subplots(figsize=(8.00, 5.00), dpi=100)
-        plt.plot(time, sorc_logDp_plot, color='blue')
-        axJ.set_xlim([0, T])
-        axJ.set_ylim([0, 14000])
-        axJ.set_xlabel('$t$ (hour)', fontsize=12)
-        axJ.set_ylabel('$J(t)$ \n (cm$^{-3}$ hour$^{-1}$)', fontsize=12, rotation=0)
-        axJ.yaxis.set_label_coords(-0.015, 1.02)
-        axJ.set_title('Nucleation rate', fontsize=12)
-        axJ.grid()
 
 
     #######################################################

@@ -1,8 +1,8 @@
 """
 
-Title: Computes solution approximations to the log-scaled general dynamic equation of aerosols.
+Title: Computes solution approximations to the general dynamic equation of aerosols
 Author: Vincent Russell
-Date: May 18, 2020
+Date: June 22, 2022
 
 """
 
@@ -28,11 +28,11 @@ if __name__ == '__main__':
 
     # Setup and plotting:
     plot_animations = True  # Set to True to plot animations
-    plot_nucleation = True  # Set to True to plot nucleation plot
-    plot_images = True  # Set to True to plot images
+    plot_nucleation = False  # Set to True to plot nucleation plot
+    plot_images = False  # Set to True to plot images
     load_coagulation = True  # Set to True to load coagulation tensors
     save_coagulation = False  # Set to True to save coagulation tensors
-    coagulation_suffix = 'case_01'  # Suffix of saved coagulation tensors file
+    coagulation_suffix = '0004_to_1_micro_metres'  # Suffix of saved coagulation tensors file
 
     # Spatial domain:
     Dp_min = 0.004  # Minimum diameter of particles (micro m)
@@ -65,13 +65,13 @@ if __name__ == '__main__':
 
     # Condensation model I_Dp(Dp, t):
     I_cst = 0.002  # Condensation parameter constant
-    I_inverse_quadratic = 0.00000006  # Condensation parameter inverse quadratic
+    I_linear = 0.05  # Condensation parameter linear
     def cond(Dp):
-        return I_cst + I_inverse_quadratic / (Dp ** 2)
+        return I_cst + I_linear * Dp
 
     # Deposition model d(Dp, t):
-    d_cst = 0.03  # Deposition parameter constant
-    d_linear = 0.1  # Deposition parameter linear
+    d_cst = 0.02  # Deposition parameter constant
+    d_linear = 0.05  # Deposition parameter linear
     d_inverse_quadratic = 0.00001  # Deposition parameter inverse quadratic
     def depo(Dp):
         return d_cst + d_linear * Dp + d_inverse_quadratic * (1 / Dp ** 2)
@@ -177,17 +177,18 @@ if __name__ == '__main__':
     xscale = 'log'  # x-axis scaling ('linear' or 'log')
     xticks = [0.01, 0.1, 1]  # Plot x-tick labels
     xlimits = [d_plot[0], d_plot[-1]]  # Plot boundary limits for x-axis
-    ylimits = [0, 12000]  # Plot boundary limits for y-axis
+    ylimits = [0, 10000]  # Plot boundary limits for y-axis
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution'  # Title for 1D animation plot
     line_color = ['blue']  # Colors of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
+    delay = 60  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
-    yscale_cond = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_cond = [1e-5, 1e-2]  # Plot boundary limits for y-axis
+    yscale_cond = 'log'  # y-axis scaling ('linear' or 'log')
+    ylimits_cond = [1e-3, 1e-1]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate'  # Title for plot
@@ -196,7 +197,7 @@ if __name__ == '__main__':
 
     # Parameters for deposition plot:
     yscale_depo = 'log'  # y-axis scaling ('linear' or 'log')
-    ylimits_depo = [0.01, 10]  # Plot boundary limits for y-axis
+    ylimits_depo = [1e-2, 1e0]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate'  # Title for plot
@@ -205,7 +206,7 @@ if __name__ == '__main__':
 
     # Size distribution animation:
     basic_tools.plot_1D_animation(d_plot, n_logDp_plot, xticks=xticks, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
-                                  delay=0, location=location, time=time, timetext=timetext, line_color=line_color, doing_mainloop=False)
+                                  delay=delay, location=location, time=time, timetext=timetext, line_color=line_color, doing_mainloop=False)
 
     # Condensation rate animation:
     basic_tools.plot_1D_animation(d_plot, cond_Dp_plot, xticks=xticks, xlimits=xlimits, ylimits=ylimits_cond, xscale=xscale, yscale=yscale_cond, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
@@ -247,7 +248,7 @@ if __name__ == '__main__':
     ylabelcoords = (-0.06, 0.96)  # y-axis label coordinates
     title_image = 'Size distribution'  # Title for image
     image_min = 10  # Minimum of image colour
-    image_max = 12000  # Maximum of image colour
+    image_max = 10000  # Maximum of image colour
     cmap = 'jet'  # Colour map of image
     cbarlabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # Label of colour bar
     cbarticks = [10, 100, 1000, 10000]  # Ticks of colorbar
