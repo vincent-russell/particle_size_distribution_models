@@ -198,7 +198,8 @@ class GDE_evolution_model:
             n_logDp_plot, sigma_n_logDp = change_basis_operator(n_x_plot, Gamma_n_x, matrix_x_to_logDp, time_varying=True, return_sigma=True)
             return d_plot, v_plot, n_logDp_plot, sigma_n_logDp
         else:
-            d_plot, v_plot, n_plot, sigma_n = get_plotting_discretisation(alpha, Gamma_alpha, self.x_boundaries, self.h, self.phi, self.N, self.Ne, self.Np, self.scale_type)
+            x_plot = get_kwarg_value(kwargs, 'x_plot', None)  # Return custom discretisation
+            d_plot, v_plot, n_plot, sigma_n = get_plotting_discretisation(alpha, Gamma_alpha, self.x_boundaries, self.h, self.phi, self.N, self.Ne, self.Np, self.scale_type, x_plot=x_plot)
             return d_plot, v_plot, n_plot, sigma_n
 
     # Computing plotting discretisation parameter over [0, T]:

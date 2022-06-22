@@ -5,10 +5,10 @@ Parameters for observation simulation in log-size (comparing to CSTAR)
 
 #######################################################
 # Modules:
-from numpy import log, exp
+from numpy import log, exp, linspace
 
 # Local modules:
-from basic_tools import gaussian, skewed_gaussian, diameter_to_volume, volume_to_diameter
+from basic_tools import skewed_gaussian, diameter_to_volume, volume_to_diameter
 from evolution_models.tools import Fuchs_Brownian
 
 
@@ -17,10 +17,10 @@ from evolution_models.tools import Fuchs_Brownian
 
 # Setup and plotting:
 plot_animations = True  # Set to True to plot animations
-plot_nucleation = False  # Set to True to plot nucleation plot
-plot_images = True  # Set to True to plot images
+plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
-coagulation_suffix = 'case_02'  # Suffix of saved coagulation tensors file
+save_coagulation = False  # Set to True to save coagulation tensors
+coagulation_suffix = 'CSTAR'  # Suffix of saved coagulation tensors file
 
 # Spatial domain:
 Dp_min = 0.0146  # Minimum diameter of particles (micro m)
@@ -42,10 +42,11 @@ N = Ne * Np  # Total degrees of freedom
 
 # Observation parameters:
 M = 107  # Observation dimension size
+logDp_obs = linspace(log(Dp_min), log(Dp_max), M)  # Log(Diameters) that observations are made
 sample_volume = 0.3  # Volume of sample used in counting, y = (1 / sample_volume) * Pois(sample_volume * n)
 
 # Save data parameters:
-data_filename = 'simulated_observations_log_case_02'  # Filename for data of simulated observations
+data_filename = 'observations_08'  # Filename for data of simulated observations
 
 # Initial condition n_0(x) = n(x, 0):
 N_0 = 53  # Amplitude of initial condition gaussian
@@ -69,13 +70,6 @@ d_cst = 0.15  # Deposition parameter constant
 d_linear = 0.9  # Deposition parameter linear
 def depo(Dp):
     return d_cst + d_linear * Dp
-
-# Source (nucleation event) model:
-N_s = 0  # Amplitude of gaussian nucleation event
-t_s = 1  # Mean time of gaussian nucleation event
-sigma_s = 1   # Standard deviation time of gaussian nucleation event
-def sorc(t):  # Source (nucleation) at xmin
-    return gaussian(t, N_s, t_s, sigma_s)  # Gaussian source (nucleation event) model output
 
 # Coagulation model:
 def coag(x, y):

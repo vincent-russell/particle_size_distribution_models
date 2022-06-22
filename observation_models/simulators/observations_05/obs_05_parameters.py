@@ -17,6 +17,7 @@ from evolution_models.tools import Fuchs_Brownian
 
 # Setup and plotting:
 plot_animations = True  # Set to True to plot animations
+plot_nucleation = False  # Set to True to plot nucleation plot
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 save_coagulation = False  # Set to True to save coagulation tensors
@@ -44,7 +45,7 @@ d_obs = linspace(Dp_min, Dp_max, M)  # Diameters that observations are made
 sample_volume = 0.005  # Volume of sample used in counting, y = (1 / sample_volume) * Pois(sample_volume * n)
 
 # Save data parameters:
-data_filename = 'observations_02'  # Filename for data of simulated observations
+data_filename = 'observations_05'  # Filename for data of simulated observations
 
 # Initial condition n_0(v) = n(v, 0):
 N_0 = 300  # Amplitude of initial condition gaussian
@@ -69,6 +70,13 @@ d_1 = -0.15  # Deposition parameter linear
 d_2 = -d_1 / (2 * depo_Dpmin)  # Deposition parameter quadratic
 def depo(Dp):
     return d_0 + d_1 * Dp + d_2 * Dp ** 2  # Quadratic model output
+
+# Source (nucleation event) model:
+N_s = 5e3  # Amplitude of gaussian nucleation event
+t_s = 8  # Mean time of gaussian nucleation event
+sigma_s = 2  # Standard deviation time of gaussian nucleation event
+def sorc(t):  # Source (nucleation) at vmin
+    return gaussian(t, N_s, t_s, sigma_s)  # Gaussian source (nucleation event) model output
 
 # Coagulation model:
 def coag(v_x, v_y):

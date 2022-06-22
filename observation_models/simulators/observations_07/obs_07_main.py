@@ -11,18 +11,17 @@ Date: October 28, 2020
 # Modules:
 import numpy as np
 import time as tm
-import matplotlib.pyplot as plt
 from tkinter import mainloop
 from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_basis_x_to_logDp, change_basis_x_to_logDp_sorc
+from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_basis_x_to_logDp
 
 
 #######################################################
 # Importing parameter file:
-from observation_models.simulators.observations_06.obs_06_parameters import *
+from observation_models.simulators.observations_07.obs_07_parameters import *
 
 
 #######################################################
@@ -38,7 +37,6 @@ if __name__ == '__main__':
     F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
     F.add_process('condensation', cond)  # Adding condensation to evolution model
     F.add_process('deposition', depo)  # Adding deposition to evolution model
-    F.add_process('source', sorc)  # Adding source to evolution model
     F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F.compile()  # Compiling evolution model
 
@@ -98,13 +96,10 @@ if __name__ == '__main__':
     Nplot = len(d_true)  # Length of size discretisation
     cond_Dp_plot = np.zeros([Nplot, NT])  # Initialising ln(volume)-based condensation rate
     depo_plot = np.zeros([Nplot, NT])  # Initialising deposition rate
-    sorc_x_plot = np.zeros(NT)  # Initialising ln(volume)-based source (nucleation) rate
     for k in range(NT):
-        sorc_x_plot[k] = sorc(t[k])  # Computing ln(volume)-based nucleation rate
         for i in range(Nplot):
             cond_Dp_plot[i, k] = cond(d_true[i])  # Computing ln(volume)-based condensation rate
             depo_plot[i, k] = depo(d_true[i])  # Computing deposition rate
-    sorc_logDp_plot = change_basis_x_to_logDp_sorc(sorc_x_plot, vmin, Dp_min)  # Computing log_10(D_p)-based nucleation rate
 
 
     #######################################################
@@ -128,9 +123,9 @@ if __name__ == '__main__':
 
     # Parameters for size distribution animation:
     xscale = 'log'  # x-axis scaling ('linear' or 'log')
-    xticks = [0.01, 0.1, 1]  # Plot x-tick labels
+    xticks = [0.1, 1, 10]  # Plot x-tick labels
     xlimits = [d_true[0], d_true[-1]]  # Plot boundary limits for x-axis
-    ylimits = [0, 12000]  # Plot boundary limits for y-axis
+    ylimits = [0, 10000]  # Plot boundary limits for y-axis
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution'  # Title for 1D animation plot
@@ -142,7 +137,7 @@ if __name__ == '__main__':
 
     # Parameters for condensation plot:
     yscale_cond = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_cond = [1e-5, 1e-2]  # Plot boundary limits for y-axis
+    ylimits_cond = [1e-3, 1e1]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate'  # Title for plot
@@ -150,8 +145,8 @@ if __name__ == '__main__':
     line_color_cond = ['blue']  # Colors of lines in plot
 
     # Parameters for deposition plot:
-    yscale_depo = 'log'  # y-axis scaling ('linear' or 'log')
-    ylimits_depo = [0.01, 10]  # Plot boundary limits for y-axis
+    yscale_depo = 'linear'  # y-axis scaling ('linear' or 'log')
+    ylimits_depo = [1e-2, 1e1]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate'  # Title for plot
@@ -177,33 +172,18 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Plotting nucleation rate:
-    if plot_nucleation:
-        print('Plotting nucleation...')
-        figJ, axJ = plt.subplots(figsize=(8.00, 5.00), dpi=100)
-        plt.plot(time, sorc_logDp_plot, color='blue')
-        axJ.set_xlim([0, T])
-        axJ.set_ylim([0, 16000])
-        axJ.set_xlabel('$t$ (hour)', fontsize=12)
-        axJ.set_ylabel('$J(t)$ \n (cm$^{-3}$ hour$^{-1}$)', fontsize=12, rotation=0)
-        axJ.yaxis.set_label_coords(-0.015, 1.02)
-        axJ.set_title('Nucleation rate', fontsize=12)
-        axJ.grid()
-
-
-    #######################################################
     # Images:
 
     # Parameters for size distribution images:
     yscale_image = 'log'  # Change scale of y-axis (linear or log)
-    yticks_image = [0.003, 0.01, 0.1, 1]  # Plot y-tick labels
+    yticks_image = [0.1, 1, 10]  # Plot y-tick labels
     xlabel_image = 'Time (hours)'  # x-axis label for image
     ylabel_image = '$D_p$ ($\mu$m) \n'  # y-axis label for image
     ylabelcoords = (-0.06, 0.96)  # y-axis label coordinates
     title_image = 'Size distribution'  # Title for image
     title_image_observations = 'Simulated observations'  # Title for image
     image_min = 10  # Minimum of image colour
-    image_max = 12000  # Maximum of image colour
+    image_max = 10000  # Maximum of image colour
     cmap = 'jet'  # Colour map of image
     cbarlabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # Label of colour bar
     cbarticks = [10, 100, 1000, 10000]  # Ticks of colorbar

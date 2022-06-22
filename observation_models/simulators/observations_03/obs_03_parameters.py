@@ -4,6 +4,9 @@ Parameters for observation simulation
 
 
 #######################################################
+# Modules:
+from numpy import linspace
+
 # Local modules:
 from basic_tools import gaussian, diameter_to_volume, volume_to_diameter
 from evolution_models.tools import Fuchs_Brownian
@@ -14,7 +17,6 @@ from evolution_models.tools import Fuchs_Brownian
 
 # Setup and plotting:
 plot_animations = True  # Set to True to plot animations
-plot_nucleation = False  # Set to True to plot nucleation plot
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 save_coagulation = False  # Set to True to save coagulation tensors
@@ -38,6 +40,7 @@ N = Ne * Np  # Total degrees of freedom
 
 # Observation parameters:
 M = 10  # Observation dimension size
+d_obs = linspace(Dp_min, Dp_max, M)  # Diameters that observations are made
 sample_volume = 0.0005  # Volume of sample used in counting, y = (1 / sample_volume) * Pois(sample_volume * n)
 
 # Save data parameters:
@@ -66,13 +69,6 @@ d_1 = -0.15  # Deposition parameter linear
 d_2 = -d_1 / (2 * depo_Dpmin)  # Deposition parameter quadratic
 def depo(Dp):
     return d_0 + d_1 * Dp + d_2 * Dp ** 2  # Quadratic model output
-
-# Source (nucleation event) model:
-N_s = 5e3  # Amplitude of gaussian nucleation event
-t_s = 8  # Mean time of gaussian nucleation event
-sigma_s = 2  # Standard deviation time of gaussian nucleation event
-def sorc(t):  # Source (nucleation) at vmin
-    return gaussian(t, N_s, t_s, sigma_s)  # Gaussian source (nucleation event) model output
 
 # Coagulation model:
 def coag(v_x, v_y):

@@ -11,13 +11,12 @@ Date: June 22, 2022
 # Modules:
 import numpy as np
 import time as tm
-import matplotlib.pyplot as plt
 from tkinter import mainloop
 from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_basis_volume_to_diameter, change_basis_volume_to_diameter_sorc
+from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_basis_volume_to_diameter
 
 
 #######################################################
@@ -38,7 +37,6 @@ if __name__ == '__main__':
     F = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero)  # Initialising evolution model
     F.add_process('condensation', cond)  # Adding condensation to evolution model
     F.add_process('deposition', depo)  # Adding deposition to evolution model
-    F.add_process('source', sorc)  # Adding source to evolution model
     F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F.compile()  # Compiling evolution model
 
@@ -84,7 +82,8 @@ if __name__ == '__main__':
 
     #######################################################
     # Computing observation discretisation:
-    d_obs, v_obs, n_v_obs, _ = F.get_nplot_discretisation(alpha, Nplot=M)  # Computing plotting discretisation over Nplot = M
+    v_obs = diameter_to_volume(d_obs)  # Volumes that observations are made
+    _, _, n_v_obs, _ = F.get_nplot_discretisation(alpha, x_plot=v_obs)  # Computing plotting discretisation
     n_Dp_obs = change_basis_volume_to_diameter(n_v_obs, d_obs)  # Computing diameter-based size distribution
     Y = (1 / sample_volume) * basic_tools.get_poisson(sample_volume * n_Dp_obs)  # Drawing observations from Poisson distribution
 
@@ -94,13 +93,10 @@ if __name__ == '__main__':
     Nplot = len(d_true)  # Length of size discretisation
     cond_Dp_plot = np.zeros([Nplot, NT])  # Initialising volume-based condensation rate
     depo_plot = np.zeros([Nplot, NT])  # Initialising deposition rate
-    sorc_v_plot = np.zeros(NT)  # Initialising volume-based source (nucleation) rate
     for k in range(NT):
-        sorc_v_plot[k] = sorc(t[k])  # Computing volume-based nucleation rate
         for i in range(Nplot):
             cond_Dp_plot[i, k] = cond(d_true[i])  # Computing volume-based condensation rate
             depo_plot[i, k] = depo(d_true[i])  # Computing deposition rate
-    sorc_Dp_plot = change_basis_volume_to_diameter_sorc(sorc_v_plot, Dp_min)  # Computing diameter-based nucleation rate
 
 
     #######################################################
@@ -167,21 +163,6 @@ if __name__ == '__main__':
     if plot_animations:
         print('Plotting animations...')
         mainloop()  # Runs tkinter GUI for plots and animations
-
-
-    #######################################################
-    # Plotting nucleation rate:
-    if plot_nucleation:
-        print('Plotting nucleation...')
-        figJ, axJ = plt.subplots(figsize=(8.00, 5.00), dpi=100)
-        plt.plot(time, sorc_Dp_plot, color='blue')
-        axJ.set_xlim([0, T])
-        axJ.set_ylim([0, 1e4])
-        axJ.set_xlabel('$t$ (hour)', fontsize=12)
-        axJ.set_ylabel('$J(t)$ \n $(\mu$m$^{-1}$cm$^{-3}$ hour$^{-1}$)', fontsize=12, rotation=0)
-        axJ.yaxis.set_label_coords(-0.015, 1.02)
-        axJ.set_title('Nucleation rate', fontsize=12)
-        axJ.grid()
 
 
     #######################################################

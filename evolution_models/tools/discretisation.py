@@ -35,16 +35,18 @@ def get_discretisation(Ne, Np, xmin, xmax):
 def get_plotting_discretisation(alpha, Gamma_alpha, x_boundaries, h, phi, N, Ne, Np, scale_type, **kwargs):
     # Parameters:
     return_Gamma = get_kwarg_value(kwargs, 'return_Gamma', False)  # Set to True to return Gamma matrix (covariance matrix)
+    x_plot = get_kwarg_value(kwargs, 'x_plot', None)  # Return custom discretisation
     # x_plot computation:
-    x_plot = np.zeros(N)  # Initialising
-    h_normalised = h / (Np + 1)  # Step size divided by order size
-    for ell in range(Ne):  # Iterating over elements
-        for j in range(Np):  # Iterating over degrees
-            i = j + ell * Np  # Getting total
-            x_plot[i] = x_boundaries[ell] + (j + 1) * h_normalised  # Computing points within element
-    # Adding boundary points:
-    x_plot = np.insert(x_plot, 0, x_boundaries[0])
-    x_plot = np.append(x_plot, x_boundaries[-1])
+    if x_plot is None:
+        x_plot = np.zeros(N)  # Initialising
+        h_normalised = h / (Np + 1)  # Step size divided by order size
+        for ell in range(Ne):  # Iterating over elements
+            for j in range(Np):  # Iterating over degrees
+                i = j + ell * Np  # Getting total
+                x_plot[i] = x_boundaries[ell] + (j + 1) * h_normalised  # Computing points within element
+        # Adding boundary points:
+        x_plot = np.insert(x_plot, 0, x_boundaries[0])
+        x_plot = np.append(x_plot, x_boundaries[-1])
     N_plot = len(x_plot)  # Total discretisation length
     # Constructing phi matrix such that n = matrix * alpha and Gamma_n = matrix * Gamma_alpha * matrix^T:
     phi_matrix = np.zeros([N_plot, N])  # Initialising phi matrix (transform matrix from alpha to n)
