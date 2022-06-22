@@ -43,7 +43,7 @@ if __name__ == '__main__':
     xmax = np.log(vmax)  # Upper limit in log-size
 
     # Time domain:
-    dt = (1 / 60) * 10  # Time step (hours)
+    dt = (1 / 60) * 20  # Time step (hours)
     T = 24  # End time (hours)
     NT = int(T / dt)  # Total number of time steps
 
