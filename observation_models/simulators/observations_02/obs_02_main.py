@@ -22,7 +22,7 @@ from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_bas
 
 #######################################################
 # Importing parameter file:
-from observation_models.simulators.observations_01.obs_01_parameters import *
+from observation_models.simulators.observations_02.obs_02_parameters import *
 
 
 #######################################################
@@ -133,7 +133,7 @@ if __name__ == '__main__':
     line_color = ['blue', 'red']  # Colors of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
-    delay = 0  # Delay between frames in milliseconds
+    delay = 60  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
     ylimits_cond = [0, 2]  # Plot boundary limits for y-axis

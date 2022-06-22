@@ -46,7 +46,6 @@ sample_volume = 0.005  # Volume of sample used in counting, y = (1 / sample_volu
 
 # Save data parameters:
 data_filename = 'simulated_observations_log_case_01'  # Filename for data of simulated observations
-save_parameter_file = True  # Set to true to save copy of parameter file
 
 # Initial condition n_0(x) = n(x, 0):
 N_0 = 1e3  # Amplitude of initial condition gaussian
