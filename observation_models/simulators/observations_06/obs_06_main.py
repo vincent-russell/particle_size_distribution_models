@@ -1,8 +1,8 @@
 """
 
-Title: Computes solution approximations to the general dynamic equation of aerosols in log-size
+Title: Simualtes observations using the general dynamic equation of aerosols
 Author: Vincent Russell
-Date: October 28, 2020
+Date: June 22, 2022
 
 """
 

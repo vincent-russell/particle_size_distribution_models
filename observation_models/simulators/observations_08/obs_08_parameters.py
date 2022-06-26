@@ -1,5 +1,5 @@
 """
-Parameters for observation simulation in log-size (comparing to CSTAR)
+Parameters for observation simulation
 """
 
 

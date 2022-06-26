@@ -1,8 +1,8 @@
 """
 
-Title: Computes solution approximations to the general dynamic equation of aerosols in log-size (comparing to CSTAR)
+Title: Simualtes observations using the general dynamic equation of aerosols
 Author: Vincent Russell
-Date: Auguest 04, 2021
+Date: June 22, 2022
 
 """
 

@@ -1,5 +1,5 @@
 """
-Parameters for observation simulation in log-size
+Parameters for observation simulation
 """
 
 

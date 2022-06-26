@@ -1,6 +1,6 @@
 """
 
-Title: Computes solution approximations to the general dynamic equation of aerosols
+Title: Simualtes observations using the general dynamic equation of aerosols
 Author: Vincent Russell
 Date: June 22, 2022
 

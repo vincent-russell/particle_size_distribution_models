@@ -5,7 +5,7 @@ Miscellaneous functions
 
 #######################################################
 # Modules:
-from numpy import zeros, exp
+from numpy import zeros, exp, arange
 
 
 #######################################################
@@ -24,6 +24,7 @@ def compute_simple_covariance_matrix(N, Np, sigma):
 def compute_correlated_covariance_matrix(N, Np, Ne, sigma, correlation_strength):
     matrix = zeros([N, N])  # Initialising
     var = sigma ** 2  # Variance computation
+    element_multiplier = (1 / (Ne + 1)) * arange(Ne + 1, 1, -1)  # Multiplier as element increases
     # Iterating over elements:
     for ell_i in range(Ne):
         for ell_j in range(Ne):
@@ -38,5 +39,5 @@ def compute_correlated_covariance_matrix(N, Np, Ne, sigma, correlation_strength)
                             if degree_i == degree_j:
                                 i = ell_i * Np + degree_i
                                 j = ell_j * Np + degree_j
-                                matrix[i, j] = var[degree_i] * exp(-(1 / correlation_strength) * element)
+                                matrix[i, j] = element_multiplier[ell_i] * element_multiplier[ell_j] * var[degree_i] * exp(-(1 / correlation_strength) * element)
     return matrix

@@ -224,6 +224,7 @@ def plot_1D_animation(x, *y, **kwargs):
     save_ani = get_kwarg_value(kwargs, 'save_ani', False)  # Save animation as .mp4 file
     save_name = get_kwarg_value(kwargs, 'save_name', 'plot_1D_animation')  # Saved animation filename
     save_fps = get_kwarg_value(kwargs, 'save_fps', 60)  # Saved animation fps
+    use_widget = get_kwarg_value(kwargs, 'use_widget', False)  # Set to True to add widget to figures
 
     # Legend labels for lines in plot:
     use_legend = False  # Default
@@ -269,14 +270,14 @@ def plot_1D_animation(x, *y, **kwargs):
         fig = plt.Figure(figsize=(8.70, 6.90), dpi=100)  # Creating figure
         root.geometry('870x720+2040+562')  # At university office
     elif location == 'Home' or location == 'Home1':
-        fig = plt.Figure(figsize=(6.5, 5.75), dpi=100)  # Creating figure
-        root.geometry('650x575-3185+600')  # At home
+        fig = plt.Figure(figsize=(5.18, 4.5), dpi=80)  # Creating figure
+        root.geometry('518x450-2547+480')  # At home
     elif location == 'Home2':
-        fig = plt.Figure(figsize=(6.5, 5.75), dpi=100)  # Creating figure
-        root.geometry('650x575+3114-590')  # At home
+        fig = plt.Figure(figsize=(5.18, 4.5), dpi=80)  # Creating figure
+        root.geometry('518x450+2483-470')  # At home
     elif location == 'Home3':
-        fig = plt.Figure(figsize=(6.5, 5.75), dpi=100)  # Creating figure
-        root.geometry('650x575+3114+600')  # At home
+        fig = plt.Figure(figsize=(5.18, 4.5), dpi=80)  # Creating figure
+        root.geometry('518x450+2483+480')  # At home
     elif location == 'Presentation' or location == 'Presentation1' or location == 'Presentation2' or location == 'Presentation3':
         fig = plt.Figure(figsize=(6.50, 5.00), dpi=100)  # Creating figure
         root.geometry('650x530-100+100')  # Default is middle of primary screen
@@ -287,7 +288,8 @@ def plot_1D_animation(x, *y, **kwargs):
     # Creating canvas and adding figure to canvas and GUI, with NavigationToolbar:
     canvas = FigureCanvasTkAgg(fig, master=root)  # Adding canvas
     canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)  # Creating space for figure and toolbar on canvas
-    NavigationToolbar2Tk(canvas, root)  # Adding navigation toolbar to figure
+    if use_widget:
+        NavigationToolbar2Tk(canvas, root)  # Adding navigation toolbar to figure
 
     # Setting axis variables:
     ax = fig.add_subplot(111)  # Creating subplot in figure
