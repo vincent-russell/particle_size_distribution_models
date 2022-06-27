@@ -25,7 +25,7 @@ from observation_models.tools import Size_distribution_observation_model
 
 #######################################################
 # Importing parameter file:
-from state_estimation_case_studies.case_study_08.state_est_08_parameters import *
+from state_estimation_case_studies.case_study_09.state_est_09_parameters import *
 
 
 #######################################################
@@ -50,7 +50,7 @@ if __name__ == '__main__':
     F_alpha.add_process('condensation', guess_cond)  # Adding condensation to evolution model
     F_alpha.add_process('deposition', guess_depo)  # Adding deposition to evolution model
     F_alpha.add_process('source', guess_sorc)  # Adding source to evolution model
-    F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
+    # F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F_alpha.compile()  # Compiling evolution model
 
 
