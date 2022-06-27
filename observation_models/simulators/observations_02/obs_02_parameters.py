@@ -29,7 +29,7 @@ vmin = diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
 vmax = diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
 
 # Time domain:
-dt = (1 / 60) * 20  # Time step (hours)
+dt = (1 / 60) * 5  # Time step (hours)
 T = 24  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
