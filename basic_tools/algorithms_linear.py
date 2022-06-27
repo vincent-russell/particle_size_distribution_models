@@ -94,7 +94,7 @@ def compute_fixed_interval_Kalman_smoother(F, NT, N, x, Gamma, x_predict, Gamma_
     Gamma_smoothed[NT - 1] = Gamma[NT - 1]  # Adding final filtered covariance to smoothed covariance
     for k in reversed(range(NT - 1)):  # Iterating over time backwards
         # Evolution model Jacobians:
-        FT = transpose(F)  # Transpose of evolution operator
+        FT = transpose(F[k])  # Transpose of evolution operator
         # Computing matrix A:
         M1 = inv(Gamma_predict[k + 1])  # Matrix operation
         M2 = matmul(FT, M1)  # Matrix operation
