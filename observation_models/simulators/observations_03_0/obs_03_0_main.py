@@ -21,7 +21,7 @@ from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_bas
 
 #######################################################
 # Importing parameter file:
-from observation_models.simulators.observations_03.obs_03_parameters import *
+from observation_models.simulators.observations_03_0.obs_03_0_parameters import *
 
 
 #######################################################
@@ -152,12 +152,12 @@ if __name__ == '__main__':
                                   delay=delay, location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, doing_mainloop=False)
 
     # Condensation rate animation:
-    basic_tools.plot_1D_animation(d_true, cond_Dp_plot, xlimits=xlimits, ylimits=ylimits_cond, xscale=xscale, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
-                                  location=location_cond, time=time, timetext=timetext, line_color=line_color_cond, doing_mainloop=False)
+    # basic_tools.plot_1D_animation(d_true, cond_Dp_plot, xlimits=xlimits, ylimits=ylimits_cond, xscale=xscale, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
+    #                               location=location_cond, time=time, timetext=timetext, line_color=line_color_cond, doing_mainloop=False)
 
     # Deposition rate animation:
-    basic_tools.plot_1D_animation(d_true, depo_plot, xlimits=xlimits, ylimits=ylimits_depo, xscale=xscale, xlabel=xlabel_depo, ylabel=ylabel_depo, title=title_depo,
-                                  location=location_depo, time=time, timetext=timetext, line_color=line_color_depo, doing_mainloop=False)
+    # basic_tools.plot_1D_animation(d_true, depo_plot, xlimits=xlimits, ylimits=ylimits_depo, xscale=xscale, xlabel=xlabel_depo, ylabel=ylabel_depo, title=title_depo,
+    #                               location=location_depo, time=time, timetext=timetext, line_color=line_color_depo, doing_mainloop=False)
 
     # Mainloop and print:
     if plot_animations:

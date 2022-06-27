@@ -1,8 +1,8 @@
 """
 
-Title: Computes estimates of the particle size distribution, condensation rate, deposition rate, and nucleation rate
+Title: State estimation of aerosol particle size distribution
 Author: Vincent Russell
-Date: April 7, 2022
+Date: June 27, 2022
 
 """
 
@@ -11,15 +11,14 @@ Date: April 7, 2022
 # Modules:
 import numpy as np
 import time as tm
-import matplotlib.pyplot as plt
 from tkinter import mainloop
 from tqdm import tqdm
 
 # Local modules:
 import basic_tools
 from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
-from observation_models.data import load_observations
-from evolution_models.tools import GDE_evolution_model, change_basis_volume_to_diameter_sorc, GDE_Jacobian
+from observation_models.data.simulated import load_observations
+from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_basis_volume_to_diameter
 from observation_models.tools import Size_distribution_observation_model
 
 
@@ -38,11 +37,10 @@ if __name__ == '__main__':
 
     #######################################################
     # Importing simulated observations and true size distribution:
-    observation_data = load_observations('simulated_observations')  # Loading data file
+    observation_data = load_observations(data_filename)  # Loading data file
     d_obs, Y = observation_data['d_obs'], observation_data['Y']  # Extracting observations
-    # d_true, n_v_true = observation_data['d_true'], observation_data['n_true']  # Extracting true size distribution
-    # v_obs = basic_tools.diameter_to_volume(d_obs)  # Converting diameter observations to volume
-    # v_true = basic_tools.diameter_to_volume(d_true)  # Converting true diameter to volume
+    d_true, n_v_true = observation_data['d_true'], observation_data['n_true']  # Extracting true size distribution
+    n_Dp_true = change_basis_volume_to_diameter(n_v_true, d_true)  # Computing diameter-based size distribution
 
 
     #######################################################
@@ -50,8 +48,7 @@ if __name__ == '__main__':
     F_alpha = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero)  # Initialising evolution model
     F_alpha.add_process('condensation', guess_cond)  # Adding condensation to evolution model
     F_alpha.add_process('deposition', guess_depo)  # Adding deposition to evolution model
-    F_alpha.add_process('source', guess_sorc)  # Adding deposition to evolution model
-    F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation)  # Adding coagulation to evolution model
+    F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F_alpha.compile()  # Compiling evolution model
 
 
@@ -115,35 +112,22 @@ if __name__ == '__main__':
     Gamma_w = np.zeros([N, N])  # Initialising noise covariance for state
     Gamma_w[0:N, 0:N] = Gamma_alpha_w  # Adding alpha covariance to state covariance
 
+
     #######################################################
     # Constructing prior and prior covariance:
 
     # For alpha:
     alpha_prior = F_alpha.compute_coefficients('alpha', initial_guess_size_distribution)  # Computing alpha coefficients from initial condition function
-    Gamma_alpha_prior = np.eye(N)
-    for i in range(N):
-        if i % Np == 0:
-            Gamma_alpha_prior[i, i] = (sigma_alpha_prior_0 ** 2)
-        elif i % Np == 1:
-            Gamma_alpha_prior[i, i] = (sigma_alpha_prior_1 ** 2)
-        elif i % Np == 2:
-            Gamma_alpha_prior[i, i] = (sigma_alpha_prior_2 ** 2)
-        elif i % Np == 3:
-            Gamma_alpha_prior[i, i] = (sigma_alpha_prior_3 ** 2)
-        elif i % Np == 4:
-            Gamma_alpha_prior[i, i] = (sigma_alpha_prior_4 ** 2)
-        elif i % Np == 5:
-            Gamma_alpha_prior[i, i] = (sigma_alpha_prior_5 ** 2)
-        elif i % Np == 6:
-            Gamma_alpha_prior[i, i] = (sigma_alpha_prior_6 ** 2)
-    # First element multiplier:
-    Gamma_alpha_prior[0: Np, 0: Np] = alpha_first_element_multiplier * Gamma_alpha_prior[0: Np, 0: Np]
+    sigma_alpha_prior = np.array([sigma_alpha_prior_0, sigma_alpha_prior_1, sigma_alpha_prior_2, sigma_alpha_prior_3, sigma_alpha_prior_4, sigma_alpha_prior_5, sigma_alpha_prior_6])  # Array of standard deviations
+    Gamma_alpha_prior = basic_tools.compute_correlated_covariance_matrix(N, Np, Ne, sigma_alpha_prior, 0.001)  # Covariance matrix computation
+    Gamma_alpha_prior[0: Np, 0: Np] = alpha_first_element_multiplier * Gamma_alpha_prior[0: Np, 0: Np]  # First element multiplier
 
     # Assimilation:
     x_prior = np.zeros([N])  # Initialising prior state
     x_prior[0:N] = alpha_prior  # Adding alpha prior to prior state
     Gamma_prior = np.zeros([N, N])  # Initialising prior covariance for state
     Gamma_prior[0:N, 0:N] = Gamma_alpha_prior  # Adding alpha covariance to state covariance
+
 
     #######################################################
     # Initialising state and adding prior:
@@ -163,7 +147,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing extended Kalman filter model:
-    model = Kalman_filter(F[0], H, Gamma_w, Gamma_v, NT, additive_evolution_vector=b[0, :])
+    model = Kalman_filter(F[0], H, Gamma_w, Gamma_v, NT, additive_evolution_vector=b[:, 0])
 
 
     #######################################################
@@ -180,10 +164,10 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Computing smoothed estimates: todo: Need to fix this
+    # Computing smoothed estimates:
     if smoothing:
         print('Computing Kalman smoother estimates...')
-        x_tilde_c, Gamma_tilde_c = compute_fixed_interval_Kalman_smoother(F, NT, N, x, Gamma, x_predict, Gamma_predict)
+        x, Gamma = compute_fixed_interval_Kalman_smoother(F, NT, N, x, Gamma, x_predict, Gamma_predict)
 
 
     #######################################################
@@ -201,19 +185,20 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Computing true underlying parameters plotting discretisation:
+    # Computing true and guessed underlying parameters plotting discretisation:
     Nplot_cond = len(d_plot)  # Length of size discretisation
     Nplot_depo = len(d_plot)  # Length of size discretisation
-    cond_Dp_true_plot = np.zeros([Nplot_cond, NT])  # Initialising volume-based condensation rate
-    depo_true_plot = np.zeros([Nplot_depo, NT])  # Initialising deposition rate
-    sorc_v_true_plot = np.zeros(NT)  # Initialising volume-based source (nucleation) rate
+    cond_Dp_truth_plot = np.zeros([Nplot_cond, NT])  # Initialising condensation rate
+    cond_Dp_guess_plot = np.zeros([Nplot_cond, NT])  # Initialising condensation rate
+    depo_truth_plot = np.zeros([Nplot_depo, NT])  # Initialising deposition rate
+    depo_guess_plot = np.zeros([Nplot_depo, NT])  # Initialising deposition rate
     for k in range(NT):
-        sorc_v_true_plot[k] = sorc(t[k])  # Computing volume-based nucleation rate
         for i in range(Nplot_cond):
-            cond_Dp_true_plot[i, k] = cond(d_plot[i])  # Computing volume-based condensation rate
+            cond_Dp_truth_plot[i, k] = cond(d_plot[i])  # Computing condensation rate
+            cond_Dp_guess_plot[i, k] = guess_cond(d_plot[i])  # Computing condensation rate
         for i in range(Nplot_depo):
-            depo_true_plot[i, k] = depo(d_plot[i])  # Computing deposition rate
-    sorc_Dp_true_plot = change_basis_volume_to_diameter_sorc(sorc_v_true_plot, Dp_min)  # Computing diameter-based nucleation rate
+            depo_truth_plot[i, k] = depo(d_plot[i])  # Computing deposition rate
+            depo_guess_plot[i, k] = guess_depo(d_plot[i])  # Computing deposition rate
 
 
     #######################################################
@@ -231,15 +216,16 @@ if __name__ == '__main__':
     # Parameters for size distribution animation:
     xscale = 'linear'  # x-axis scaling ('linear' or 'log')
     xlimits = [d_plot[0], d_plot[-1]]  # Plot boundary limits for x-axis
-    ylimits = [0, 12000]  # Plot boundary limits for y-axis
+    ylimits = [0, 10000]  # Plot boundary limits for y-axis
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution estimation'  # Title for 1D animation plot
-    legend = ['Estimate', '$\pm 2 \sigma$', '', 'Simulated observations']  # Adding legend to plot
-    line_color = ['blue', 'blue', 'blue', 'red']  # Colors of lines in plot
+    legend = ['Estimate', '$\pm 2 \sigma$', '', 'Truth']  # Adding legend to plot
+    line_color = ['blue', 'blue', 'blue', 'green']  # Colors of lines in plot
     line_style = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
+    delay = 30  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
     ylimits_cond = [0, 2]  # Plot boundary limits for y-axis
@@ -247,54 +233,38 @@ if __name__ == '__main__':
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate estimation'  # Title for plot
     location_cond = location + '2'  # Location for plot
-    legend_cond = ['Truth']  # Adding legend to plot
-    line_color_cond = ['green']  # Colors of lines in plot
-    line_style_cond = ['solid']  # Style of lines in plot
+    legend_cond = ['Guess', 'Truth']  # Adding legend to plot
+    line_color_cond = ['blue', 'green']  # Colors of lines in plot
+    line_style_cond = ['solid', 'solid']  # Style of lines in plot
     delay_cond = 0  # Delay for each frame (ms)
 
     # Parameters for deposition plot:
-    ylimits_depo = [0, 1]  # Plot boundary limits for y-axis
+    ylimits_depo = [0, 0.6]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate estimation'  # Title for plot
     location_depo = location + '3'  # Location for plot
-    legend_depo = ['Truth']  # Adding legend to plot
-    line_color_depo = ['green']  # Colors of lines in plot
-    line_style_depo = ['solid']  # Style of lines in plot
+    legend_depo = ['Guess', 'Truth']  # Adding legend to plot
+    line_color_depo = ['blue', 'green']  # Colors of lines in plot
+    line_style_depo = ['solid', 'solid']  # Style of lines in plot
     delay_depo = delay_cond  # Delay between frames in milliseconds
 
     # Size distribution animation:
-    basic_tools.plot_1D_animation(d_plot, n_Dp_plot, n_Dp_plot_lower, n_Dp_plot_upper, plot_add=(d_obs, Y), xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
-                                  location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, line_style=line_style, doing_mainloop=False)
+    basic_tools.plot_1D_animation(d_plot, n_Dp_plot, n_Dp_plot_lower, n_Dp_plot_upper, plot_add=(d_true, n_Dp_true), xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
+                                  delay=delay, location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, line_style=line_style, doing_mainloop=False)
 
     # Condensation rate animation:
-    basic_tools.plot_1D_animation(d_plot, cond_Dp_true_plot, xlimits=xlimits, ylimits=ylimits_cond, xscale=xscale, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
+    basic_tools.plot_1D_animation(d_plot, cond_Dp_guess_plot, cond_Dp_truth_plot, xlimits=xlimits, ylimits=ylimits_cond, xscale=xscale, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
                                   location=location_cond, delay=delay_cond, legend=legend_cond, time=time, timetext=timetext, line_color=line_color_cond, line_style=line_style_cond, doing_mainloop=False)
 
     # Deposition rate animation:
-    basic_tools.plot_1D_animation(d_plot, depo_true_plot, xlimits=xlimits, ylimits=ylimits_depo, xscale=xscale, xlabel=xlabel_depo, ylabel=ylabel_depo, title=title_depo,
+    basic_tools.plot_1D_animation(d_plot, depo_guess_plot, depo_truth_plot, xlimits=xlimits, ylimits=ylimits_depo, xscale=xscale, xlabel=xlabel_depo, ylabel=ylabel_depo, title=title_depo,
                                   location=location_depo, delay=delay_depo, legend=legend_depo, time=time, timetext=timetext, line_color=line_color_depo, line_style=line_style_depo, doing_mainloop=False)
 
     # Mainloop and print:
     if plot_animations:
         print('Plotting animations...')
         mainloop()  # Runs tkinter GUI for plots and animations
-
-
-    #######################################################
-    # Plotting nucleation rate:
-    if plot_nucleation:
-        print('Plotting nucleation...')
-        figJ, axJ = plt.subplots(figsize=(8.00, 5.00), dpi=100)
-        plt.plot(time, sorc_Dp_true_plot, 'g-', label='Truth')
-        axJ.set_xlim([0, T])
-        axJ.set_ylim([0, 3500])
-        axJ.set_xlabel('$t$ (hour)', fontsize=12)
-        axJ.set_ylabel('$J(t)$ \n $(\mu$m$^{-1}$cm$^{-3}$ hour$^{-1}$)', fontsize=12, rotation=0)
-        axJ.yaxis.set_label_coords(-0.015, 1.02)
-        axJ.set_title('Nucleation rate esimation', fontsize=12)
-        axJ.grid()
-        axJ.legend(fontsize=11, loc='upper left')
 
 
     #######################################################
@@ -308,7 +278,7 @@ if __name__ == '__main__':
     title_image = 'Size distribution estimation'  # Title for image
     title_image_observations = 'Simulated observations'  # Title for image
     image_min = 100  # Minimum of image colour
-    image_max = 12000  # Maximum of image colour
+    image_max = 10000  # Maximum of image colour
     cmap = 'jet'  # Colour map of image
     cbarlabel = '$\dfrac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$'  # Label of colour bar
     cbarticks = [100, 1000, 10000]  # Ticks of colorbar

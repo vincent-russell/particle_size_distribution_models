@@ -18,13 +18,15 @@ from evolution_models.tools import Fuchs_Brownian
 # Setup and plotting:
 smoothing = False  # Set to True to compute fixed interval Kalman smoother estimates
 plot_animations = True  # Set to True to plot animations
-plot_nucleation = True  # Set to True to plot nucleation plot
+# plot_nucleation = True  # Set to True to plot nucleation plot
 plot_images = True  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
+coagulation_suffix = '1_to_10_micro_metres'  # Suffix of saved coagulation tensors file
+data_filename = 'observations_01'  # Filename for data of simulated observations
 
 # Spatial domain:
 Dp_min = 1  # Minimum diameter of particles (micro m)
-Dp_max = 5  # Maximum diameter of particles (micro m)
+Dp_max = 10  # Maximum diameter of particles (micro m)
 vmin = diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
 vmax = diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
 
@@ -34,7 +36,7 @@ T = 24  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
 # Size distribution discretisation:
-Ne = 32  # Number of elements
+Ne = 50  # Number of elements
 Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 
@@ -62,7 +64,7 @@ sigma_alpha_prior_4 = 0
 sigma_alpha_prior_5 = 0
 sigma_alpha_prior_6 = 0
 # Prior covariance for gamma; Gamma_gamma_prior = sigma_gamma_prior^2 * I_N_gamma (Condensation rate):
-sigma_gamma_prior_0 = 0.3
+sigma_gamma_prior_0 = 0.4
 sigma_gamma_prior_1 = sigma_gamma_prior_0 / 2
 sigma_gamma_prior_2 = sigma_gamma_prior_1 / 4
 sigma_gamma_prior_3 = 0
@@ -70,7 +72,7 @@ sigma_gamma_prior_4 = 0
 sigma_gamma_prior_5 = 0
 sigma_gamma_prior_6 = 0
 # Prior covariance for eta; Gamma_eta_prior = sigma_eta_prior^2 * I_N_eta (Deposition rate):
-sigma_eta_prior_0 = 0.2
+sigma_eta_prior_0 = 0.3
 sigma_eta_prior_1 = sigma_eta_prior_0 / 2
 sigma_eta_prior_2 = sigma_eta_prior_1 / 4
 sigma_eta_prior_3 = 0
@@ -150,9 +152,9 @@ gamma_first_element_multiplier = 2
 eta_first_element_multiplier = 2
 
 # Initial guess of the size distribution n_0(v) = n(v, 0):
-N_0 = 1e3  # Amplitude of initial condition gaussian
-v_0 = 10  # Mean of initial condition gaussian
-sigma_0 = 2.5  # Standard deviation of initial condition gaussian
+N_0 = 300  # Amplitude of initial condition gaussian
+v_0 = diameter_to_volume(4)  # Mean of initial condition gaussian
+sigma_0 = 15  # Standard deviation of initial condition gaussian
 def initial_guess_size_distribution(v):
     return gaussian(v, N_0, v_0, sigma_0)
 
@@ -168,24 +170,25 @@ def initial_guess_deposition_rate(_):
 boundary_zero = True
 
 # True underlying condensation model I_Dp(Dp, t):
-I_0 = 0.05  # Condensation parameter constant
+I_0 = 0.2  # Condensation parameter constant
 I_1 = 1  # Condensation parameter inverse quadratic
 def cond(Dp):
     return I_0 + I_1 / (Dp ** 2)
 
 # True underlying deposition model d(Dp, t):
-d_0 = 1  # Deposition parameter constant
-d_1 = -0.6  # Deposition parameter linear
-d_2 = -(d_1 / 2) / 3  # Deposition parameter quadratic
+depo_Dpmin = 5  # Deposition parameter; diameter at which minimum
+d_0 = 0.4  # Deposition parameter constant
+d_1 = -0.15  # Deposition parameter linear
+d_2 = -d_1 / (2 * depo_Dpmin)  # Deposition parameter quadratic
 def depo(Dp):
     return d_0 + d_1 * Dp + d_2 * Dp ** 2  # Quadratic model output
 
-# True underlying source (nucleation event) model:
-N_s = 2e3  # Amplitude of gaussian nucleation event
-t_s = 8  # Mean time of gaussian nucleation event
-sigma_s = 1.5  # Standard deviation time of gaussian nucleation event
-def sorc(t):  # Source (nucleation) at vmin
-    return gaussian(t, N_s, t_s, sigma_s)  # Gaussian source (nucleation event) model output
+# # True underlying source (nucleation event) model:
+# N_s = 2e3  # Amplitude of gaussian nucleation event
+# t_s = 8  # Mean time of gaussian nucleation event
+# sigma_s = 1.5  # Standard deviation time of gaussian nucleation event
+# def sorc(t):  # Source (nucleation) at vmin
+#     return gaussian(t, N_s, t_s, sigma_s)  # Gaussian source (nucleation event) model output
 
 # Coagulation model:
 def coag(v_x, v_y):

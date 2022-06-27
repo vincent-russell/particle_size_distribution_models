@@ -18,7 +18,7 @@ plot_animations = True  # Set to True to plot animations
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 coagulation_suffix = '1_to_10_micro_metres'  # Suffix of saved coagulation tensors file
-data_filename = 'observations_03'  # Filename for data of simulated observations
+data_filename = 'observations_03_2'  # Filename for data of simulated observations
 
 # Spatial domain:
 Dp_min = 1  # Minimum diameter of particles (micro m)
@@ -48,8 +48,8 @@ sigma_alpha_prior_6 = 0
 
 # Model noise parameters:
 # Observation noise covariance parameters:
-sigma_v = 1000  # Additive noise
-sigma_Y_multiplier = 100  # Noise multiplier proportional to Y
+sigma_v = 2000  # Additive noise
+sigma_Y_multiplier = 0  # Noise multiplier proportional to Y
 # Evolution noise covariance Gamma_alpha_w = sigma_alpha_w^2 * I_N (Size distribution):
 sigma_alpha_w_0 = sigma_alpha_prior_0
 sigma_alpha_w_1 = sigma_alpha_prior_1
@@ -72,14 +72,14 @@ def initial_guess_size_distribution(v):
 
 # Guess of the condensation rate I(Dp):
 I_0_guess = 0.2  # Condensation parameter constant
-I_1_guess = 1  # Condensation parameter inverse quadratic
+I_1_guess = 0  # Condensation parameter inverse quadratic
 def guess_cond(Dp):
     return I_0_guess + I_1_guess / (Dp ** 2)
 
 # Guess of the deposition rate d(Dp):
 depo_Dpmin_guess = 5  # Deposition parameter; diameter at which minimum
-d_0_guess = 0.4  # Deposition parameter constant
-d_1_guess = -0.15  # Deposition parameter linear
+d_0_guess = 0.2  # Deposition parameter constant
+d_1_guess = 0  # Deposition parameter linear
 d_2_guess = -d_1_guess / (2 * depo_Dpmin_guess)  # Deposition parameter quadratic
 def guess_depo(Dp):
     return d_0_guess + d_1_guess * Dp + d_2_guess * Dp ** 2  # Quadratic model output

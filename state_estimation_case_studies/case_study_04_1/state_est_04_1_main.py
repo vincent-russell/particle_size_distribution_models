@@ -16,15 +16,15 @@ from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from basic_tools import Extended_Kalman_filter, compute_fixed_interval_extended_Kalman_smoother
+from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
 from observation_models.data.simulated import load_observations
 from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_basis_volume_to_diameter
-from observation_models.tools import Size_distribution_observation_model, Size_distribution_observation_model_Jacobian
+from observation_models.tools import Size_distribution_observation_model
 
 
 #######################################################
 # Importing parameter file:
-from state_estimation_case_studies.case_study_02.state_est_02_parameters import *
+from state_estimation_case_studies.case_study_04_1.state_est_04_1_parameters import *
 
 
 #######################################################
@@ -49,13 +49,7 @@ if __name__ == '__main__':
     F_alpha.add_process('condensation', guess_cond)  # Adding condensation to evolution model
     F_alpha.add_process('deposition', guess_depo)  # Adding deposition to evolution model
     F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
-    F_alpha.compile(time_integrator='euler')  # Compiling evolution model and adding time integrator
-
-
-    #######################################################
-    # Constructing state evolution model:
-    def F(alpha, t):
-        return F_alpha.eval(alpha, t)
+    F_alpha.compile()  # Compiling evolution model
 
 
     #######################################################
@@ -65,36 +59,45 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Constructing Jacobian of state evolution model:
-    def J_F(alpha, t):
-        return dF_alpha_d_alpha(alpha, t)
+    # Functions to compute/update evolution operator, Jacobians, and covariance using Crank-Nicolson method:
+
+    # Function to compute evolution operator Jacobians:
+    def compute_evolution_operator_Jacobians(alpha_star, t_star):
+        # Computing Jacobians:
+        J_alpha_star = dF_alpha_d_alpha(alpha_star, t_star)
+        return J_alpha_star
+
+    # Function to compute evolution operator:
+    def compute_evolution_operator(alpha_star, t_star, J_alpha_star):
+        # Computing F_star:
+        F_star = F_alpha.eval(alpha_star, t_star) - np.matmul(J_alpha_star, alpha_star)
+        # Computing evolution operators for each coefficient:
+        matrix_multiplier = np.linalg.inv(np.eye(N) - (dt / 2) * J_alpha_star)  # Computing matrix multiplier for evolution operators and additive vector
+        F_evol_alpha = np.matmul(matrix_multiplier, (np.eye(N) + (dt / 2) * J_alpha_star))
+        # Computing evolution operator:
+        F_evolution = np.zeros([N, N])  # Initialising
+        F_evolution[0:N, 0:N] = F_evol_alpha
+        # Computing evolution additive vector:
+        b_evolution = np.zeros(N)  # Initialising
+        b_evolution[0:N] = np.matmul(matrix_multiplier, (dt * F_star))
+        return F_evolution, b_evolution
 
 
     #######################################################
     # Constructing observation model:
     M = len(Y)  # Dimension size of observations
     H_alpha = Size_distribution_observation_model(F_alpha, d_obs, M)  # Observation model
-    def H(x, *_):
-        alpha = x[0: N]  # Extracting alpha from state x
-        return H_alpha.eval(alpha)
-
-
-    #######################################################
-    # Constructing Jacobian of observation model:
-    J_H_alpha = Size_distribution_observation_model_Jacobian(H_alpha)  # Observation Jacobian
-    def J_H(*_):
-        output = np.zeros([M, N])
-        output[0:M, 0:N] = J_H_alpha.eval()
-        return output
+    H = np.zeros([M, N])  # Initialising
+    H[0:M, 0:N] = H_alpha.H_phi  # Observation operator
 
 
     #######################################################
     # Constructing noise covariance for observation model:
     Gamma_v = np.zeros([NT, M, M])  # Initialising
-    for t in range(NT):
-        Gamma_Y_multiplier = (sigma_Y_multiplier ** 2) * np.diag(Y[:, t])  # Noise proportional to Y
+    for k in range(NT):
+        Gamma_Y_multiplier = (sigma_Y_multiplier ** 2) * np.diag(Y[:, k])  # Noise proportional to Y
         Gamma_v_additive = (sigma_v ** 2) * np.eye(M)  # Additive noise
-        Gamma_v[t] = Gamma_Y_multiplier + Gamma_v_additive  # Observation noise covariance
+        Gamma_v[k] = Gamma_Y_multiplier + Gamma_v_additive  # Observation noise covariance
 
 
     #######################################################
@@ -137,29 +140,38 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Initialising evolution operator and additive evolution vector:
+    F = np.zeros([NT, N, N])  # Initialising evolution operator F_0, F_1, ..., F_{NT - 1}
+    b = np.zeros([N, NT])  # Initialising additive evolution vector b_0, b_1, ..., b_{NT - 1}
+
+
+    #######################################################
     # Constructing extended Kalman filter model:
-    model = Extended_Kalman_filter(F, J_F, H, J_H, Gamma_w, Gamma_v, NT)
+    model = Kalman_filter(F[0], H, Gamma_w, Gamma_v, NT, additive_evolution_vector=b[:, 0])
 
 
     #######################################################
     # Computing time evolution of model:
-    print('Computing Extended Kalman filter estimates...')
+    print('Computing Kalman filter estimates...')
     t = np.zeros(NT)  # Initialising time array
     for k in tqdm(range(NT - 1)):  # Iterating over time
-        x_predict[:, k + 1], Gamma_predict[k + 1] = model.predict(x[:, k], Gamma[k], t[k], k)  # Computing prediction
-        x[:, k + 1], Gamma[k + 1],  = model.update(x_predict[:, k + 1], Gamma_predict[k + 1], Y[:, k + 1], t[k], k)  # Computing update
+        J_alpha_star = compute_evolution_operator_Jacobians(x[:, k], t[k])  # Computing evolution operator Jacobian
+        F[k], b[:, k] = compute_evolution_operator(x[:, k], t[k], J_alpha_star)  # Computing evolution operator F and vector b
+        model.F, model.additive_evolution_vector = F[k], b[:, k]  # Adding updated evolution operator and vector b to Kalman Filter
+        x_predict[:, k + 1], Gamma_predict[k + 1] = model.predict(x[:, k], Gamma[k], k)  # Computing prediction
+        x[:, k + 1], Gamma[k + 1] = model.update(x_predict[:, k + 1], Gamma_predict[k + 1], Y[:, k + 1], k)  # Computing update
         t[k + 1] = (k + 1) * dt  # Time (hours)
 
 
     #######################################################
     # Computing smoothed estimates:
     if smoothing:
-        print('Computing Extended Kalman smoother estimates...')
-        x, Gamma = compute_fixed_interval_extended_Kalman_smoother(J_F, dt, NT, N, x, Gamma, x_predict, Gamma_predict)
+        print('Computing Kalman smoother estimates...')
+        x, Gamma = compute_fixed_interval_Kalman_smoother(F, NT, N, x, Gamma, x_predict, Gamma_predict)
 
 
     #######################################################
-    # Extracting alpha, gamma, eta, and covariances from state:
+    # Extracting alpha from state:
     alpha = x[0:N, :]  # Size distribution coefficients
     Gamma_alpha = Gamma[:, 0:N, 0:N]  # Size distribution covariance
 
@@ -213,7 +225,7 @@ if __name__ == '__main__':
     line_style = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
-    delay = 30  # Delay between frames in milliseconds
+    delay = 60  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
     ylimits_cond = [0, 2]  # Plot boundary limits for y-axis

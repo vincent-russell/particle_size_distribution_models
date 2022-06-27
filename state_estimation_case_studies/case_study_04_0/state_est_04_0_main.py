@@ -18,13 +18,13 @@ from tqdm import tqdm
 import basic_tools
 from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
 from observation_models.data.simulated import load_observations
-from evolution_models.tools import GDE_evolution_model, GDE_Jacobian
+from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_basis_volume_to_diameter
 from observation_models.tools import Size_distribution_observation_model
 
 
 #######################################################
 # Importing parameter file:
-from state_estimation_case_studies.case_study_04.state_est_04_parameters import *
+from state_estimation_case_studies.case_study_04_0.state_est_04_0_parameters import *
 
 
 #######################################################
@@ -39,9 +39,8 @@ if __name__ == '__main__':
     # Importing simulated observations and true size distribution:
     observation_data = load_observations(data_filename)  # Loading data file
     d_obs, Y = observation_data['d_obs'], observation_data['Y']  # Extracting observations
-    # d_true, n_v_true = observation_data['d_true'], observation_data['n_true']  # Extracting true size distribution
-    # v_obs = basic_tools.diameter_to_volume(d_obs)  # Converting diameter observations to volume
-    # v_true = basic_tools.diameter_to_volume(d_true)  # Converting true diameter to volume
+    d_true, n_v_true = observation_data['d_true'], observation_data['n_true']  # Extracting true size distribution
+    n_Dp_true = change_basis_volume_to_diameter(n_v_true, d_true)  # Computing diameter-based size distribution
 
 
     #######################################################
@@ -186,16 +185,20 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Computing true underlying parameters plotting discretisation:
+    # Computing true and guessed underlying parameters plotting discretisation:
     Nplot_cond = len(d_plot)  # Length of size discretisation
     Nplot_depo = len(d_plot)  # Length of size discretisation
-    cond_Dp_true_plot = np.zeros([Nplot_cond, NT])  # Initialising volume-based condensation rate
-    depo_true_plot = np.zeros([Nplot_depo, NT])  # Initialising deposition rate
+    cond_Dp_truth_plot = np.zeros([Nplot_cond, NT])  # Initialising condensation rate
+    cond_Dp_guess_plot = np.zeros([Nplot_cond, NT])  # Initialising condensation rate
+    depo_truth_plot = np.zeros([Nplot_depo, NT])  # Initialising deposition rate
+    depo_guess_plot = np.zeros([Nplot_depo, NT])  # Initialising deposition rate
     for k in range(NT):
         for i in range(Nplot_cond):
-            cond_Dp_true_plot[i, k] = cond(d_plot[i])  # Computing volume-based condensation rate
+            cond_Dp_truth_plot[i, k] = cond(d_plot[i])  # Computing condensation rate
+            cond_Dp_guess_plot[i, k] = guess_cond(d_plot[i])  # Computing condensation rate
         for i in range(Nplot_depo):
-            depo_true_plot[i, k] = depo(d_plot[i])  # Computing deposition rate
+            depo_truth_plot[i, k] = depo(d_plot[i])  # Computing deposition rate
+            depo_guess_plot[i, k] = guess_depo(d_plot[i])  # Computing deposition rate
 
 
     #######################################################
@@ -217,11 +220,12 @@ if __name__ == '__main__':
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution estimation'  # Title for 1D animation plot
-    legend = ['Estimate', '$\pm 2 \sigma$', '', 'Simulated observations']  # Adding legend to plot
-    line_color = ['blue', 'blue', 'blue', 'red']  # Colors of lines in plot
+    legend = ['Estimate', '$\pm 2 \sigma$', '', 'Truth']  # Adding legend to plot
+    line_color = ['blue', 'blue', 'blue', 'green']  # Colors of lines in plot
     line_style = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
+    delay = 60  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
     ylimits_cond = [0, 2]  # Plot boundary limits for y-axis
@@ -229,9 +233,9 @@ if __name__ == '__main__':
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate estimation'  # Title for plot
     location_cond = location + '2'  # Location for plot
-    legend_cond = ['Truth']  # Adding legend to plot
-    line_color_cond = ['green']  # Colors of lines in plot
-    line_style_cond = ['solid']  # Style of lines in plot
+    legend_cond = ['Guess', 'Truth']  # Adding legend to plot
+    line_color_cond = ['blue', 'green']  # Colors of lines in plot
+    line_style_cond = ['solid', 'solid']  # Style of lines in plot
     delay_cond = 0  # Delay for each frame (ms)
 
     # Parameters for deposition plot:
@@ -240,21 +244,21 @@ if __name__ == '__main__':
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate estimation'  # Title for plot
     location_depo = location + '3'  # Location for plot
-    legend_depo = ['Truth']  # Adding legend to plot
-    line_color_depo = ['green']  # Colors of lines in plot
-    line_style_depo = ['solid']  # Style of lines in plot
+    legend_depo = ['Guess', 'Truth']  # Adding legend to plot
+    line_color_depo = ['blue', 'green']  # Colors of lines in plot
+    line_style_depo = ['solid', 'solid']  # Style of lines in plot
     delay_depo = delay_cond  # Delay between frames in milliseconds
 
     # Size distribution animation:
-    basic_tools.plot_1D_animation(d_plot, n_Dp_plot, n_Dp_plot_lower, n_Dp_plot_upper, plot_add=(d_obs, Y), xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
-                                  location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, line_style=line_style, doing_mainloop=False)
+    basic_tools.plot_1D_animation(d_plot, n_Dp_plot, n_Dp_plot_lower, n_Dp_plot_upper, plot_add=(d_true, n_Dp_true), xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
+                                  delay=delay, location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, line_style=line_style, doing_mainloop=False)
 
     # Condensation rate animation:
-    basic_tools.plot_1D_animation(d_plot, cond_Dp_true_plot, xlimits=xlimits, ylimits=ylimits_cond, xscale=xscale, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
+    basic_tools.plot_1D_animation(d_plot, cond_Dp_guess_plot, cond_Dp_truth_plot, xlimits=xlimits, ylimits=ylimits_cond, xscale=xscale, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
                                   location=location_cond, delay=delay_cond, legend=legend_cond, time=time, timetext=timetext, line_color=line_color_cond, line_style=line_style_cond, doing_mainloop=False)
 
     # Deposition rate animation:
-    basic_tools.plot_1D_animation(d_plot, depo_true_plot, xlimits=xlimits, ylimits=ylimits_depo, xscale=xscale, xlabel=xlabel_depo, ylabel=ylabel_depo, title=title_depo,
+    basic_tools.plot_1D_animation(d_plot, depo_guess_plot, depo_truth_plot, xlimits=xlimits, ylimits=ylimits_depo, xscale=xscale, xlabel=xlabel_depo, ylabel=ylabel_depo, title=title_depo,
                                   location=location_depo, delay=delay_depo, legend=legend_depo, time=time, timetext=timetext, line_color=line_color_depo, line_style=line_style_depo, doing_mainloop=False)
 
     # Mainloop and print:

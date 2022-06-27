@@ -18,7 +18,7 @@ plot_animations = True  # Set to True to plot animations
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 coagulation_suffix = '1_to_10_micro_metres'  # Suffix of saved coagulation tensors file
-data_filename = 'observations_02'  # Filename for data of simulated observations
+data_filename = 'observations_03_0'  # Filename for data of simulated observations
 
 # Spatial domain:
 Dp_min = 1  # Minimum diameter of particles (micro m)
@@ -27,7 +27,7 @@ vmin = diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
 vmax = diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
 
 # Time domain:
-dt = (1 / 60) * 5  # Time step (hours)
+dt = (1 / 60) * 20  # Time step (hours)
 T = 24  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
