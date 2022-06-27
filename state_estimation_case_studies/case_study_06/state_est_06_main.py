@@ -24,7 +24,7 @@ from observation_models.tools import Size_distribution_observation_model
 
 #######################################################
 # Importing parameter file:
-from state_estimation_case_studies.case_study_05.state_est_05_parameters import *
+from state_estimation_case_studies.case_study_06.state_est_06_parameters import *
 
 
 #######################################################
