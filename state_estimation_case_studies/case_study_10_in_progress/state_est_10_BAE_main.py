@@ -20,7 +20,7 @@ from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, compute_U
 
 #######################################################
 # Importing parameter file:
-from state_estimation_case_studies.case_study_10.state_est_10_BAE_parameters import *
+from state_estimation_case_studies.case_study_10_in_progress.state_est_10_BAE_parameters import *
 
 
 #######################################################
