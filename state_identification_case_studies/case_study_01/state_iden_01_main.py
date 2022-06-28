@@ -18,7 +18,7 @@ from tqdm import tqdm
 import basic_tools
 from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
 from observation_models.data.simulated import load_observations
-from evolution_models.tools import GDE_evolution_model, change_basis_volume_to_diameter_sorc, GDE_Jacobian, compute_U
+from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, compute_U
 from observation_models.tools import Size_distribution_observation_model
 
 
@@ -418,7 +418,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing extended Kalman filter model:
-    model = Kalman_filter(F[0], H, Gamma_tilde_c_w, Gamma_v, NT, additive_evolution_vector=b[0, :])
+    model = Kalman_filter(F[0], H, Gamma_tilde_c_w, Gamma_v, NT, additive_evolution_vector=b[:, 0])
 
 
     #######################################################
