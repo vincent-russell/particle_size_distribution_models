@@ -17,14 +17,14 @@ from tqdm import tqdm
 # Local modules:
 import basic_tools
 from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
-from observation_models.data.simulated import load_observations
+from observation_models.data.CSTAR import load_observations
 from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_basis_x_to_logDp
 from observation_models.tools import Size_distribution_observation_model
 
 
 #######################################################
 # Importing parameter file:
-from state_estimation_case_studies.case_study_13.state_est_13_parameters import *
+from state_estimation_case_studies.case_study_16_in_progress.state_est_16_parameters import *
 
 
 #######################################################
@@ -215,9 +215,9 @@ if __name__ == '__main__':
 
     # Parameters for size distribution animation:
     xscale = 'log'  # x-axis scaling ('linear' or 'log')
-    xticks = [0.1, 1, 10]  # Plot x-tick labels
-    xlimits = [d_plot[0], d_plot[-1]]  # Plot boundary limits for x-axis
-    ylimits = [0, 10000]  # Plot boundary limits for y-axis
+    xticks = [Dp_min, 0.1, Dp_max]  # Plot x-tick labels
+    xlimits = [Dp_min, Dp_max]  # Plot boundary limits for x-axis
+    ylimits = [0, 300]  # Plot boundary limits for y-axis
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution estimation'  # Title for 1D animation plot
@@ -226,11 +226,11 @@ if __name__ == '__main__':
     line_style = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
-    delay = 60  # Delay between frames in milliseconds
+    delay = 15  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
     yscale_cond = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_cond = [1e-3, 1e1]  # Plot boundary limits for y-axis
+    ylimits_cond = [0, 0.01]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate estimation'  # Title for plot
@@ -242,7 +242,7 @@ if __name__ == '__main__':
 
     # Parameters for deposition plot:
     yscale_depo = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_depo = [1e-2, 1e1]  # Plot boundary limits for y-axis
+    ylimits_depo = [0, 1]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate estimation'  # Title for plot
@@ -275,17 +275,17 @@ if __name__ == '__main__':
 
     # Parameters for size distribution images:
     yscale_image = 'log'  # Change scale of y-axis (linear or log)
-    yticks_image = [0.1, 1, 10]  # Plot y-tick labels
+    yticks_image = [Dp_min, 0.1, Dp_max]  # Plot y-tick labels
     xlabel_image = 'Time (hours)'  # x-axis label for image
     ylabel_image = '$D_p$ ($\mu$m)'  # y-axis label for image
     ylabelcoords = (-0.06, 1.05)  # y-axis label coordinates
     title_image = 'Size distribution estimation'  # Title for image
     title_image_observations = 'Simulated observations'  # Title for image
-    image_min = 100  # Minimum of image colour
-    image_max = 10000  # Maximum of image colour
+    image_min = 1  # Minimum of image colour
+    image_max = 300  # Maximum of image colour
     cmap = 'jet'  # Colour map of image
     cbarlabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # Label of colour bar
-    cbarticks = [10, 100, 1000, 10000]  # Ticks of colorbar
+    cbarticks = [1, 10, 100]  # Ticks of colorbar
 
     # Plotting images:
     if plot_images:
