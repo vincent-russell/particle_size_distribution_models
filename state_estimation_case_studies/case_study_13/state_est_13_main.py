@@ -11,7 +11,6 @@ Date: June 27, 2022
 # Modules:
 import numpy as np
 import time as tm
-import matplotlib.pyplot as plt
 from tkinter import mainloop
 from tqdm import tqdm
 
@@ -19,13 +18,13 @@ from tqdm import tqdm
 import basic_tools
 from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
 from observation_models.data.simulated import load_observations
-from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_basis_x_to_logDp, change_basis_x_to_logDp_sorc
+from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_basis_x_to_logDp
 from observation_models.tools import Size_distribution_observation_model
 
 
 #######################################################
 # Importing parameter file:
-from state_estimation_case_studies.case_study_11.state_est_11_parameters import *
+from state_estimation_case_studies.case_study_13.state_est_13_parameters import *
 
 
 #######################################################
@@ -49,7 +48,6 @@ if __name__ == '__main__':
     F_alpha = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
     F_alpha.add_process('condensation', guess_cond)  # Adding condensation to evolution model
     F_alpha.add_process('deposition', guess_depo)  # Adding deposition to evolution model
-    F_alpha.add_process('source', guess_sorc)  # Adding source to evolution model
     F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F_alpha.compile()  # Compiling evolution model
 
@@ -194,19 +192,13 @@ if __name__ == '__main__':
     cond_Dp_guess_plot = np.zeros([Nplot_cond, NT])  # Initialising condensation rate
     depo_truth_plot = np.zeros([Nplot_depo, NT])  # Initialising deposition rate
     depo_guess_plot = np.zeros([Nplot_depo, NT])  # Initialising deposition rate
-    sorc_x_truth_plot = np.zeros(NT)  # Initialising log(volume)-based source (nucleation) rate
-    sorc_x_guess_plot = np.zeros(NT)  # Initialising log(volume)-based source (nucleation) rate
     for k in range(NT):
-        sorc_x_truth_plot[k] = sorc(t[k])  # Computing volume-based nucleation rate
-        sorc_x_guess_plot[k] = guess_sorc(t[k])  # Computing volume-based nucleation rate
         for i in range(Nplot_cond):
             cond_Dp_truth_plot[i, k] = cond(d_plot[i])  # Computing condensation rate
             cond_Dp_guess_plot[i, k] = guess_cond(d_plot[i])  # Computing condensation rate
         for i in range(Nplot_depo):
             depo_truth_plot[i, k] = depo(d_plot[i])  # Computing deposition rate
             depo_guess_plot[i, k] = guess_depo(d_plot[i])  # Computing deposition rate
-    sorc_logDp_truth_plot = change_basis_x_to_logDp_sorc(sorc_x_truth_plot, vmin, Dp_min)  # Computing log(diameter)-based nucleation rate
-    sorc_logDp_guess_plot = change_basis_x_to_logDp_sorc(sorc_x_guess_plot, vmin, Dp_min)  # Computing log(diameter)-based nucleation rate
 
 
     #######################################################
@@ -223,7 +215,7 @@ if __name__ == '__main__':
 
     # Parameters for size distribution animation:
     xscale = 'log'  # x-axis scaling ('linear' or 'log')
-    xticks = [0.01, 0.1, 1]  # Plot x-tick labels
+    xticks = [0.1, 1, 10]  # Plot x-tick labels
     xlimits = [d_plot[0], d_plot[-1]]  # Plot boundary limits for x-axis
     ylimits = [0, 10000]  # Plot boundary limits for y-axis
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
@@ -234,11 +226,11 @@ if __name__ == '__main__':
     line_style = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
-    delay = 120  # Delay between frames in milliseconds
+    delay = 60  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
     yscale_cond = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_cond = [0, 0.06]  # Plot boundary limits for y-axis
+    ylimits_cond = [1e-3, 1e1]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate estimation'  # Title for plot
@@ -250,7 +242,7 @@ if __name__ == '__main__':
 
     # Parameters for deposition plot:
     yscale_depo = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_depo = [0, 0.6]  # Plot boundary limits for y-axis
+    ylimits_depo = [1e-2, 1e1]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate estimation'  # Title for plot
@@ -279,27 +271,11 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Plotting nucleation rate:
-    if plot_nucleation:
-        print('Plotting nucleation...')
-        figJ, axJ = plt.subplots(figsize=(8.00, 5.00), dpi=100)
-        plt.plot(time, sorc_logDp_guess_plot, color='blue', label='Guess')
-        plt.plot(time, sorc_logDp_truth_plot, color='green', label='Truth')
-        plt.legend()
-        axJ.set_xlim([0, T])
-        axJ.set_ylim([0, 16000])
-        axJ.set_xlabel('$t$ (hour)', fontsize=12)
-        axJ.set_ylabel('$J(t)$ \n (cm$^{-3}$ hour$^{-1}$)', fontsize=12, rotation=0)
-        axJ.yaxis.set_label_coords(-0.015, 1.02)
-        axJ.set_title('Nucleation rate', fontsize=12)
-        axJ.grid()
-
-
-    #######################################################
     # Images:
 
     # Parameters for size distribution images:
-    yscale_image = 'linear'  # Change scale of y-axis (linear or log)
+    yscale_image = 'log'  # Change scale of y-axis (linear or log)
+    yticks_image = [0.1, 1, 10]  # Plot y-tick labels
     xlabel_image = 'Time (hours)'  # x-axis label for image
     ylabel_image = '$D_p$ ($\mu$m)'  # y-axis label for image
     ylabelcoords = (-0.06, 1.05)  # y-axis label coordinates
@@ -309,15 +285,15 @@ if __name__ == '__main__':
     image_max = 10000  # Maximum of image colour
     cmap = 'jet'  # Colour map of image
     cbarlabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # Label of colour bar
-    cbarticks = [100, 1000, 10000]  # Ticks of colorbar
+    cbarticks = [10, 100, 1000, 10000]  # Ticks of colorbar
 
     # Plotting images:
     if plot_images:
         print('Plotting images...')
         basic_tools.image_plot(time, d_plot, n_logDp_plot, xlabel=xlabel_image, ylabel=ylabel_image, title=title_image,
-                               yscale=yscale_image, ylabelcoords=ylabelcoords, image_min=image_min, image_max=image_max, cmap=cmap, cbarlabel=cbarlabel, cbarticks=cbarticks)
+                               yscale=yscale_image, ylabelcoords=ylabelcoords, yticks=yticks_image, image_min=image_min, image_max=image_max, cmap=cmap, cbarlabel=cbarlabel, cbarticks=cbarticks)
         basic_tools.image_plot(time, d_obs, Y, xlabel=xlabel_image, ylabel=ylabel_image, title=title_image_observations,
-                               yscale=yscale_image, ylabelcoords=ylabelcoords, image_min=image_min, image_max=image_max, cmap=cmap, cbarlabel=cbarlabel, cbarticks=cbarticks)
+                               yscale=yscale_image, ylabelcoords=ylabelcoords, yticks=yticks_image, image_min=image_min, image_max=image_max, cmap=cmap, cbarlabel=cbarlabel, cbarticks=cbarticks)
 
 
     # Final print statements
