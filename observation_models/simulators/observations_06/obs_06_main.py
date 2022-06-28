@@ -130,7 +130,7 @@ if __name__ == '__main__':
     xscale = 'log'  # x-axis scaling ('linear' or 'log')
     xticks = [0.01, 0.1, 1]  # Plot x-tick labels
     xlimits = [d_true[0], d_true[-1]]  # Plot boundary limits for x-axis
-    ylimits = [0, 12000]  # Plot boundary limits for y-axis
+    ylimits = [0, 10000]  # Plot boundary limits for y-axis
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution'  # Title for 1D animation plot
@@ -142,7 +142,7 @@ if __name__ == '__main__':
 
     # Parameters for condensation plot:
     yscale_cond = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_cond = [1e-5, 1e-2]  # Plot boundary limits for y-axis
+    ylimits_cond = [0, 0.06]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate'  # Title for plot
@@ -150,8 +150,8 @@ if __name__ == '__main__':
     line_color_cond = ['blue']  # Colors of lines in plot
 
     # Parameters for deposition plot:
-    yscale_depo = 'log'  # y-axis scaling ('linear' or 'log')
-    ylimits_depo = [0.01, 10]  # Plot boundary limits for y-axis
+    yscale_depo = 'linear'  # y-axis scaling ('linear' or 'log')
+    ylimits_depo = [0, 0.6]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate'  # Title for plot
@@ -196,7 +196,7 @@ if __name__ == '__main__':
 
     # Parameters for size distribution images:
     yscale_image = 'log'  # Change scale of y-axis (linear or log)
-    yticks_image = [0.003, 0.01, 0.1, 1]  # Plot y-tick labels
+    yticks_image = [0.01, 0.1, 1]  # Plot y-tick labels
     xlabel_image = 'Time (hours)'  # x-axis label for image
     ylabel_image = '$D_p$ ($\mu$m) \n'  # y-axis label for image
     ylabelcoords = (-0.06, 0.96)  # y-axis label coordinates
