@@ -50,7 +50,7 @@ if __name__ == '__main__':
     N_r = Ne_r * Np_r  # Total degrees of freedom
 
     # Loop parameters:
-    N_iterations = 1000  # Number of observations to compute
+    N_iterations = 1000  # Number of samples from prior to compute BAE
 
 
     #######################################################
