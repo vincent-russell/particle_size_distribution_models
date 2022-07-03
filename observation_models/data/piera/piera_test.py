@@ -10,9 +10,11 @@ Date: June 22, 2022
 #######################################################
 # Modules:
 import numpy as np
+import time as tm
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
+from tqdm import tqdm
 
 # Local modules:
 import basic_tools
@@ -30,20 +32,36 @@ if __name__ == '__main__':
     plot_aerosol_2D_log = True  # Set to true if plotting log(aerosol particle counts)
     aerosol_N_time_max = 68  # Maximum number of time steps allowed in aerosol count data for each event
     save_data = True  # Set to true to save dataset
-    save_as_image = True  # Set to true to save dataset as a .png file instead of a .csv file
     event_type = 'Tobacco'  # Axe, Vape, Tobacco, or All
+    data_pathname = 'C:/Users/Vincent/OneDrive - The University of Auckland/Python/particle_size_distribution_models/observation_models/data/piera/'  # String of path for data
+
+
+    #######################################################
+    # Initialising timer for total computation:
+    basic_tools.print_lines()
+    initial_time = tm.time()  # Initial time stamp
+
+
+    #######################################################
+    # Pre-loop initialisations:
+    aerosol_sizes = np.array([0.1, 0.3, 0.5, 1.0, 2.5, 5.0, 10])  # Array of aerosol sizes (diameter in micro meters)
+    event_observations = list()  # Initialising list of observations for each event
+    event_observations_log = list()  # Initialising list of log observations for each event
+    event_time = list()  # Initialising list of times for each event
+    event_source = list()  # Initliainsg list of source for each event
 
 
     #######################################################
     # Iterating over serial number:
-    for serial_number in np.arange(1, 11):
+    print('Iterating over serial number ' + event_type)
+    for serial_number in tqdm(np.arange(1, 11)):
 
 
         #######################################################
         # Loading dataframe:
-        event_df = pd.read_csv('/home/vm-aerosol/datasets/piera/events.csv')
-        round_1_df = pd.read_csv('/home/vm-aerosol/datasets/piera/round_1/Serial_' + str(serial_number) + '.csv')
-        round_2_df = pd.read_csv('/home/vm-aerosol/datasets/piera/round_2/Serial_' + str(serial_number) + '.csv')
+        event_df = pd.read_csv(data_pathname + 'events.csv')
+        round_1_df = pd.read_csv(data_pathname + 'round_1/Serial_' + str(serial_number) + '.csv')
+        round_2_df = pd.read_csv(data_pathname + 'round_2/Serial_' + str(serial_number) + '.csv')
         dataframe = pd.concat([round_1_df, round_2_df])
 
 
@@ -68,7 +86,6 @@ if __name__ == '__main__':
 
         #######################################################
         # Converting aerosol data to array:
-        aerosol_sizes = np.array([0.1, 0.3, 0.5, 1.0, 2.5, 5.0, 10])  # Array of aerosol sizes (diameter in micro meters)
         observations = dataframe.iloc[:, 2:9].to_numpy()  # Aerosol particle counts
         observations_log = np.log(observations + 1)  # Log transformation of particle counts
 
