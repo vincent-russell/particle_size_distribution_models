@@ -61,16 +61,12 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Functions to compute/update evolution operator, Jacobians, and covariance using Crank-Nicolson method:
-
-    # Function to compute evolution operator Jacobians:
-    def compute_evolution_operator_Jacobians(alpha_star, t_star):
-        # Computing Jacobians:
-        J_alpha_star = dF_alpha_d_alpha(alpha_star, t_star)
-        return J_alpha_star
+    # Functions to compute/update reduced evolution operator using Crank-Nicolson method:
 
     # Function to compute evolution operator:
-    def compute_evolution_operator(alpha_star, t_star, J_alpha_star):
+    def compute_evolution_operator(alpha_star, t_star):
+        # Computing J_star:
+        J_alpha_star = dF_alpha_d_alpha(alpha_star, t_star)
         # Computing F_star:
         F_star = F_alpha.eval(alpha_star, t_star) - np.matmul(J_alpha_star, alpha_star)
         # Computing evolution operators for each coefficient:
@@ -148,8 +144,13 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Constructing extended Kalman filter model:
-    model = Kalman_filter(F[0], H, Gamma_w, Gamma_v, NT, additive_evolution_vector=b[:, 0])
+    # Constructing Kalman filter model:
+    if use_BAE:
+        BAE_data = np.load(filename_BAE + '.npz')  # Loading BAE data
+        BAE_mean, BAE_covariance = BAE_data['BAE_mean'], BAE_data['BAE_covariance']  # Extracting mean and covariance from data
+        model = Kalman_filter(F[0], H, Gamma_w, Gamma_v, NT, additive_evolution_vector=b[:, 0], mean_epsilon=BAE_mean, Gamma_epsilon=BAE_covariance)
+    else:
+        model = Kalman_filter(F[0], H, Gamma_w, Gamma_v, NT, additive_evolution_vector=b[:, 0])
 
 
     #######################################################
@@ -157,8 +158,7 @@ if __name__ == '__main__':
     print('Computing Kalman filter estimates...')
     t = np.zeros(NT)  # Initialising time array
     for k in tqdm(range(NT - 1)):  # Iterating over time
-        J_alpha_star = compute_evolution_operator_Jacobians(x[:, k], t[k])  # Computing evolution operator Jacobian
-        F[k], b[:, k] = compute_evolution_operator(x[:, k], t[k], J_alpha_star)  # Computing evolution operator F and vector b
+        F[k], b[:, k] = compute_evolution_operator(x[:, k], t[k])  # Computing evolution operator F and vector b
         model.F, model.additive_evolution_vector = F[k], b[:, k]  # Adding updated evolution operator and vector b to Kalman Filter
         x_predict[:, k + 1], Gamma_predict[k + 1] = model.predict(x[:, k], Gamma[k], k)  # Computing prediction
         x[:, k + 1], Gamma[k + 1] = model.update(x_predict[:, k + 1], Gamma_predict[k + 1], Y[:, k + 1], k)  # Computing update
@@ -233,7 +233,7 @@ if __name__ == '__main__':
     line_style = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
-    delay = 120  # Delay between frames in milliseconds
+    delay = 60  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
     ylimits_cond = [0, 2]  # Plot boundary limits for y-axis

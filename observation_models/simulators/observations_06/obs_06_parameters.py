@@ -44,7 +44,7 @@ N = Ne * Np  # Total degrees of freedom
 # Observation parameters:
 M = 50  # Observation dimension size
 logDp_obs = linspace(log(Dp_min), log(Dp_max), M)  # Log(Diameters) that observations are made
-sample_volume = 0.005  # Volume of sample used in counting, y = (1 / sample_volume) * Pois(sample_volume * n)
+sample_volume = 0.001  # Volume of sample used in counting, y = (1 / sample_volume) * Pois(sample_volume * n)
 
 # Save data parameters:
 data_filename = 'observations_06'  # Filename for data of simulated observations

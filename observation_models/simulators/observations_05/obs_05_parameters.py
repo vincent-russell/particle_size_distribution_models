@@ -40,9 +40,9 @@ Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 
 # Observation parameters:
-M = 50  # Observation dimension size
+M = 20  # Observation dimension size
 d_obs = linspace(Dp_min, Dp_max, M)  # Diameters that observations are made
-sample_volume = 0.005  # Volume of sample used in counting, y = (1 / sample_volume) * Pois(sample_volume * n)
+sample_volume = 0.001  # Volume of sample used in counting, y = (1 / sample_volume) * Pois(sample_volume * n)
 
 # Save data parameters:
 data_filename = 'observations_05'  # Filename for data of simulated observations

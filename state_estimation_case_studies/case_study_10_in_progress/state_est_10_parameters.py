@@ -13,9 +13,11 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
-smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
+use_BAE = True  # Set to True to use BAE
+filename_BAE = 'state_est_10_BAE'  # Filename for BAE mean and covariance
+smoothing = False  # Set to True to compute fixed interval Kalman smoother estimates
 plot_animations = True  # Set to True to plot animations
-plot_nucleation = True  # Set to True to plot nucleation plot
+plot_nucleation = False  # Set to True to plot nucleation plot
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 coagulation_suffix = '1_to_10_micro_metres'  # Suffix of saved coagulation tensors file

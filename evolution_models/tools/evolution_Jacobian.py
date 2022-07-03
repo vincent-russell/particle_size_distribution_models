@@ -187,7 +187,8 @@ def get_dF_coag(F):
 class GDE_Jacobian:
     def __init__(self, F):
         # Print statement:
-        print('Initialising Jacobian of general dynamic equation evolution operator.')
+        if F.print_status:
+            print('Initialising Jacobian of general dynamic equation evolution operator.')
         # Properties for evaluation:
         self.N = F.N  # Total degrees of freedom
         self.dt = F.dt  # Time step

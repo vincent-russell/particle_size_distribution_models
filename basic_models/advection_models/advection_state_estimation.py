@@ -18,7 +18,7 @@ from tkinter import mainloop
 # Local modules:
 import basic_tools
 import basic_models.advection_models.tools as tools
-from state_space_identification_models.algorithms import Kalman_filter, compute_fixed_interval_Kalman_smoother
+from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
 
 
 #######################################################
@@ -140,6 +140,7 @@ if __name__ == '__main__':
     Gamma_v = np.zeros([NT, obs_dim, obs_dim])  # Initialising
     for k in range(NT):
         Gamma_v[k] = (sigma_v ** 2) * np.eye(obs_dim)  # Observation noise covariance
+
 
     #######################################################
     # Constructing noise covariances for evolution model:

@@ -1,5 +1,5 @@
 """
-Parameters for state estimation
+Parameters for BAE computation for state estimation
 """
 
 
@@ -12,14 +12,9 @@ from evolution_models.tools import Fuchs_Brownian
 #######################################################
 # Parameters:
 
-# Setup and plotting:
-smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
-plot_animations = True  # Set to True to plot animations
-plot_nucleation = True  # Set to True to plot nucleation plot
-plot_images = False  # Set to True to plot images
+# Setup:
 load_coagulation = True  # Set to True to load coagulation tensors
 coagulation_suffix = '1_to_10_micro_metres'  # Suffix of saved coagulation tensors file
-data_filename = 'observations_05'  # Filename for data of simulated observations
 
 # Spatial domain:
 Dp_min = 1  # Minimum diameter of particles (micro m)
@@ -36,33 +31,28 @@ NT = int(T / dt)  # Total number of time steps
 Ne = 50  # Number of elements
 Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
+# Solution discretisation for reduced model:
+Ne_r = 50  # Number of elements (needs to be a multiple of Ne)
+Np_r = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
+N_r = Ne_r * Np_r  # Total degrees of freedom
 
-# Prior noise parameters:
-# Prior covariance for alpha; Gamma_alpha_prior = sigma_alpha_prior^2 * I_N (Size distribution):
-sigma_alpha_prior_0 = 10
-sigma_alpha_prior_1 = sigma_alpha_prior_0 / 2
-sigma_alpha_prior_2 = sigma_alpha_prior_1 / 4
-sigma_alpha_prior_3 = 0
-sigma_alpha_prior_4 = 0
-sigma_alpha_prior_5 = 0
-sigma_alpha_prior_6 = 0
+# Loop parameters:
+filename_BAE = 'state_est_10_BAE'  # Filename for BAE mean and covariance
+N_iterations = 2  # Number of samples from prior to compute BAE
 
-# Model noise parameters:
-# Observation noise covariance parameters:
-sigma_v = 2000  # Additive noise
-sigma_Y_multiplier = 0  # Noise multiplier proportional to Y
-# Evolution noise covariance Gamma_alpha_w = sigma_alpha_w^2 * I_N (Size distribution):
-sigma_alpha_w_0 = sigma_alpha_prior_0
-sigma_alpha_w_1 = sigma_alpha_prior_1
-sigma_alpha_w_2 = sigma_alpha_prior_2
-sigma_alpha_w_3 = 0
-sigma_alpha_w_4 = 0
-sigma_alpha_w_5 = 0
-sigma_alpha_w_6 = 0
-sigma_alpha_w_correlation = 2
+# Coagulation model:
+def coag(v_x, v_y):
+    Dp_x = volume_to_diameter(v_x)  # Diameter of particle x (micro m)
+    Dp_y = volume_to_diameter(v_y)  # Diameter of particle y (micro m)
+    return Fuchs_Brownian(Dp_x, Dp_y)
 
-# Modifying first element covariance for alpha (size distribution):
-alpha_first_element_multiplier = 1000
+# Set to True for imposing boundary condition n(vmin, t) = 0:
+boundary_zero = True
+
+
+#=========================================================#
+# NOTE: The following parameters are for the reduced model.
+#=========================================================#
 
 # Initial guess of the size distribution n_0(v) = n(v, 0):
 N_0 = 300  # Amplitude of initial condition gaussian
@@ -91,33 +81,3 @@ t_s_guess = 7  # Mean time of gaussian nucleation event
 sigma_s_guess = 1.5  # Standard deviation time of gaussian nucleation event
 def guess_sorc(t):  # Source (nucleation) at vmin
     return gaussian(t, N_s_guess, t_s_guess, sigma_s_guess)  # Gaussian source (nucleation event) model output
-
-# Set to True for imposing boundary condition n(vmin, t) = 0:
-boundary_zero = True
-
-# True underlying condensation model I_Dp(Dp, t):
-I_0 = 0.2  # Condensation parameter constant
-I_1 = 1  # Condensation parameter inverse quadratic
-def cond(Dp):
-    return I_0 + I_1 / (Dp ** 2)
-
-# True underlying deposition model d(Dp, t):
-depo_Dpmin = 5  # Deposition parameter; diameter at which minimum
-d_0 = 0.4  # Deposition parameter constant
-d_1 = -0.15  # Deposition parameter linear
-d_2 = -d_1 / (2 * depo_Dpmin)  # Deposition parameter quadratic
-def depo(Dp):
-    return d_0 + d_1 * Dp + d_2 * Dp ** 2  # Quadratic model output
-
-# True underlying source (nucleation event) model:
-N_s = 5e3  # Amplitude of gaussian nucleation event
-t_s = 8  # Mean time of gaussian nucleation event
-sigma_s = 2  # Standard deviation time of gaussian nucleation event
-def sorc(t):  # Source (nucleation) at vmin
-    return gaussian(t, N_s, t_s, sigma_s)  # Gaussian source (nucleation event) model output
-
-# Coagulation model:
-def coag(v_x, v_y):
-    Dp_x = volume_to_diameter(v_x)  # Diameter of particle x (micro m)
-    Dp_y = volume_to_diameter(v_y)  # Diameter of particle y (micro m)
-    return Fuchs_Brownian(Dp_x, Dp_y)

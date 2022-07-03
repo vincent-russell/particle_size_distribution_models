@@ -27,12 +27,14 @@ from evolution_models.tools import (get_Legendre_basis, get_Legendre_basis_deriv
 class GDE_evolution_model:
 
     def __init__(self, Ne, Np, xmin, xmax, dt, NT, **kwargs):
-        # Print statement:
-        print_lines()
-        print('Initialising general dynamic equation evolution operator.')
         # Setup parameters:
+        self.print_status = get_kwarg_value(kwargs, 'print_status', True)  # Set to False to remove print statements
         self.scale_type = get_kwarg_value(kwargs, 'scale_type', 'linear')  # Size discretisation linear or log formulation ('linear' or 'log')
         self.boundary_zero = get_kwarg_value(kwargs, 'boundary_zero', True)  # Set to True for imposing boundary condition n(vmin, t) = 0
+        # Print statement:
+        if self.print_status:
+            print_lines()
+            print('Initialising general dynamic equation evolution operator.')
         # Time parameters:
         self.dt = dt  # Time step
         self.NT = NT  # Total number of time steps
@@ -87,7 +89,8 @@ class GDE_evolution_model:
 
     # Function to add process models to evolution model:
     def add_process(self, process, model, **kwargs):
-        print('Adding', process, 'to model...')
+        if self.print_status:
+            print('Adding', process, 'to model...')
         if process == 'condensation':
             self.cond = model
             self.Q = compute_Q(self.cond, self.N, self.Np, self.x_boundaries, self.phi, self.dphi, self.scale_type)
@@ -107,7 +110,8 @@ class GDE_evolution_model:
             coagulation_suffix = get_kwarg_value(kwargs, 'coagulation_suffix', False)  # Set to True to save coagulation tensors
             # Loading or computing coagulation tensors:
             if load_coagulation:
-                print('Loading coagulation data...')
+                if self.print_status:
+                    print('Loading coagulation data...')
                 if not coagulation_suffix:
                     data_filename = 'Coagulation_data_Ne=' + str(self.Ne) + '_Np=' + str(self.Np) + '_' + self.scale_type
                 else:
@@ -120,7 +124,8 @@ class GDE_evolution_model:
             self.f_coag = Coagulation_evolution(self).eval
             # Saving coagulation tensors:
             if save_coagulation:
-                print('Saving coagulation data...')
+                if self.print_status:
+                    print('Saving coagulation data...')
                 if not coagulation_suffix:
                     data_filename = 'Coagulation_data_Ne=' + str(self.Ne) + '_Np=' + str(self.Np) + '_' + self.scale_type + '.npz'
                 else:
@@ -130,10 +135,12 @@ class GDE_evolution_model:
 
     # Function to add unknown process models to evolution model:
     def add_unknown(self, process, Ne_process=None, Np_process=None):  # Default for Ne and Np is None
-        print('Adding', process, 'as unknown to model...')
+        if self.print_status:
+            print('Adding', process, 'as unknown to model...')
         self.unknowns.append(process)
         if process == 'condensation':
-            print('Computing condensation as unknown operator...')
+            if self.print_status:
+                print('Computing condensation as unknown operator...')
             self.Ne_gamma, self.Np_gamma = Ne_process, Np_process
             self.N_gamma = self.Ne_gamma * self.Np_gamma
             if self.scale_type == 'log':
@@ -146,7 +153,8 @@ class GDE_evolution_model:
             self.R2_gamma = compute_R2_gamma(self.Ne, self.Np, self.N_gamma, self.phi, self.phi_gamma, self.x_boundaries, self.scale_type)
             self.f_cond = Condensation_unknown_evolution(self).eval
         elif process == 'deposition':
-            print('Computing deposition as unknown operator...')
+            if self.print_status:
+                print('Computing deposition as unknown operator...')
             self.Ne_eta, self.Np_eta = Ne_process, Np_process
             self.N_eta = self.Ne_eta * self.Np_eta
             if self.scale_type == 'log':
@@ -157,7 +165,8 @@ class GDE_evolution_model:
             self.D_eta = compute_D_eta(self.N, self.Np, self.Np_eta, self.N_eta, self.phi, self.phi_eta, self.x_boundaries, self.scale_type)
             self.f_depo = Deposition_unknown_evolution(self).eval
         elif process == 'source':
-            print('Computing source as unknown operator...')
+            if self.print_status:
+                print('Computing source as unknown operator...')
             self.f_sorc = Source_unknown_evolution(self).eval
 
     # Compilation of model (for example: getting function f such that dalpha(t) / dt = f(x(t), t)):
@@ -183,7 +192,8 @@ class GDE_evolution_model:
 
     # Computing plotting discretisation over [0, T] from all alpha = [alpha_0, alpha_1, ..., alpha_NT]:
     def get_nplot_discretisation(self, alpha, **kwargs):
-        print('Computing size distribution plotting discretisation...')
+        if self.print_status:
+            print('Computing size distribution plotting discretisation...')
         Gamma_alpha = get_kwarg_value(kwargs, 'Gamma_alpha', np.zeros([self.NT, self.N, self.N]))  # Covariance matrix of alpha
         convert_v_to_Dp = get_kwarg_value(kwargs, 'convert_v_to_Dp', False)  # Set to True to convert from n_v to n_Dp (and covariance)
         convert_x_to_logDp = get_kwarg_value(kwargs, 'convert_x_to_logDp', False)  # Set to True to convert from n_x to n_logDp (and covariance)
@@ -205,15 +215,18 @@ class GDE_evolution_model:
     # Computing plotting discretisation parameter over [0, T]:
     def get_parameter_estimation_discretisation(self, process, coefficient, Gamma, **kwargs):
         if process == 'condensation':
-            print('Computing condensation plotting discretisation...')
+            if self.print_status:
+                print('Computing condensation plotting discretisation...')
             _, d_plot, cond_plot, sigma_cond = get_plotting_discretisation(coefficient, Gamma, self.x_boundaries_gamma, self.h_gamma, self.phi_gamma, self.N_gamma, self.Ne_gamma, self.Np_gamma, 'linear')
             return _, d_plot, cond_plot, sigma_cond
         elif process == 'deposition':
-            print('Computing deposition plotting discretisation...')
+            if self.print_status:
+                print('Computing deposition plotting discretisation...')
             _, d_plot, depo_plot, sigma_depo = get_plotting_discretisation(coefficient, Gamma, self.x_boundaries_eta, self.h_eta, self.phi_eta, self.N_eta, self.Ne_eta, self.Np_eta, 'linear')
             return _, d_plot, depo_plot, sigma_depo
         elif process == 'nucleation':
-            print('Computing nucleation plotting discretisation...')
+            if self.print_status:
+                print('Computing nucleation plotting discretisation...')
             # Parameters:
             convert_v_to_Dp = get_kwarg_value(kwargs, 'convert_v_to_Dp', False)  # Set to True to convert from v to Dp (and covariance)
             convert_x_to_logDp = get_kwarg_value(kwargs, 'convert_x_to_logDp', False)  # Set to True to convert from x to logDp (and covariance)

@@ -8,10 +8,9 @@ Matrix and tensor computations
 import numpy as np
 from scipy.linalg import null_space
 from math import floor
-from tqdm import tqdm
 
 # Local modules:
-from basic_tools import GLnpt, timer, volume_to_diameter
+from basic_tools import GLnpt, volume_to_diameter, timer
 from evolution_models.tools import get_element_vector, get_element_matrix, Phi_ell_vector
 
 
@@ -61,7 +60,7 @@ def compute_Q(cond, N, Np, x_boundaries, phi, dphi, scale_type):
 
 #######################################################
 # Computes matrix R:
-@timer('condensation matrix R')
+# @timer('condensation matrix R')
 def compute_R(cond, Ne, Np, N, x_boundaries, phi, inv_M, Q, boundary_zero, scale_type):
     R = np.zeros([N, N])  # Initialising matrix R
     for ell in range(Ne):
@@ -104,7 +103,7 @@ def compute_R(cond, Ne, Np, N, x_boundaries, phi, inv_M, Q, boundary_zero, scale
 
 #######################################################
 # Computes tensor Q_gamma:
-@timer('condensation tensor Q_gamma')
+# @timer('condensation tensor Q_gamma')
 def compute_Q_gamma(Ne, Np, Np_gamma, N_gamma, phi, dphi, phi_gamma, x_boundaries, scale_type):
     Q = np.zeros([Ne, Np, N_gamma, Np])  # Initialising
     # Iterating over elements:
@@ -176,7 +175,7 @@ def compute_R2_gamma(Ne, Np, N_gamma, phi, phi_gamma, x_boundaries, scale_type):
 
 #######################################################
 # Computes matrix D:
-@timer('deposition matrix D')
+# @timer('deposition matrix D')
 def compute_D(depo, N, Np, x_boundaries, phi, scale_type):
     D = np.zeros([N, N])  # Initialising
     for i in range(N):
@@ -205,7 +204,7 @@ def compute_D(depo, N, Np, x_boundaries, phi, scale_type):
 
 #######################################################
 # Computes tensor D_eta:
-@timer('deposition tensor D_eta')
+# @timer('deposition tensor D_eta')
 def compute_D_eta(N, Np, Np_eta, N_eta, phi, phi_eta, x_boundaries, scale_type):
     D = np.zeros([N, N, N_eta])  # Initialising
     # Iterating over matrices j = 0, 1, ..., N - 1:
@@ -247,14 +246,13 @@ def compute_A(N, x_Gauss, phi):
 
 #######################################################
 # Computes B and C tensors:
-@timer('coagulation tensors B and C')
+# @timer('coagulation tensors B and C')
 def compute_B_C(coag, N, Np, x_boundaries, x_Gauss, phi, scale_type):
     B = np.zeros([N, N, N])  # Initialising
     C = np.zeros([N, N, N])  # Initialising
 
     # Iterating over i-th matrix in tensor:
-    print('Computing coagulation tensors B and C...')
-    for i in tqdm(range(N)):
+    for i in range(N):
 
         # Determining upper limit of B integral and condition check for non-zero integral from limit value:
         if scale_type == 'log':
@@ -341,3 +339,23 @@ def compute_U(N, Ne, Np, phi, x_boundaries):
     U = null_space(V)  # Null space of V
     UT = np.transpose(U)  # Transpose of U
     return U, UT
+
+
+#######################################################
+# Computing matrix G for projection operator in BAE computation:
+def compute_G(N, N_r, Np, Np_r, phi, phi_r, x_boundaries):
+    G = np.zeros([N_r, N])  # Initialising
+    for i in range(N):
+        ell_i = floor(i / Np)  # ell-th element for phi_i
+        degree_i = i - ell_i * Np  # Degree of polynomial i
+        for j in range(N_r):
+            ell_j = floor(j / Np_r)  # ell-th element for phi^r_j
+            degree_j = j - ell_j * Np_r  # Degree of polynomial j
+
+            # Integrand in G:
+            def G_integrand(x):
+                return phi_r[j](x) * phi[i](x)
+
+            GLorder = floor((degree_i + degree_j + 1) / 2) + 3  # Order of integration of Gauss-Legendre quadrature
+            G[j, i] = GLnpt(G_integrand, x_boundaries[ell_i], x_boundaries[ell_i + 1], GLorder)  # Computing entries
+    return G
