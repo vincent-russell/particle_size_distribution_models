@@ -31,7 +31,7 @@ xmin = log(vmin)  # Lower limit in log-size
 xmax = log(vmax)  # Upper limit in log-size
 
 # Time domain:
-dt = 0.0396  # Total number of time steps
+dt = 0.0396  # Time step (hours)
 NT = 167  # Total number of time steps
 T = dt * NT  # End time (hours)
 

@@ -41,9 +41,9 @@ if __name__ == '__main__':
     xmax = np.log(vmax)  # Upper limit in log-size
 
     # Time domain:
-    dt = (1 / 60) * (1 / 2)  # Time step (hours)
-    T = 1  # End time (hours)
-    NT = int(T / dt)  # Total number of time steps
+    T = (1 / 60) * 5  # End time (hours)
+    NT = 68  # Total number of time steps
+    dt = T / NT  # Time step
 
     # Size distribution discretisation:
     Ne = 50  # Number of elements
@@ -173,8 +173,8 @@ if __name__ == '__main__':
     ylabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution'  # Title for 1D animation plot
     line_color = ['blue']  # Colors of lines in plot
-    time = t  # Array where time[i] is plotted (and animated)
-    timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
+    time = t * 60  # Array where time[i] is plotted (and animated)
+    timetext = ('Time = ', ' minutes')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
     delay = 60  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
