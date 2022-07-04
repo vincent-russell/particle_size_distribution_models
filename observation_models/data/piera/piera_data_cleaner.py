@@ -9,6 +9,7 @@ Date: June 22, 2022
 
 #######################################################
 # Modules:
+from os import mkdir
 import numpy as np
 import time as tm
 import pandas as pd
@@ -25,15 +26,18 @@ if __name__ == '__main__':
 
     #######################################################
     # Parameters:
-    plot_aerosol_1D = False  # Set to True to plot aerosol in 1D
+    plot_aerosol_1D = False  # Set to true to plot aerosol in 1D
     event_number = 5  # Event number (Deodorant: 0-2, Vape: 3-7, Smoke: 8-10)
     size_number = 0  # Particle size number
     plot_aerosol_2D = False  # Plot heat map of aerosol particle counts
     plot_aerosol_2D_log = True  # Set to true if plotting log(aerosol particle counts)
     aerosol_N_time_max = 68  # Maximum number of time steps allowed in aerosol count data for each event
     save_data = True  # Set to true to save dataset
-    event_type = 'Tobacco'  # Axe, Vape, Tobacco, or All
-    data_pathname = 'C:/Users/Vincent/OneDrive - The University of Auckland/Python/particle_size_distribution_models/observation_models/data/piera/'  # String of path for data
+    data_create_dir = False  # Set to true to also create directory for saved data
+    data_include_time = True  # Set to true to also include time in data .csv files
+    event_type = 'Vape'  # Axe, Vape, Tobacco, or All
+    data_load_from_path = 'C:/Users/Vincent/OneDrive - The University of Auckland/Python/particle_size_distribution_models/observation_models/data/piera/data_raw/'  # Path of data to load from
+    data_save_to_path = 'C:/Users/Vincent/OneDrive - The University of Auckland/Python/particle_size_distribution_models/observation_models/data/piera/data_clean/'  # Path of data to save to
 
 
     #######################################################
@@ -52,6 +56,12 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Pre-loop initialisations:
+    if data_create_dir:
+        mkdir(data_save_to_path + event_type + '/')
+
+
+    #######################################################
     # Iterating over serial number:
     print('Iterating over serial number ' + event_type)
     for serial_number in tqdm(np.arange(1, 11)):
@@ -59,9 +69,9 @@ if __name__ == '__main__':
 
         #######################################################
         # Loading dataframe:
-        event_df = pd.read_csv(data_pathname + 'events.csv')
-        round_1_df = pd.read_csv(data_pathname + 'round_1/Serial_' + str(serial_number) + '.csv')
-        round_2_df = pd.read_csv(data_pathname + 'round_2/Serial_' + str(serial_number) + '.csv')
+        event_df = pd.read_csv(data_load_from_path + 'events.csv')
+        round_1_df = pd.read_csv(data_load_from_path + 'round_1/Serial_' + str(serial_number) + '.csv')
+        round_2_df = pd.read_csv(data_load_from_path + 'round_2/Serial_' + str(serial_number) + '.csv')
         dataframe = pd.concat([round_1_df, round_2_df])
 
 
@@ -109,12 +119,16 @@ if __name__ == '__main__':
                     event_i_time = np.append(event_i_time, time[k])  # Appending i-th event time
                     event_i_obs = np.append(event_i_obs, np.reshape(observations[k, :], (1, 7)), axis = 0)  # Appending i-th event aerosol counts
                     event_i_obs_log = np.append(event_i_obs_log, np.reshape(observations_log[k, :], (1, 7)), axis = 0)  # Appending i-th event log aerosol counts
-
+            # Cutting observations to maximum time size:
+            event_i_obs = event_i_obs[0: aerosol_N_time_max]
+            event_i_obs_log = event_i_obs_log[0: aerosol_N_time_max]
+            # Cutting time to maximum time size and zero-ing time (setting first element to 0):
+            event_i_time = event_i_time[0: aerosol_N_time_max]
+            event_i_time = event_i_time - event_i_time[0]
             # Adding i-th event data to lists and cutting to max time index:
-            event_observations.append(event_i_obs[0: aerosol_N_time_max])  # Adding i-th event observations to list
-            event_observations_log.append(event_i_obs_log[0: aerosol_N_time_max])  # Adding i-th event log observations to list
-            event_time.append(event_i_time[0: aerosol_N_time_max])  # Adding i-th event times to list
-
+            event_observations.append(event_i_obs)  # Adding i-th event observations to list
+            event_observations_log.append(event_i_obs_log)  # Adding i-th event log observations to list
+            event_time.append(event_i_time)  # Adding i-th event times to list
         event_source = event_df[event_df['Activity'] == 'Source']['Source'].to_numpy()  # List of aerosol source for each event
 
 
@@ -135,11 +149,19 @@ if __name__ == '__main__':
         # Saving data to .csv file:
         if save_data:
             date_string = '21-03-2022'  # String of date of data
-            data_header = 'PC0.1, PC0.3, PC0.5, PC1.0, PC2.5, PC5.0, PC10'  # Header for .csv file for data
             for i in event_indices:  # Iterating over number of events
-                # Saving data of i-th event in .csv file:
-                with open(date_string + '-serial-' + str(serial_number) + '-event-' + str(i) + '.csv', 'a') as csvfile:
-                    np.savetxt(csvfile, event_observations_log[i], delimiter = ',', header = data_header, fmt = '%s', comments = '')
+                if data_include_time:
+                    data_header = 'Time (mins), PC0.1, PC0.3, PC0.5, PC1.0, PC2.5, PC5.0, PC10'  # Header for .csv file for data
+                    # Appending time array to observation array if including time in saved data:
+                    event_observations_and_time = np.append(np.reshape(event_time[i], (-1, 1)), event_observations[i], axis=1)
+                    # Saving data of i-th event in .csv file:
+                    with open(data_save_to_path + event_type + '/' + date_string + '-serial-' + str(serial_number) + '-event-' + str(i) + '.csv', 'a') as csvfile:
+                        np.savetxt(csvfile, event_observations_and_time, delimiter = ',', header = data_header, fmt = '%s', comments = '')
+                else:
+                    data_header = 'PC0.1, PC0.3, PC0.5, PC1.0, PC2.5, PC5.0, PC10'  # Header for .csv file for data
+                    # Saving data of i-th event in .csv file:
+                    with open(data_save_to_path + event_type + '/' + date_string + '-serial-' + str(serial_number) + '-event-' + str(i) + '.csv', 'a') as csvfile:
+                        np.savetxt(csvfile, event_observations[i], delimiter = ',', header = data_header, fmt = '%s', comments = '')
 
 
     #######################################################
