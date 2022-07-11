@@ -1,6 +1,6 @@
 """
 
-Title: Extracts and plots data from CSTAR data.csv file
+Title: Extracts data from CSTAR data.csv file
 Author: Vincent Russell
 Date: June 6, 2020
 

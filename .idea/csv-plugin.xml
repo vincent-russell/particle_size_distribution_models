@@ -3,6 +3,20 @@
   <component name="CsvFileAttributes">
     <option name="attributeMap">
       <map>
+        <entry key="\observation_models\data\CSTAR\data.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\observation_models\data\piera\data_clean\Axe\21-03-2022-serial-1-event-0.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\observation_models\data\piera\data_clean\Tobacco\21-03-2022-serial-1-event-8.csv">
           <value>
             <Attribute>

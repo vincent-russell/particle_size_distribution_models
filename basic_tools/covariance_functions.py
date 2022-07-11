@@ -7,6 +7,9 @@ Miscellaneous functions
 # Modules:
 from numpy import zeros, exp, arange
 
+# Local modules:
+from basic_tools import get_kwarg_value
+
 
 #######################################################
 # Function to compute simple covariance matrix with Legendre polynomial structure:
@@ -21,7 +24,8 @@ def compute_simple_covariance_matrix(N, Np, sigma):
 
 #######################################################
 # Function to compute correlated covariance matrix with Legendre polynomial structure:
-def compute_correlated_covariance_matrix(N, Np, Ne, sigma, correlation_strength):
+def compute_correlated_covariance_matrix(N, Np, Ne, sigma, correlation_strength, **kwargs):
+    use_element_multiplier = get_kwarg_value(kwargs, 'use_element_multiplier', True)
     matrix = zeros([N, N])  # Initialising
     var = sigma ** 2  # Variance computation
     element_multiplier = (1 / (Ne + 1)) * arange(Ne + 1, 1, -1)  # Multiplier as element increases
@@ -39,5 +43,8 @@ def compute_correlated_covariance_matrix(N, Np, Ne, sigma, correlation_strength)
                             if degree_i == degree_j:
                                 i = ell_i * Np + degree_i
                                 j = ell_j * Np + degree_j
-                                matrix[i, j] = element_multiplier[ell_i] * element_multiplier[ell_j] * var[degree_i] * exp(-(1 / correlation_strength) * element)
+                                if use_element_multiplier:
+                                    matrix[i, j] = element_multiplier[ell_i] * element_multiplier[ell_j] * var[degree_i] * exp(-(1 / correlation_strength) * element)
+                                else:
+                                    matrix[i, j] = var[degree_i] * exp(-(1 / correlation_strength) * element)
     return matrix

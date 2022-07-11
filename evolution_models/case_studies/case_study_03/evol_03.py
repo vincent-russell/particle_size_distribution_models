@@ -30,11 +30,11 @@ if __name__ == '__main__':
     plot_images = False  # Set to True to plot images
     load_coagulation = True  # Set to True to load coagulation tensors
     save_coagulation = False  # Set to True to save coagulation tensors
-    coagulation_suffix = '1_to_10_micro_metres'  # Suffix of saved coagulation tensors file
+    coagulation_suffix = '1_to_11_micro_metres'  # Suffix of saved coagulation tensors file
 
     # Spatial domain:
     Dp_min = 1  # Minimum diameter of particles (micro m)
-    Dp_max = 10  # Maximum diameter of particles (micro m)
+    Dp_max = 11  # Maximum diameter of particles (micro m)
     vmin = basic_tools.diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
     vmax = basic_tools.diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
 

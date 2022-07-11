@@ -1,8 +1,8 @@
 """
 
-Title: Computes estimates of the particle size distribution, condensation rate, deposition rate, and nucleation rate
+Title: State identification of aerosol particle size distribution
 Author: Vincent Russell
-Date: April 7, 2022
+Date: June 27, 2022
 
 """
 
@@ -18,7 +18,7 @@ from tqdm import tqdm
 import basic_tools
 from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
 from observation_models.data.simulated import load_observations
-from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, compute_U
+from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, compute_U, change_basis_volume_to_diameter
 from observation_models.tools import Size_distribution_observation_model
 
 
@@ -39,9 +39,8 @@ if __name__ == '__main__':
     # Importing simulated observations and true size distribution:
     observation_data = load_observations(data_filename)  # Loading data file
     d_obs, Y = observation_data['d_obs'], observation_data['Y']  # Extracting observations
-    # d_true, n_v_true = observation_data['d_true'], observation_data['n_true']  # Extracting true size distribution
-    # v_obs = basic_tools.diameter_to_volume(d_obs)  # Converting diameter observations to volume
-    # v_true = basic_tools.diameter_to_volume(d_true)  # Converting true diameter to volume
+    d_true, n_v_true = observation_data['d_true'], observation_data['n_true']  # Extracting true size distribution
+    n_Dp_true = change_basis_volume_to_diameter(n_v_true, d_true)  # Computing diameter-based size distribution
 
 
     #######################################################
@@ -266,12 +265,12 @@ if __name__ == '__main__':
 
     # For alpha:
     sigma_alpha_w = np.array([sigma_alpha_w_0, sigma_alpha_w_1, sigma_alpha_w_2, sigma_alpha_w_3, sigma_alpha_w_4, sigma_alpha_w_5, sigma_alpha_w_6])  # Array of standard deviations
-    Gamma_alpha_w = basic_tools.compute_correlated_covariance_matrix(N, Np, Ne, sigma_alpha_w, sigma_alpha_w_correlation)  # Covariance matrix computation
+    Gamma_alpha_w = basic_tools.compute_correlated_covariance_matrix(N, Np, Ne, sigma_alpha_w, sigma_alpha_w_correlation, use_element_multiplier=alpha_use_element_multipler)  # Covariance matrix computation
     Gamma_alpha_w[0: Np, 0: Np] = alpha_first_element_multiplier * Gamma_alpha_w[0: Np, 0: Np]  # First element multiplier
 
     # For gamma:
     sigma_gamma_w = np.array([sigma_gamma_w_0, sigma_gamma_w_1, sigma_gamma_w_2, sigma_gamma_w_3, sigma_gamma_w_4, sigma_gamma_w_5, sigma_gamma_w_6])  # Array of standard deviations
-    Gamma_gamma_w = basic_tools.compute_correlated_covariance_matrix(N_gamma, Np_gamma, Ne_gamma, sigma_gamma_w, sigma_gamma_w_correlation)  # Covariance matrix computation
+    Gamma_gamma_w = basic_tools.compute_correlated_covariance_matrix(N_gamma, Np_gamma, Ne_gamma, sigma_gamma_w, sigma_gamma_w_correlation, use_element_multiplier=gamma_use_element_multipler)  # Covariance matrix computation
     Gamma_gamma_w[0: Np_gamma, 0: Np_gamma] = gamma_first_element_multiplier * Gamma_gamma_w[0: Np_gamma, 0: Np_gamma]  # First element multiplier
     Gamma_gamma_tilde_w = np.zeros([gamma_p * N_gamma, gamma_p * N_gamma])  # Initialising covariance for gamma_tilde
     Gamma_gamma_tilde_w[0: N_gamma, 0: N_gamma] = Gamma_gamma_w  # Covariance for gamma_tilde
@@ -279,7 +278,7 @@ if __name__ == '__main__':
 
     # For eta:
     sigma_eta_w = np.array([sigma_eta_w_0, sigma_eta_w_1, sigma_eta_w_2, sigma_eta_w_3, sigma_eta_w_4, sigma_eta_w_5, sigma_eta_w_6])  # Array of standard deviations
-    Gamma_eta_w = basic_tools.compute_correlated_covariance_matrix(N_eta, Np_eta, Ne_eta, sigma_eta_w, sigma_eta_w_correlation)  # Covariance matrix computation
+    Gamma_eta_w = basic_tools.compute_correlated_covariance_matrix(N_eta, Np_eta, Ne_eta, sigma_eta_w, sigma_eta_w_correlation, use_element_multiplier=eta_use_element_multipler)  # Covariance matrix computation
     Gamma_eta_w[0: Np_eta, 0: Np_eta] = eta_first_element_multiplier * Gamma_eta_w[0: Np_eta, 0: Np_eta]  # First element multiplier
     Gamma_eta_tilde_w = np.zeros([eta_p * N_eta, eta_p * N_eta])  # Initialising covariance for eta_tilde
     Gamma_eta_tilde_w[0: N_eta, 0: N_eta] = Gamma_eta_w  # Covariance for eta_tilde
@@ -303,45 +302,15 @@ if __name__ == '__main__':
 
     # For alpha:
     alpha_prior = F_alpha.compute_coefficients('alpha', initial_guess_size_distribution)  # Computing alpha coefficients from initial condition function
-    Gamma_alpha_prior = np.eye(N)
-    for i in range(N):
-        if i % Np == 0:
-            Gamma_alpha_prior[i, i] = (sigma_alpha_prior_0 ** 2)
-        elif i % Np == 1:
-            Gamma_alpha_prior[i, i] = (sigma_alpha_prior_1 ** 2)
-        elif i % Np == 2:
-            Gamma_alpha_prior[i, i] = (sigma_alpha_prior_2 ** 2)
-        elif i % Np == 3:
-            Gamma_alpha_prior[i, i] = (sigma_alpha_prior_3 ** 2)
-        elif i % Np == 4:
-            Gamma_alpha_prior[i, i] = (sigma_alpha_prior_4 ** 2)
-        elif i % Np == 5:
-            Gamma_alpha_prior[i, i] = (sigma_alpha_prior_5 ** 2)
-        elif i % Np == 6:
-            Gamma_alpha_prior[i, i] = (sigma_alpha_prior_6 ** 2)
-    # First element multiplier:
-    Gamma_alpha_prior[0: Np, 0: Np] = alpha_first_element_multiplier * Gamma_alpha_prior[0: Np, 0: Np]
+    sigma_alpha_prior = np.array([sigma_alpha_prior_0, sigma_alpha_prior_1, sigma_alpha_prior_2, sigma_alpha_prior_3, sigma_alpha_prior_4, sigma_alpha_prior_5, sigma_alpha_prior_6])  # Array of standard deviations
+    Gamma_alpha_prior = basic_tools.compute_correlated_covariance_matrix(N, Np, Ne, sigma_alpha_prior, 0.001, use_element_multiplier=alpha_use_element_multipler)  # Covariance matrix computation
+    Gamma_alpha_prior[0: Np, 0: Np] = alpha_first_element_multiplier * Gamma_alpha_prior[0: Np, 0: Np]  # First element multiplier
 
     # For gamma:
     gamma_prior = F_alpha.compute_coefficients('gamma', initial_guess_condensation_rate)    # Computing gamma coefficients from initial guess of condensation rate
-    Gamma_gamma_prior = np.eye(N_gamma)
-    for i in range(N_gamma):
-        if i % Np_gamma == 0:
-            Gamma_gamma_prior[i, i] = (sigma_gamma_prior_0 ** 2)
-        elif i % Np_gamma == 1:
-            Gamma_gamma_prior[i, i] = (sigma_gamma_prior_1 ** 2)
-        elif i % Np_gamma == 2:
-            Gamma_gamma_prior[i, i] = (sigma_gamma_prior_2 ** 2)
-        elif i % Np_gamma == 3:
-            Gamma_gamma_prior[i, i] = (sigma_gamma_prior_3 ** 2)
-        elif i % Np_gamma == 4:
-            Gamma_gamma_prior[i, i] = (sigma_gamma_prior_4 ** 2)
-        elif i % Np_gamma == 5:
-            Gamma_gamma_prior[i, i] = (sigma_gamma_prior_5 ** 2)
-        elif i % Np_gamma == 6:
-            Gamma_gamma_prior[i, i] = (sigma_gamma_prior_6 ** 2)
-    # First element multiplier:
-    Gamma_gamma_prior[0: Np_gamma, 0: Np_gamma] = gamma_first_element_multiplier * Gamma_gamma_prior[0: Np_gamma, 0: Np_gamma]
+    sigma_gamma_prior = np.array([sigma_gamma_prior_0, sigma_gamma_prior_1, sigma_gamma_prior_2, sigma_gamma_prior_3, sigma_gamma_prior_4, sigma_gamma_prior_5, sigma_gamma_prior_6])  # Array of standard deviations
+    Gamma_gamma_prior = basic_tools.compute_correlated_covariance_matrix(N_gamma, Np_gamma, Ne_gamma, sigma_gamma_prior, 0.001, use_element_multiplier=gamma_use_element_multipler)  # Covariance matrix computation
+    Gamma_gamma_prior[0: Np_gamma, 0: Np_gamma] = gamma_first_element_multiplier * Gamma_gamma_prior[0: Np_gamma, 0: Np_gamma]  # First element multiplier
     # Prior for gamma_tilde:
     gamma_tilde_prior = np.zeros([gamma_p * N_gamma])
     Gamma_gamma_tilde_prior = np.zeros([gamma_p * N_gamma, gamma_p * N_gamma])
@@ -352,24 +321,11 @@ if __name__ == '__main__':
     gamma_tilde_c_prior = np.matmul(UT_gamma_p, gamma_tilde_prior)
     Gamma_gamma_tilde_c_prior = np.matmul(UT_gamma_p, np.matmul(Gamma_gamma_tilde_prior, U_gamma_p))
 
-    # For eta:
+    # For gamma:
     eta_prior = F_alpha.compute_coefficients('eta', initial_guess_deposition_rate)    # Computing eta coefficients from initial guess of deposition rate
-    Gamma_eta_prior = np.eye(N_eta)
-    for i in range(N_eta):
-        if i % Np_eta == 0:
-            Gamma_eta_prior[i, i] = (sigma_eta_prior_0 ** 2)
-        elif i % Np_eta == 1:
-            Gamma_eta_prior[i, i] = (sigma_eta_prior_1 ** 2)
-        elif i % Np_eta == 2:
-            Gamma_eta_prior[i, i] = (sigma_eta_prior_2 ** 2)
-        elif i % Np_eta == 3:
-            Gamma_eta_prior[i, i] = (sigma_eta_prior_3 ** 2)
-        elif i % Np_eta == 4:
-            Gamma_eta_prior[i, i] = (sigma_eta_prior_4 ** 2)
-        elif i % Np_eta == 5:
-            Gamma_eta_prior[i, i] = (sigma_eta_prior_5 ** 2)
-        elif i % Np_eta == 6:
-            Gamma_eta_prior[i, i] = (sigma_eta_prior_6 ** 2)
+    sigma_eta_prior = np.array([sigma_eta_prior_0, sigma_eta_prior_1, sigma_eta_prior_2, sigma_eta_prior_3, sigma_eta_prior_4, sigma_eta_prior_5, sigma_eta_prior_6])  # Array of standard deviations
+    Gamma_eta_prior = basic_tools.compute_correlated_covariance_matrix(N_eta, Np_eta, Ne_eta, sigma_eta_prior, 0.001, use_element_multiplier=eta_use_element_multipler)  # Covariance matrix computation
+    Gamma_eta_prior[0: Np_eta, 0: Np_eta] = eta_first_element_multiplier * Gamma_eta_prior[0: Np_eta, 0: Np_eta]  # First element multiplier
     # First element multiplier:
     Gamma_eta_prior[0: Np_eta, 0: Np_eta] = eta_first_element_multiplier * Gamma_eta_prior[0: Np_eta, 0: Np_eta]
     # Prior for eta_tilde:
@@ -436,10 +392,10 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Computing smoothed estimates: todo: Need to fix this
+    # Computing smoothed estimates:
     if smoothing:
         print('Computing Kalman smoother estimates...')
-        x_tilde_c, Gamma_tilde_c = compute_fixed_interval_Kalman_smoother(F, NT, N + Nc_gamma + Nc_eta + J_p, x_tilde_c, Gamma_tilde_c, x_tilde_c_predict, Gamma_tilde_c_predict)
+        x_tilde_c, Gamma_tilde_c = compute_fixed_interval_Kalman_smoother(F, NT, N + gamma_p * Nc_gamma + eta_p * Nc_eta + J_p, x_tilde_c, Gamma_tilde_c, x_tilde_c_predict, Gamma_tilde_c_predict)
 
 
     #######################################################
@@ -534,19 +490,20 @@ if __name__ == '__main__':
 
     # Parameters for size distribution animation:
     xscale = 'linear'  # x-axis scaling ('linear' or 'log')
-    xlimits = [d_plot[0], d_plot[-1]]  # Plot boundary limits for x-axis
-    ylimits = [0, 12000]  # Plot boundary limits for y-axis
+    xlimits = [1, 10]  # Plot boundary limits for x-axis
+    ylimits = [0, 10000]  # Plot boundary limits for y-axis
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution estimation'  # Title for 1D animation plot
-    legend = ['Estimate', '$\pm 2 \sigma$', '', 'Simulated observations']  # Adding legend to plot
-    line_color = ['blue', 'blue', 'blue', 'red']  # Colors of lines in plot
+    legend = ['Estimate', '$\pm 2 \sigma$', '', 'Truth']  # Adding legend to plot
+    line_color = ['blue', 'blue', 'blue', 'green']  # Colors of lines in plot
     line_style = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
+    delay = 60  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
-    ylimits_cond = [0, 2]  # Plot boundary limits for y-axis
+    ylimits_cond = [0, 0.4]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate estimation'  # Title for plot
@@ -554,10 +511,10 @@ if __name__ == '__main__':
     legend_cond = ['Estimate', '$\pm 2 \sigma$', '', 'Truth']  # Adding legend to plot
     line_color_cond = ['blue', 'blue', 'blue', 'green']  # Colors of lines in plot
     line_style_cond = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
-    delay_cond = 0  # Delay for each frame (ms)
+    delay_cond = 60  # Delay for each frame (ms)
 
     # Parameters for deposition plot:
-    ylimits_depo = [0, 1]  # Plot boundary limits for y-axis
+    ylimits_depo = [0, 0.2]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate estimation'  # Title for plot
@@ -568,8 +525,8 @@ if __name__ == '__main__':
     delay_depo = delay_cond  # Delay between frames in milliseconds
 
     # Size distribution animation:
-    basic_tools.plot_1D_animation(d_plot, n_Dp_plot, n_Dp_plot_lower, n_Dp_plot_upper, plot_add=(d_obs, Y), xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
-                                  location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, line_style=line_style, doing_mainloop=False)
+    basic_tools.plot_1D_animation(d_plot, n_Dp_plot, n_Dp_plot_lower, n_Dp_plot_upper, plot_add=(d_true, n_Dp_true), xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
+                                  delay=delay, location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, line_style=line_style, doing_mainloop=False)
 
     # Condensation rate animation:
     basic_tools.plot_1D_animation(d_plot_cond, cond_Dp_plot, cond_Dp_plot_lower, cond_Dp_plot_upper, cond_Dp_true_plot, xlimits=xlimits, ylimits=ylimits_cond, xscale=xscale, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
@@ -615,7 +572,7 @@ if __name__ == '__main__':
     title_image = 'Size distribution estimation'  # Title for image
     title_image_observations = 'Simulated observations'  # Title for image
     image_min = 100  # Minimum of image colour
-    image_max = 12000  # Maximum of image colour
+    image_max = 10000  # Maximum of image colour
     cmap = 'jet'  # Colour map of image
     cbarlabel = '$\dfrac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$'  # Label of colour bar
     cbarticks = [100, 1000, 10000]  # Ticks of colorbar
@@ -623,9 +580,9 @@ if __name__ == '__main__':
     # Plotting images:
     if plot_images:
         print('Plotting images...')
-        basic_tools.image_plot(time, d_plot, n_Dp_plot, xlabel=xlabel_image, ylabel=ylabel_image, title=title_image,
+        basic_tools.image_plot(time, d_plot, n_Dp_plot, ylimits=xlimits, xlabel=xlabel_image, ylabel=ylabel_image, title=title_image,
                                yscale=yscale_image, ylabelcoords=ylabelcoords, image_min=image_min, image_max=image_max, cmap=cmap, cbarlabel=cbarlabel, cbarticks=cbarticks)
-        basic_tools.image_plot(time, d_obs, Y, xlabel=xlabel_image, ylabel=ylabel_image, title=title_image_observations,
+        basic_tools.image_plot(time, d_obs, Y, ylimits=xlimits, xlabel=xlabel_image, ylabel=ylabel_image, title=title_image_observations,
                                yscale=yscale_image, ylabelcoords=ylabelcoords, image_min=image_min, image_max=image_max, cmap=cmap, cbarlabel=cbarlabel, cbarticks=cbarticks)
 
 

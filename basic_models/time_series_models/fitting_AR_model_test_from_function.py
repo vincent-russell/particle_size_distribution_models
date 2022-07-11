@@ -25,7 +25,7 @@ if __name__ == '__main__':
     # Parameters:
 
     # Autoregressive model parameters:
-    p = 3  # Order of model, i.e. AR(p)
+    p = 5  # Order of model, i.e. AR(p)
 
     # Time parameters:
     dt = 0.05  # Time step (hours)
@@ -36,9 +36,9 @@ if __name__ == '__main__':
     x_0 = 0
 
     # Function to approximate by an AR(p) model:
-    Amp = 2e3  # Amplitude of gaussian
-    mean = 8  # Mean time of gaussian
-    sigma = 1.5  # Standard deviation time of gaussian
+    Amp = 1  # Amplitude of gaussian
+    mean = 5  # Mean time of gaussian
+    sigma = 0.5  # Standard deviation time of gaussian
     def function(t):
         return basic_tools.gaussian(t, Amp, mean, sigma)  # Gaussian source model output
 

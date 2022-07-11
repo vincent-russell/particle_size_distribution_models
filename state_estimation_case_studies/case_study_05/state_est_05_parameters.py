@@ -61,7 +61,7 @@ sigma_alpha_w_6 = 0
 sigma_alpha_w_correlation = 2
 
 # Modifying first element covariance for alpha (size distribution):
-alpha_first_element_multiplier = 10
+alpha_first_element_multiplier = 1
 
 # Initial guess of the size distribution n_0(v) = n(v, 0):
 N_0 = 300  # Amplitude of initial condition gaussian
@@ -85,7 +85,7 @@ d_0_guess = 0.04  # Deposition parameter constant
 d_1_guess = 0  # Deposition parameter linear
 d_2_guess = -d_1_guess / (2 * depo_Dpmin_guess)  # Deposition parameter quadratic
 def guess_depo(Dp):
-    return d_0_guess + d_1_guess * Dp + d_2_guess * Dp ** 2  # Quadratic model output
+    return d_0_guess + d_1_guess * Dp + d_2_guess * Dp ** 2
 
 # Set to True for imposing boundary condition n(vmin, t) = 0:
 boundary_zero = True

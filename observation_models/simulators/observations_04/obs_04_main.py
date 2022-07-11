@@ -132,7 +132,7 @@ if __name__ == '__main__':
     delay = 60  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
-    ylimits_cond = [0, 2]  # Plot boundary limits for y-axis
+    ylimits_cond = [0, 0.3]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate'  # Title for plot
@@ -140,7 +140,7 @@ if __name__ == '__main__':
     line_color_cond = ['blue']  # Colors of lines in plot
 
     # Parameters for deposition plot:
-    ylimits_depo = [0, 0.6]  # Plot boundary limits for y-axis
+    ylimits_depo = [0, 0.1]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate'  # Title for plot

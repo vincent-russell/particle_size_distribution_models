@@ -390,7 +390,7 @@ def plot_1D_animation(x, *y, **kwargs):
 
 
 #######################################################
-# Plot of 2D array as an colour plot / image:
+# Plot of 2D array as a colour plot / image:
 def image_plot(x, y, n, **kwargs):
 
     #######################
@@ -398,6 +398,8 @@ def image_plot(x, y, n, **kwargs):
     figsize = get_kwarg_value(kwargs, 'figsize', (6.00, 5.00))  # Size of figure
     xlabel = get_kwarg_value(kwargs, 'xlabel', '')  # x-axis label
     ylabel = get_kwarg_value(kwargs, 'ylabel', '')  # y-axis label
+    xlimits = get_kwarg_value(kwargs, 'xlimits', [np.min(x), np.max(x)])  # Plot boundary limits for x-axis
+    ylimits = get_kwarg_value(kwargs, 'ylimits', [np.min(y), np.max(y)])  # Plot boundary limits for y-axis
     xfontsize = get_kwarg_value(kwargs, 'xfontsize', 14)  # x-axis label font size
     yfontsize = get_kwarg_value(kwargs, 'yfontsize', 14)  # y-axis label font size
     ylabelrotation = get_kwarg_value(kwargs, 'ylabelrotation', 0)  # y-axis label rotation from axis
@@ -447,6 +449,8 @@ def image_plot(x, y, n, **kwargs):
     ax.set_title(title, fontsize=titlefontsize)  # Adds title
     ax.set_xlabel(xlabel)  # Adds xlabel
     ax.set_ylabel(ylabel)  # Adds ylabel
+    ax.set_xlim(xlimits)  # Adds xlimits
+    ax.set_ylim(ylimits)  # Adds ylimits
     ax.set_xscale(xscale)  # Changes x-axis scaling
     ax.set_yscale(yscale)  # Changes y-axis scaling
     if xticks is not None:

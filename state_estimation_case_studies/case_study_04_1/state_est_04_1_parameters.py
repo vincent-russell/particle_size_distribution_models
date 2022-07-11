@@ -61,7 +61,7 @@ sigma_alpha_w_6 = 0
 sigma_alpha_w_correlation = 2
 
 # Modifying first element covariance for alpha (size distribution):
-alpha_first_element_multiplier = 10
+alpha_first_element_multiplier = 1
 
 # Initial guess of the size distribution n_0(v) = n(v, 0):
 N_0 = 300  # Amplitude of initial condition gaussian
