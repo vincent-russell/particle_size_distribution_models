@@ -18,6 +18,12 @@ def get_f(model):
             eta = x[model.N + model.N_gamma: model.N + model.N_gamma + model.N_eta]
             J = x[model.N + model.N_gamma + model.N_eta]
             return model.f_cond(alpha, gamma) + model.f_coag(alpha) + model.f_sorc(J) + model.f_depo(alpha, eta)
+    elif 'condensation' in model.unknowns and 'source' in model.unknowns:
+        def f(x, _):
+            alpha = x[0: model.N]
+            gamma = x[model.N: model.N + model.N_gamma]
+            J = x[model.N + model.N_gamma]
+            return model.f_cond(alpha, gamma) + model.f_coag(alpha) + model.f_sorc(J) + model.f_depo(alpha)
     elif 'condensation' in model.unknowns:
         def f(x, t):
             alpha = x[0: model.N]
