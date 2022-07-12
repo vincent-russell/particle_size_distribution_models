@@ -36,9 +36,9 @@ if __name__ == '__main__':
     x_0 = 0
 
     # Function to approximate by an AR(p) model:
-    Amp = 1  # Amplitude of gaussian
-    mean = 5  # Mean time of gaussian
-    sigma = 0.5  # Standard deviation time of gaussian
+    Amp = 5e3  # Amplitude of gaussian
+    mean = 8  # Mean time of gaussian
+    sigma = 2  # Standard deviation time of gaussian
     def function(t):
         return basic_tools.gaussian(t, Amp, mean, sigma)  # Gaussian source model output
 

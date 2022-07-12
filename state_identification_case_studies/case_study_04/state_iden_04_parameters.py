@@ -133,12 +133,12 @@ eta_A6 = 0 * eye(N_eta)
 eta_A = array([eta_A1, eta_A2, eta_A3, eta_A4, eta_A5, eta_A6])  # Tensor of VAR(p) coefficients
 
 # Nucleation AR(p) coefficients for model J_{t + 1} = a_1 J_t + ... + w_{J_t}:
-J_p = 1  # Order of AR model
-J_a1 = 1
-J_a2 = 0
-J_a3 = 0
-J_a4 = 0
-J_a5 = 0
+J_p = 5  # Order of AR model
+J_a1 = 1.725
+J_a2 = 0.03
+J_a3 = -0.73
+J_a4 = -0.531
+J_a5 = 0.506
 J_a6 = 0
 J_a = array([J_a1, J_a2, J_a3, J_a4, J_a5, J_a6])  # Vector of AR(p) coefficients
 

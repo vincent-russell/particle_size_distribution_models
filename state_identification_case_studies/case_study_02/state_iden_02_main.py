@@ -24,7 +24,7 @@ from observation_models.tools import Size_distribution_observation_model
 
 #######################################################
 # Importing parameter file:
-from state_identification_case_studies.case_study_01.state_iden_01_parameters import *
+from state_identification_case_studies.case_study_02.state_iden_02_parameters import *
 
 
 #######################################################
@@ -466,14 +466,11 @@ if __name__ == '__main__':
     Nplot_depo = len(d_plot_depo)  # Length of size discretisation
     cond_Dp_true_plot = np.zeros([Nplot_cond, NT])  # Initialising volume-based condensation rate
     depo_true_plot = np.zeros([Nplot_depo, NT])  # Initialising deposition rate
-    # sorc_v_true_plot = np.zeros(NT)  # Initialising volume-based source (nucleation) rate
     for k in range(NT):
-        # sorc_v_true_plot[k] = sorc(t[k])  # Computing volume-based nucleation rate
         for i in range(Nplot_cond):
             cond_Dp_true_plot[i, k] = cond(d_plot_cond[i])  # Computing volume-based condensation rate
         for i in range(Nplot_depo):
             depo_true_plot[i, k] = depo(d_plot_depo[i])  # Computing deposition rate
-    # sorc_Dp_true_plot = change_basis_volume_to_diameter_sorc(sorc_v_true_plot, Dp_min)  # Computing diameter-based nucleation rate
 
 
     #######################################################
@@ -540,25 +537,6 @@ if __name__ == '__main__':
     if plot_animations:
         print('Plotting animations...')
         mainloop()  # Runs tkinter GUI for plots and animations
-
-
-    # #######################################################
-    # # Plotting nucleation rate:
-    # if plot_nucleation:
-    #     print('Plotting nucleation...')
-    #     figJ, axJ = plt.subplots(figsize=(8.00, 5.00), dpi=100)
-    #     plt.plot(time, J_Dp_plot, 'b-', label='Estimate')
-    #     plt.plot(time, J_Dp_plot_lower, 'b--', label='$\pm 2 \sigma$')
-    #     plt.plot(time, J_Dp_plot_upper, 'b--')
-    #     plt.plot(time, sorc_Dp_true_plot, 'g-', label='Truth')
-    #     axJ.set_xlim([0, T])
-    #     axJ.set_ylim([0, 3500])
-    #     axJ.set_xlabel('$t$ (hour)', fontsize=12)
-    #     axJ.set_ylabel('$J(t)$ \n $(\mu$m$^{-1}$cm$^{-3}$ hour$^{-1}$)', fontsize=12, rotation=0)
-    #     axJ.yaxis.set_label_coords(-0.015, 1.02)
-    #     axJ.set_title('Nucleation rate esimation', fontsize=12)
-    #     axJ.grid()
-    #     axJ.legend(fontsize=11, loc='upper left')
 
 
     #######################################################
