@@ -28,7 +28,7 @@ if __name__ == '__main__':
     p = 5  # Order of model, i.e. AR(p)
 
     # Time parameters:
-    dt = 0.05  # Time step (hours)
+    dt = (1 / 60) * 20  # Time step (hours)
     T = 24  # End time (hours)
     NT = int(T / dt)  # Total number of time steps
 
@@ -36,9 +36,9 @@ if __name__ == '__main__':
     x_0 = 0
 
     # Function to approximate by an AR(p) model:
-    Amp = 5e3  # Amplitude of gaussian
+    Amp = 2e3  # Amplitude of gaussian
     mean = 8  # Mean time of gaussian
-    sigma = 2  # Standard deviation time of gaussian
+    sigma = 1.5  # Standard deviation time of gaussian
     def function(t):
         return basic_tools.gaussian(t, Amp, mean, sigma)  # Gaussian source model output
 

@@ -19,7 +19,7 @@ from evolution_models.tools import (get_Legendre_basis, get_Legendre_basis_deriv
                                     Source_evolution, Source_unknown_evolution,
                                     Deposition_evolution, Deposition_unknown_evolution,
                                     Coagulation_evolution,
-                                    get_f, get_next_step, change_basis_operator, get_element_matrix)
+                                    get_f, get_next_step, change_basis_operator, get_element_matrix, log_transform_function_check)
 
 
 #######################################################
@@ -182,13 +182,16 @@ class GDE_evolution_model:
         return self.next_step(x, t)
 
     # Function to compute coefficient(t) from function f(x, t):
+    # Note that gamma and eta functions should always be as a function of diameter Dp.
     def compute_coefficients(self, coefficient, f):
         if coefficient == 'alpha':
             return compute_coefficients(f, self.N, self.Np, self.phi, self.x_boundaries, self.h)
         elif coefficient == 'gamma':
-            return compute_coefficients(f, self.N_gamma, self.Np_gamma, self.phi_gamma, self.x_boundaries_gamma, self.h_gamma)
+            g = log_transform_function_check(f, self.scale_type)
+            return compute_coefficients(g, self.N_gamma, self.Np_gamma, self.phi_gamma, self.x_boundaries_gamma, self.h_gamma)
         elif coefficient == 'eta':
-            return compute_coefficients(f, self.N_eta, self.Np_eta, self.phi_eta, self.x_boundaries_eta, self.h_eta)
+            g = log_transform_function_check(f, self.scale_type)
+            return compute_coefficients(g, self.N_eta, self.Np_eta, self.phi_eta, self.x_boundaries_eta, self.h_eta)
 
     # Computing plotting discretisation over [0, T] from all alpha = [alpha_0, alpha_1, ..., alpha_NT]:
     def get_nplot_discretisation(self, alpha, **kwargs):

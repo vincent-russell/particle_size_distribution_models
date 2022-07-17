@@ -73,7 +73,7 @@ d_0_guess = 0.2  # Deposition parameter constant
 d_1_guess = 0  # Deposition parameter linear
 d_2_guess = -d_1_guess / (2 * depo_Dpmin_guess)  # Deposition parameter quadratic
 def guess_depo(Dp):
-    return d_0_guess + d_1_guess * Dp + d_2_guess * Dp ** 2  # Quadratic model output
+    return d_0_guess + d_1_guess * Dp + d_2_guess * Dp ** 2
 
 # Guess of the source (nucleation event) model:
 N_s_guess = 5e3  # Amplitude of gaussian nucleation event

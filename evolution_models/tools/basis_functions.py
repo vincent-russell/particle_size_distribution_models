@@ -149,3 +149,16 @@ class Approximation_ell:
         for i in range(self.Np):
             output += self.coefficient_ell[i] * self.phi_ell[i](x)  # Computing coefficient^ell_i(t) * phi^ell_i(x)
         return output
+
+
+#######################################################
+# Transforms function by checking if using log scale type:
+def log_transform_function_check(f, scale_type):
+    if scale_type == 'log':
+        def g(x):
+            v = np.exp(x)
+            return f(v)
+    else:
+        def g(v):
+            return f(v)
+    return g

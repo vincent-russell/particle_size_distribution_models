@@ -69,7 +69,7 @@ d_0 = 0.4  # Deposition parameter constant
 d_1 = -0.15  # Deposition parameter linear
 d_2 = -d_1 / (2 * depo_Dpmin)  # Deposition parameter quadratic
 def depo(Dp):
-    return d_0 + d_1 * Dp + d_2 * Dp ** 2  # Quadratic model output
+    return d_0 + d_1 * Dp + d_2 * Dp ** 2
 
 # Source (nucleation event) model:
 N_s = 5e3  # Amplitude of gaussian nucleation event

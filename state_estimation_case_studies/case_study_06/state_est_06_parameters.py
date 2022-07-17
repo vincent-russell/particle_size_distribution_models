@@ -85,7 +85,7 @@ d_0_guess = 0.04  # Deposition parameter constant
 d_1_guess = 0  # Deposition parameter linear
 d_2_guess = -d_1_guess / (2 * depo_Dpmin_guess)  # Deposition parameter quadratic
 def guess_depo(Dp):
-    return d_0_guess + d_1_guess * Dp + d_2_guess * Dp ** 2  # Quadratic model output
+    return d_0_guess + d_1_guess * Dp + d_2_guess * Dp ** 2
 
 # Set to True for imposing boundary condition n(vmin, t) = 0:
 boundary_zero = True
@@ -102,7 +102,7 @@ d_0 = 0.06  # Deposition parameter constant
 d_1 = -0.02  # Deposition parameter linear
 d_2 = -d_1 / (2 * depo_Dpmin)  # Deposition parameter quadratic
 def depo(Dp):
-    return d_0 + d_1 * Dp + d_2 * Dp ** 2  # Quadratic model output
+    return d_0 + d_1 * Dp + d_2 * Dp ** 2
 
 # Coagulation model:
 def coag(v_x, v_y):

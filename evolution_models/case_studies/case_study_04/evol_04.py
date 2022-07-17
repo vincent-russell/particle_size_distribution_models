@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
     # Spatial domain:
     Dp_min = 0.004  # Minimum diameter of particles (micro m)
-    Dp_max = 1  # Maximum diameter of particles (micro m)
+    Dp_max = 1.1  # Maximum diameter of particles (micro m)
     vmin = basic_tools.diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
     vmax = basic_tools.diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
     xmin = np.log(vmin)  # Lower limit in log-size
