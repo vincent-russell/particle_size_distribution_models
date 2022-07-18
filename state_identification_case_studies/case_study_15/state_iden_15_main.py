@@ -17,14 +17,14 @@ from tqdm import tqdm
 # Local modules:
 import basic_tools
 from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
-from observation_models.data.simulated import load_observations
-from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, compute_U, change_basis_x_to_logDp
+from observation_models.data.CSTAR import get_CSTAR_data
+from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, compute_U
 from observation_models.tools import Size_distribution_observation_model
 
 
 #######################################################
 # Importing parameter file:
-from state_identification_case_studies.case_study_14.state_iden_14_parameters import *
+from state_identification_case_studies.case_study_15.state_iden_15_parameters import *
 
 
 #######################################################
@@ -36,11 +36,8 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Importing simulated observations and true size distribution:
-    observation_data = load_observations(data_filename)  # Loading data file
-    d_obs, Y = observation_data['d_obs'], observation_data['Y']  # Extracting observations
-    d_true, n_x_true = observation_data['d_true'], observation_data['n_true']  # Extracting true size distribution
-    n_logDp_true = change_basis_x_to_logDp(n_x_true, diameter_to_volume(d_true), d_true)  # Computing diameter-based size distribution
+    # Importing CSTAR observations:
+    d_obs, Y, _ = get_CSTAR_data()
 
 
     #######################################################
@@ -48,7 +45,7 @@ if __name__ == '__main__':
     F_alpha = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
     F_alpha.add_unknown('condensation', Ne_gamma, Np_gamma)  # Adding condensation as unknown to evolution model
     F_alpha.add_unknown('deposition', Ne_eta, Np_eta)  # Adding deposition as unknown to evolution model
-    # F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
+    F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F_alpha.compile()  # Compiling evolution model
 
 
@@ -398,18 +395,9 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Computing true underlying parameters plotting discretisation:
-    Nplot_cond = len(log_d_plot_cond)  # Length of size discretisation
-    Nplot_depo = len(log_d_plot_depo)  # Length of size discretisation
+    # Computing parameters plotting discretisation:
     d_plot_cond = np.exp(log_d_plot_cond)  # Computing Dp plotting discretisation
     d_plot_depo = np.exp(log_d_plot_depo)  # Computing Dp plotting discretisation
-    cond_Dp_true_plot = np.zeros([Nplot_cond, NT])  # Initialising condensation rate
-    depo_true_plot = np.zeros([Nplot_depo, NT])  # Initialising deposition rate
-    for k in range(NT):
-        for i in range(Nplot_cond):
-            cond_Dp_true_plot[i, k] = cond(d_plot_cond[i])  # Computing condensation rate
-        for i in range(Nplot_depo):
-            depo_true_plot[i, k] = depo(d_plot_depo[i])  # Computing deposition rate
 
 
     #######################################################
@@ -432,47 +420,47 @@ if __name__ == '__main__':
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution estimation'  # Title for 1D animation plot
-    legend = ['Estimate', '$\pm 2 \sigma$', '', 'Truth']  # Adding legend to plot
-    line_color = ['blue', 'blue', 'blue', 'green']  # Colors of lines in plot
+    legend = ['Estimate', '$\pm 2 \sigma$', '', 'CSTAR Observations']  # Adding legend to plot
+    line_color = ['blue', 'blue', 'blue', 'red']  # Colors of lines in plot
     line_style = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
-    delay = 15  # Delay between frames in milliseconds
+    delay = 60  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
     yscale_cond = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_cond = [0, 0.01]  # Plot boundary limits for y-axis
+    ylimits_cond = [0, 0.025]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate estimation'  # Title for plot
     location_cond = location + '2'  # Location for plot
-    legend_cond = ['Estimate', '$\pm 2 \sigma$', '', 'Truth']  # Adding legend to plot
-    line_color_cond = ['blue', 'blue', 'blue', 'green']  # Colors of lines in plot
-    line_style_cond = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
-    delay_cond = 5  # Delay between frames in milliseconds
+    legend_cond = ['Estimate', '$\pm 2 \sigma$', '']  # Adding legend to plot
+    line_color_cond = ['blue', 'blue', 'blue']  # Colors of lines in plot
+    line_style_cond = ['solid', 'dashed', 'dashed']  # Style of lines in plot
+    delay_cond = 30  # Delay between frames in milliseconds
 
     # Parameters for deposition plot:
     yscale_depo = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_depo = [0, 1]  # Plot boundary limits for y-axis
+    ylimits_depo = [0, 1.2]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate estimation'  # Title for plot
     location_depo = location + '3'  # Location for plot
-    legend_depo = ['Estimate', '$\pm 2 \sigma$', '', 'Truth']  # Adding legend to plot
-    line_color_depo = ['blue', 'blue', 'blue', 'green']  # Colors of lines in plot
-    line_style_depo = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
+    legend_depo = ['Estimate', '$\pm 2 \sigma$', '']  # Adding legend to plot
+    line_color_depo = ['blue', 'blue', 'blue']  # Colors of lines in plot
+    line_style_depo = ['solid', 'dashed', 'dashed']  # Style of lines in plot
     delay_depo = delay_cond  # Delay between frames in milliseconds
 
     # Size distribution animation:
-    basic_tools.plot_1D_animation(d_plot, n_logDp_plot, n_logDp_plot_lower, n_logDp_plot_upper, plot_add=(d_true, n_logDp_true), xticks=xticks, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
+    basic_tools.plot_1D_animation(d_plot, n_logDp_plot, n_logDp_plot_lower, n_logDp_plot_upper, plot_add=(d_obs, Y), xticks=xticks, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
                                   delay=delay, location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, line_style=line_style, doing_mainloop=False)
 
     # Condensation rate animation:
-    basic_tools.plot_1D_animation(d_plot_cond, cond_Dp_plot, cond_Dp_plot_lower, cond_Dp_plot_upper, cond_Dp_true_plot, xticks=xticks, xlimits=xlimits, xscale=xscale, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
+    basic_tools.plot_1D_animation(d_plot_cond, cond_Dp_plot, cond_Dp_plot_lower, cond_Dp_plot_upper, xticks=xticks, xlimits=xlimits, xscale=xscale, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
                                   delay=delay_cond, ylimits=ylimits_cond, yscale=yscale_cond, location=location_cond, legend=legend_cond, time=time, timetext=timetext, line_color=line_color_cond, line_style=line_style_cond, doing_mainloop=False)
 
     # Deposition rate animation:
-    basic_tools.plot_1D_animation(d_plot_depo, depo_plot, depo_plot_lower, depo_plot_upper, depo_true_plot, xticks=xticks, xlimits=xlimits, xscale=xscale, xlabel=xlabel_depo, ylabel=ylabel_depo, title=title_depo,
+    basic_tools.plot_1D_animation(d_plot_depo, depo_plot, depo_plot_lower, depo_plot_upper, xticks=xticks, xlimits=xlimits, xscale=xscale, xlabel=xlabel_depo, ylabel=ylabel_depo, title=title_depo,
                                   delay=delay_depo, ylimits=ylimits_depo, yscale=yscale_depo, location=location_depo, legend=legend_depo, time=time, timetext=timetext, line_color=line_color_depo, line_style=line_style_depo, doing_mainloop=False)
 
     # Mainloop and print:
@@ -491,7 +479,7 @@ if __name__ == '__main__':
     ylabel_image = '$D_p$ ($\mu$m) \n'  # y-axis label for image
     ylabelcoords = (-0.06, 0.96)  # y-axis label coordinates
     title_image = 'Size distribution estimation'  # Title for image
-    title_image_observations = 'Simulated observations'  # Title for image
+    title_image_observations = 'CSTAR observations'  # Title for image
     image_min = 1  # Minimum of image colour
     image_max = 300  # Maximum of image colour
     cmap = 'jet'  # Colour map of image

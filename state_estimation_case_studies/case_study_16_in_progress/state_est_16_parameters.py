@@ -22,7 +22,6 @@ plot_nucleation = True  # Set to True to plot nucleation plot
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 coagulation_suffix = 'CSTAR'  # Suffix of saved coagulation tensors file
-data_filename = 'observations_08'  # Filename for data of simulated observations
 
 # Spatial domain:
 Dp_min = 0.0146  # Minimum diameter of particles (micro m)

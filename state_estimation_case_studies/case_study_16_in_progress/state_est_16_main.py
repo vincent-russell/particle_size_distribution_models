@@ -273,7 +273,7 @@ if __name__ == '__main__':
     ylabel_image = '$D_p$ ($\mu$m)'  # y-axis label for image
     ylabelcoords = (-0.06, 1.05)  # y-axis label coordinates
     title_image = 'Size distribution estimation'  # Title for image
-    title_image_observations = 'Simulated observations'  # Title for image
+    title_image_observations = 'CSTAR observations'  # Title for image
     image_min = 1  # Minimum of image colour
     image_max = 300  # Maximum of image colour
     cmap = 'jet'  # Colour map of image
