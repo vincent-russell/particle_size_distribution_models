@@ -32,13 +32,13 @@ Ne = 50  # Number of elements
 Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 # Solution discretisation for reduced model:
-Ne_r = 50  # Number of elements (needs to be a multiple of Ne)
-Np_r = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
+Ne_r = 25  # Number of elements (needs to be a multiple of Ne)
+Np_r = 1  # Np - 1 = degree of Legendre polynomial approximation in each element
 N_r = Ne_r * Np_r  # Total degrees of freedom
 
 # Loop parameters:
 filename_BAE = 'state_est_10_BAE'  # Filename for BAE mean and covariance
-N_iterations = 2  # Number of samples from prior to compute BAE
+N_iterations = 1000  # Number of samples from prior to compute BAE
 
 # Coagulation model:
 def coag(v_x, v_y):
@@ -62,7 +62,7 @@ def initial_guess_size_distribution(v):
     return gaussian(v, N_0, v_0, sigma_0)
 
 # Guess of the condensation rate I(Dp):
-I_0_guess = 0.2  # Condensation parameter constant
+I_0_guess = 0.5  # Condensation parameter constant
 I_1_guess = 0  # Condensation parameter inverse quadratic
 def guess_cond(Dp):
     return I_0_guess + I_1_guess / (Dp ** 2)
@@ -76,8 +76,8 @@ def guess_depo(Dp):
     return d_0_guess + d_1_guess * Dp + d_2_guess * Dp ** 2
 
 # Guess of the source (nucleation event) model:
-N_s_guess = 5e3  # Amplitude of gaussian nucleation event
-t_s_guess = 7  # Mean time of gaussian nucleation event
-sigma_s_guess = 1.5  # Standard deviation time of gaussian nucleation event
+N_s_guess = 4e3  # Amplitude of gaussian nucleation event
+t_s_guess = 10  # Mean time of gaussian nucleation event
+sigma_s_guess = 1.25  # Standard deviation time of gaussian nucleation event
 def guess_sorc(t):  # Source (nucleation) at vmin
     return gaussian(t, N_s_guess, t_s_guess, sigma_s_guess)  # Gaussian source (nucleation event) model output

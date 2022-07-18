@@ -17,7 +17,7 @@ from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
+from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother, compute_norm_difference
 from observation_models.data.simulated import load_observations
 from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_basis_volume_to_diameter, change_basis_volume_to_diameter_sorc
 from observation_models.tools import Size_distribution_observation_model
@@ -25,7 +25,7 @@ from observation_models.tools import Size_distribution_observation_model
 
 #######################################################
 # Importing parameter file:
-from state_estimation_case_studies.case_study_10_in_progress.state_est_10_parameters import *
+from state_estimation_case_studies.case_study_10.state_est_10_parameters import *
 
 
 #######################################################
@@ -210,6 +210,14 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Computing norm difference between truth and estimates:
+    # Size distribution:
+    v_true = basic_tools.diameter_to_volume(d_true)  # Getting true discretisation
+    _, _, n_v_estimate, sigma_n_v = F_alpha.get_nplot_discretisation(alpha, Gamma_alpha=Gamma_alpha, x_plot=v_true)  # Computing estimate on true discretisation
+    norm_diff = compute_norm_difference(n_v_true, n_v_estimate, sigma_n_v, compute_weighted_norm=compute_weighted_norm)  # Computing norm difference
+
+
+    #######################################################
     # Printing total computation time:
     computation_time = round(tm.time() - initial_time, 3)  # Initial time stamp
     print('Total computation time:', str(computation_time), 'seconds.')  # Print statement
@@ -244,7 +252,7 @@ if __name__ == '__main__':
     legend_cond = ['Guess', 'Truth']  # Adding legend to plot
     line_color_cond = ['blue', 'green']  # Colors of lines in plot
     line_style_cond = ['solid', 'solid']  # Style of lines in plot
-    delay_cond = 0  # Delay for each frame (ms)
+    delay_cond = 30  # Delay for each frame (ms)
 
     # Parameters for deposition plot:
     ylimits_depo = [0, 0.6]  # Plot boundary limits for y-axis
@@ -284,12 +292,31 @@ if __name__ == '__main__':
         plt.plot(time, sorc_Dp_truth_plot, color='green', label='Truth')
         plt.legend()
         axJ.set_xlim([0, T])
-        axJ.set_ylim([0, 1e4])
+        axJ.set_ylim([0, 1.2e4])
         axJ.set_xlabel('$t$ (hour)', fontsize=12)
         axJ.set_ylabel('$J(t)$ \n $(\mu$m$^{-1}$cm$^{-3}$ hour$^{-1}$)', fontsize=12, rotation=0)
         axJ.yaxis.set_label_coords(-0.015, 1.02)
         axJ.set_title('Nucleation rate', fontsize=12)
         axJ.grid()
+
+
+    #######################################################
+    # Plotting norm difference between truth and estimates:
+    if plot_norm_difference:
+        print('Plotting norm difference between truth and estimates...')
+        plt.figure(1)
+        plt.plot(t, norm_diff)
+        plt.xlim([0, T])
+        plt.ylim([0, np.max(norm_diff)])
+        plt.xlabel('$t$', fontsize=15)
+        plt.ylabel(r'||$n_{est}(x, t) - n_{true}(x, t)$||$_W$', fontsize=14)
+        plt.grid()
+        plot_title = 'norm difference between truth and mean estimate'
+        if compute_weighted_norm:
+            plot_title = 'Weighted ' + plot_title
+        if use_BAE:
+            plot_title = plot_title + ' using BAE'
+        plt.title(plot_title, fontsize=12)
 
 
     #######################################################

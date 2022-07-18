@@ -12,3 +12,4 @@ from .plotting import *
 from .polynomial_approximators import *
 from .print_computation_time import *
 from .time_integrators import *
+from .evaluations import *

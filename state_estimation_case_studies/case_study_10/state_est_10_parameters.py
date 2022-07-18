@@ -13,9 +13,11 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
-use_BAE = True  # Set to True to use BAE
+use_BAE = False  # Set to True to use BAE
 filename_BAE = 'state_est_10_BAE'  # Filename for BAE mean and covariance
-smoothing = False  # Set to True to compute fixed interval Kalman smoother estimates
+compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
+plot_norm_difference = False  # Set to True to plot norm difference between truth and estimates
+smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
 plot_animations = True  # Set to True to plot animations
 plot_nucleation = False  # Set to True to plot nucleation plot
 plot_images = False  # Set to True to plot images
@@ -35,13 +37,13 @@ T = 24  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
 # Size distribution discretisation:
-Ne = 50  # Number of elements
-Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
+Ne = 25  # Number of elements
+Np = 1  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 
 # Prior noise parameters:
 # Prior covariance for alpha; Gamma_alpha_prior = sigma_alpha_prior^2 * I_N (Size distribution):
-sigma_alpha_prior_0 = 10
+sigma_alpha_prior_0 = 1
 sigma_alpha_prior_1 = sigma_alpha_prior_0 / 2
 sigma_alpha_prior_2 = sigma_alpha_prior_1 / 4
 sigma_alpha_prior_3 = 0
@@ -74,7 +76,7 @@ def initial_guess_size_distribution(v):
     return gaussian(v, N_0, v_0, sigma_0)
 
 # Guess of the condensation rate I(Dp):
-I_0_guess = 0.2  # Condensation parameter constant
+I_0_guess = 0.5  # Condensation parameter constant
 I_1_guess = 0  # Condensation parameter inverse quadratic
 def guess_cond(Dp):
     return I_0_guess + I_1_guess / (Dp ** 2)
@@ -88,9 +90,9 @@ def guess_depo(Dp):
     return d_0_guess + d_1_guess * Dp + d_2_guess * Dp ** 2
 
 # Guess of the source (nucleation event) model:
-N_s_guess = 5e3  # Amplitude of gaussian nucleation event
-t_s_guess = 7  # Mean time of gaussian nucleation event
-sigma_s_guess = 1.5  # Standard deviation time of gaussian nucleation event
+N_s_guess = 4e3  # Amplitude of gaussian nucleation event
+t_s_guess = 10  # Mean time of gaussian nucleation event
+sigma_s_guess = 1.25  # Standard deviation time of gaussian nucleation event
 def guess_sorc(t):  # Source (nucleation) at vmin
     return gaussian(t, N_s_guess, t_s_guess, sigma_s_guess)  # Gaussian source (nucleation event) model output
 

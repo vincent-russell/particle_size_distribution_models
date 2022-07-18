@@ -9,6 +9,7 @@ Date: June 27, 2022
 
 #######################################################
 # Modules:
+import random
 import numpy as np
 import time as tm
 from tqdm import tqdm
@@ -20,7 +21,7 @@ from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, compute_G
 
 #######################################################
 # Importing parameter file:
-from state_estimation_case_studies.case_study_10_in_progress.state_est_10_BAE_computation_parameters import *
+from state_estimation_case_studies.case_study_10.state_est_10_BAE_computation_parameters import *
 
 
 #######################################################
@@ -117,23 +118,23 @@ if __name__ == '__main__':
         # Drawing sample of parameters for evolution model:
 
         # Sample of the condensation rate I(Dp):
-        I_0 = 0.2  # Condensation parameter constant
-        I_1 = 1  # Condensation parameter inverse quadratic
+        I_0 = random.uniform(0.125, 0.625)  # Condensation parameter constant
+        I_1 = 0  # Condensation parameter inverse quadratic
         def cond(Dp):
             return I_0 + I_1 / (Dp ** 2)
 
         # Sample of the deposition rate d(Dp):
         depo_Dpmin = 5  # Deposition parameter; diameter at which minimum
-        d_0 = 0.4  # Deposition parameter constant
-        d_1 = -0.15  # Deposition parameter linear
+        d_0 = random.uniform(0.01, 0.45)  # Deposition parameter constant
+        d_1 = 0  # Deposition parameter linear
         d_2 = -d_1 / (2 * depo_Dpmin)  # Deposition parameter quadratic
         def depo(Dp):
             return d_0 + d_1 * Dp + d_2 * Dp ** 2  # Quadratic model output
 
         # Sample of the source (nucleation event) model:
-        N_s = 5e3  # Amplitude of gaussian nucleation event
-        t_s = 8  # Mean time of gaussian nucleation event
-        sigma_s = 2  # Standard deviation time of gaussian nucleation event
+        N_s = random.uniform(2e3, 6e3)  # Amplitude of gaussian nucleation event
+        t_s = random.uniform(5, 15)  # Mean time of gaussian nucleation event
+        sigma_s = 1.25  # Standard deviation time of gaussian nucleation event
         def sorc(t):  # Source (nucleation) at vmin
             return gaussian(t, N_s, t_s, sigma_s)  # Gaussian source (nucleation event) model output
 

@@ -31,7 +31,7 @@ if __name__ == '__main__':
     smoothing = False  # Set to True to compute fixed interval Kalman smoother estimates
     plot_animations = True  # Set to True to plot animations
     use_BAE = True  # Set to True to use BAE in state estimation
-    compute_weighted_norm = True  # Sest to True to compute weighted norm difference (weighted by inverse of sigma_n)
+    compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
     observation_number = 1  # Can get specific observation number, or set to None for random
 
     # Spatial domain:
