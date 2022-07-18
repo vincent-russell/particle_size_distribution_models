@@ -378,14 +378,14 @@ if __name__ == '__main__':
     Nplot_cond = len(log_d_plot_cond)  # Length of size discretisation
     Nplot_depo = len(d_plot)  # Length of size discretisation
     d_plot_cond = np.exp(log_d_plot_cond)  # Computing Dp plotting discretisation
-    cond_Dp_true_plot = np.zeros([Nplot_cond, NT])  # Initialising ln(volume)-based condensation rate
+    cond_Dp_true_plot = np.zeros([Nplot_cond, NT])  # Initialising condensation rate
     depo_truth_plot = np.zeros([Nplot_depo, NT])  # Initialising deposition rate
     depo_guess_plot = np.zeros([Nplot_depo, NT])  # Initialising deposition rate
     sorc_x_true_plot = np.zeros(NT)  # Initialising ln(volume)-based source (nucleation) rate
     for k in range(NT):
         sorc_x_true_plot[k] = sorc(t[k])  # Computing ln(volume)-based nucleation rate
         for i in range(Nplot_cond):
-            cond_Dp_true_plot[i, k] = cond(d_plot_cond[i])  # Computing ln(volume)-based condensation rate
+            cond_Dp_true_plot[i, k] = cond(d_plot_cond[i])  # Computing condensation rate
         for i in range(Nplot_depo):
             depo_truth_plot[i, k] = depo(d_plot[i])  # Computing deposition rate
             depo_guess_plot[i, k] = guess_depo(d_plot[i])  # Computing deposition rate

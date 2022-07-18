@@ -8,7 +8,7 @@ Parameters for state identification
 from numpy import log, exp, array, eye
 
 # Local modules:
-from basic_tools import gaussian, skewed_gaussian, diameter_to_volume, volume_to_diameter
+from basic_tools import skewed_gaussian, diameter_to_volume, volume_to_diameter
 from evolution_models.tools import Fuchs_Brownian
 
 
@@ -16,25 +16,24 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
-smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
+smoothing = False  # Set to True to compute fixed interval Kalman smoother estimates
 plot_animations = True  # Set to True to plot animations
-plot_nucleation = True  # Set to True to plot nucleation plot
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
-coagulation_suffix = '0004_to_1_1_micro_metres'  # Suffix of saved coagulation tensors file
-data_filename = 'observations_06'  # Filename for data of simulated observations
+coagulation_suffix = '01_to_11_micro_metres'  # Suffix of saved coagulation tensors file
+data_filename = 'observations_07'  # Filename for data of simulated observations
 
 # Spatial domain:
-Dp_min = 0.004  # Minimum diameter of particles (micro m)
-Dp_max = 1.1  # Maximum diameter of particles (micro m)
+Dp_min = 0.1  # Minimum diameter of particles (micro m)
+Dp_max = 11  # Maximum diameter of particles (micro m)
 vmin = diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
 vmax = diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
 xmin = log(vmin)  # Lower limit in log-size
 xmax = log(vmax)  # Upper limit in log-size
 
 # Time domain:
-dt = (1 / 60) * 20  # Time step (hours)
-T = 24  # End time (hours)
+dt = (1 / 60) * (1 / 2)  # Time step (hours)
+T = 1  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
 # Size distribution discretisation:
@@ -62,7 +61,7 @@ sigma_alpha_prior_4 = 0
 sigma_alpha_prior_5 = 0
 sigma_alpha_prior_6 = 0
 # Prior covariance for gamma; Gamma_gamma_prior = sigma_gamma_prior^2 * I_N_gamma (Condensation rate):
-sigma_gamma_prior_0 = 0.02
+sigma_gamma_prior_0 = 0.5
 sigma_gamma_prior_1 = sigma_gamma_prior_0 / 2
 sigma_gamma_prior_2 = sigma_gamma_prior_1 / 4
 sigma_gamma_prior_3 = 0
@@ -70,15 +69,13 @@ sigma_gamma_prior_4 = 0
 sigma_gamma_prior_5 = 0
 sigma_gamma_prior_6 = 0
 # Prior covariance for eta; Gamma_eta_prior = sigma_eta_prior^2 * I_N_eta (Deposition rate):
-sigma_eta_prior_0 = 0.2
+sigma_eta_prior_0 = 2
 sigma_eta_prior_1 = sigma_eta_prior_0 / 2
 sigma_eta_prior_2 = sigma_eta_prior_1 / 4
 sigma_eta_prior_3 = 0
 sigma_eta_prior_4 = 0
 sigma_eta_prior_5 = 0
 sigma_eta_prior_6 = 0
-# Prior uncertainty for J (Nucleation rate):
-sigma_J_prior = 100
 
 # Model noise parameters:
 # Observation noise covariance parameters:
@@ -111,8 +108,6 @@ sigma_eta_w_4 = 0
 sigma_eta_w_5 = 0
 sigma_eta_w_6 = 0
 sigma_eta_w_correlation = 2
-# Evolution noise for J (Nucleation rate):
-sigma_J_w = sigma_J_prior
 
 # Condensation VAR(p) coefficients for model gamma_{t + 1} = A_1 gamma_t + ... + w_{gamma_t}:
 gamma_p = 1
@@ -134,69 +129,51 @@ eta_A5 = 0 * eye(N_eta)
 eta_A6 = 0 * eye(N_eta)
 eta_A = array([eta_A1, eta_A2, eta_A3, eta_A4, eta_A5, eta_A6])  # Tensor of VAR(p) coefficients
 
-# Nucleation AR(p) coefficients for model J_{t + 1} = a_1 J_t + ... + w_{J_t}:
-J_p = 5  # Order of AR model
-J_a1 = 4.234
-J_a2 = -7.261
-J_a3 = 6.286
-J_a4 = -2.736
-J_a5 = 0.476
-J_a6 = 0
-J_a = array([J_a1, J_a2, J_a3, J_a4, J_a5, J_a6])  # Vector of AR(p) coefficients
-
-# Modifying first element covariance for alpha (size distribution):
-alpha_first_element_multiplier = 10
-gamma_first_element_multiplier = 1
-eta_first_element_multiplier = 1
-
 # Option to use element multiplier in covariance matrices (covariance decreases as element increases):
 alpha_use_element_multipler = False
 gamma_use_element_multipler = False
 eta_use_element_multipler = False
 
 # Initial guess of the size distribution n_0(x) = n(x, 0):
-N_0 = 1e3  # Amplitude of initial condition gaussian
-x_0 = log(diameter_to_volume(0.01))  # Mean of initial condition gaussian
-sigma_0 = 3  # Standard deviation of initial condition gaussian
-skewness = 3  # Skewness factor for initial condition gaussian
+N_0 = 1.5e3  # Amplitude of initial condition gaussian
+N_1 = 1e3  # Amplitude of initial condition gaussian
+x_0 = log(diameter_to_volume(0.2))  # Mean of initial condition gaussian
+x_1 = log(diameter_to_volume(2))  # Mean of initial condition gaussian
+sigma_0 = 2  # Standard deviation of initial condition gaussian
+sigma_1 = 2  # Standard deviation of initial condition gaussian
+skewness_0 = 5  # Skewness factor for initial condition gaussian
+skewness_1 = 1  # Skewness factor for initial condition gaussian
 def initial_guess_size_distribution(x):
-    return skewed_gaussian(x, N_0, x_0, sigma_0, skewness)
+    return skewed_gaussian(x, N_0, x_0, sigma_0, skewness_0) + skewed_gaussian(x, N_1, x_1, sigma_1, skewness_1)
 
 # Initial guess of the condensation rate I_0(Dp) = I_Dp(Dp, 0):
-I_cst_guess = 0.01  # Condensation parameter constant
-I_linear_guess = 0  # Condensation parameter linear
+I_cst_guess = 0.4  # Condensation parameter constant
+I_linear_guess = 0.2  # Condensation parameter linear
 def initial_guess_condensation_rate(Dp):
     return I_cst_guess + I_linear_guess * Dp
 
 # Initial guess of the deposition rate d_0(Dp) = d(Dp, 0):
-d_cst_guess = 0.4  # Deposition parameter constant
+d_cst_guess = 4  # Deposition parameter constant
 d_linear_guess = 0  # Deposition parameter linear
-d_inverse_quadratic_guess = 0  # Deposition parameter inverse quadratic
+d_inv_linear_guess = 0  # Deposition parameter inverse quadratic
 def initial_guess_deposition_rate(Dp):
-    return d_cst_guess + d_linear_guess * Dp + d_inverse_quadratic_guess * (1 / Dp ** 2)
+    return d_cst_guess + d_linear_guess * Dp + d_inv_linear_guess * (1 / Dp)
 
 # Set to True for imposing boundary condition n(xmin, t) = 0:
 boundary_zero = True
 
 # True underlying condensation model I_Dp(Dp, t):
-I_cst = 0.002  # Condensation parameter constant
-I_linear = 0.05  # Condensation parameter linear
+I_cst = 0.2  # Condensation parameter constant
+I_linear = 0.5  # Condensation parameter linear
 def cond(Dp):
     return I_cst + I_linear * Dp
 
 # True underlying deposition model d(Dp, t):
-d_cst = 0.02  # Deposition parameter constant
-d_linear = 0.05  # Deposition parameter linear
-d_inverse_quadratic = 0.00001  # Deposition parameter inverse quadratic
+d_cst = 0.1  # Deposition parameter constant
+d_linear = 0.5  # Deposition parameter linear
+d_inv_linear = 0.25  # Deposition parameter inverse quadratic
 def depo(Dp):
-    return d_cst + d_linear * Dp + d_inverse_quadratic * (1 / Dp ** 2)
-
-# True underlying source (nucleation event) model:
-N_s = 2e3  # Amplitude of gaussian nucleation event
-t_s = 8  # Mean time of gaussian nucleation event
-sigma_s = 1.5   # Standard deviation time of gaussian nucleation event
-def sorc(t):  # Source (nucleation) at xmin
-    return gaussian(t, N_s, t_s, sigma_s)  # Gaussian source (nucleation event) model output
+    return d_cst + d_linear * Dp + d_inv_linear * (1 / Dp)
 
 # Coagulation model:
 def coag(x, y):

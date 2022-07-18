@@ -41,6 +41,11 @@ Ne = 50  # Number of elements
 Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 
+# Condensation rate discretisation:
+Ne_gamma = 2  # Number of elements
+Np_gamma = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
+N_gamma = Ne_gamma * Np_gamma  # Total degrees of freedom
+
 # Deposition rate discretisation:
 Ne_eta = 2  # Number of elements
 Np_eta = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
@@ -55,6 +60,14 @@ sigma_alpha_prior_3 = 0
 sigma_alpha_prior_4 = 0
 sigma_alpha_prior_5 = 0
 sigma_alpha_prior_6 = 0
+# Prior covariance for gamma; Gamma_gamma_prior = sigma_gamma_prior^2 * I_N_gamma (Condensation rate):
+sigma_gamma_prior_0 = 0.5
+sigma_gamma_prior_1 = sigma_gamma_prior_0 / 2
+sigma_gamma_prior_2 = sigma_gamma_prior_1 / 4
+sigma_gamma_prior_3 = 0
+sigma_gamma_prior_4 = 0
+sigma_gamma_prior_5 = 0
+sigma_gamma_prior_6 = 0
 # Prior covariance for eta; Gamma_eta_prior = sigma_eta_prior^2 * I_N_eta (Deposition rate):
 sigma_eta_prior_0 = 2
 sigma_eta_prior_1 = sigma_eta_prior_0 / 2
@@ -77,15 +90,34 @@ sigma_alpha_w_4 = 0
 sigma_alpha_w_5 = 0
 sigma_alpha_w_6 = 0
 sigma_alpha_w_correlation = 2
+# Evolution noise covariance Gamma_gamma_w = sigma_gamma_w^2 * I_N_gamma (Condensation rate):
+sigma_gamma_w_0 = sigma_gamma_prior_0 / 100
+sigma_gamma_w_1 = sigma_gamma_prior_1 / 100
+sigma_gamma_w_2 = sigma_gamma_prior_2 / 100
+sigma_gamma_w_3 = 0
+sigma_gamma_w_4 = 0
+sigma_gamma_w_5 = 0
+sigma_gamma_w_6 = 0
+sigma_gamma_w_correlation = 2
 # Evolution noise covariance Gamma_eta_w = sigma_eta_w^2 * I_N_eta (Deposition rate):
 sigma_eta_w_0 = sigma_eta_prior_0 / 1000
-sigma_eta_w_1 = sigma_eta_prior_0 / 1000
-sigma_eta_w_2 = sigma_eta_prior_0 / 1000
+sigma_eta_w_1 = sigma_eta_prior_1 / 1000
+sigma_eta_w_2 = sigma_eta_prior_2 / 1000
 sigma_eta_w_3 = 0
 sigma_eta_w_4 = 0
 sigma_eta_w_5 = 0
 sigma_eta_w_6 = 0
 sigma_eta_w_correlation = 2
+
+# Condensation VAR(p) coefficients for model gamma_{t + 1} = A_1 gamma_t + ... + w_{gamma_t}:
+gamma_p = 1
+gamma_A1 = 1 * eye(N_gamma)
+gamma_A2 = 0 * eye(N_gamma)
+gamma_A3 = 0 * eye(N_gamma)
+gamma_A4 = 0 * eye(N_gamma)
+gamma_A5 = 0 * eye(N_gamma)
+gamma_A6 = 0 * eye(N_gamma)
+gamma_A = array([gamma_A1, gamma_A2, gamma_A3, gamma_A4, gamma_A5, gamma_A6])  # Tensor of VAR(p) coefficients
 
 # Deposition VAR(p) coefficients for model eta_{t + 1} = A_1 eta_t + ... + w_{eta_t}:
 eta_p = 1
@@ -99,6 +131,7 @@ eta_A = array([eta_A1, eta_A2, eta_A3, eta_A4, eta_A5, eta_A6])  # Tensor of VAR
 
 # Option to use element multiplier in covariance matrices (covariance decreases as element increases):
 alpha_use_element_multipler = False
+gamma_use_element_multipler = False
 eta_use_element_multipler = False
 
 # Initial guess of the size distribution n_0(x) = n(x, 0):
@@ -113,10 +146,10 @@ skewness_1 = 1  # Skewness factor for initial condition gaussian
 def initial_guess_size_distribution(x):
     return skewed_gaussian(x, N_0, x_0, sigma_0, skewness_0) + skewed_gaussian(x, N_1, x_1, sigma_1, skewness_1)
 
-# Guess of the condensation rate I(Dp):
+# Initial guess of the condensation rate I_0(Dp) = I_Dp(Dp, 0):
 I_cst_guess = 0.4  # Condensation parameter constant
 I_linear_guess = 0.2  # Condensation parameter linear
-def guess_cond(Dp):
+def initial_guess_condensation_rate(Dp):
     return I_cst_guess + I_linear_guess * Dp
 
 # Initial guess of the deposition rate d_0(Dp) = d(Dp, 0):
@@ -126,7 +159,7 @@ d_inv_linear_guess = 0  # Deposition parameter inverse quadratic
 def initial_guess_deposition_rate(Dp):
     return d_cst_guess + d_linear_guess * Dp + d_inv_linear_guess * (1 / Dp)
 
-# Set to True for imposing boundary condition n(vmin, t) = 0:
+# Set to True for imposing boundary condition n(xmin, t) = 0:
 boundary_zero = True
 
 # True underlying condensation model I_Dp(Dp, t):

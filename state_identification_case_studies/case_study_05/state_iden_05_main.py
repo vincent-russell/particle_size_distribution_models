@@ -327,8 +327,6 @@ if __name__ == '__main__':
     sigma_eta_prior = np.array([sigma_eta_prior_0, sigma_eta_prior_1, sigma_eta_prior_2, sigma_eta_prior_3, sigma_eta_prior_4, sigma_eta_prior_5, sigma_eta_prior_6])  # Array of standard deviations
     Gamma_eta_prior = basic_tools.compute_correlated_covariance_matrix(N_eta, Np_eta, Ne_eta, sigma_eta_prior, 0.001, use_element_multiplier=eta_use_element_multipler)  # Covariance matrix computation
     Gamma_eta_prior[0: Np_eta, 0: Np_eta] = eta_first_element_multiplier * Gamma_eta_prior[0: Np_eta, 0: Np_eta]  # First element multiplier
-    # First element multiplier:
-    Gamma_eta_prior[0: Np_eta, 0: Np_eta] = eta_first_element_multiplier * Gamma_eta_prior[0: Np_eta, 0: Np_eta]
     # Prior for eta_tilde:
     eta_tilde_prior = np.zeros([eta_p * N_eta])
     Gamma_eta_tilde_prior = np.zeros([eta_p * N_eta, eta_p * N_eta])
@@ -465,13 +463,13 @@ if __name__ == '__main__':
     # Computing true underlying parameters plotting discretisation:
     Nplot_cond = len(d_plot_cond)  # Length of size discretisation
     Nplot_depo = len(d_plot_depo)  # Length of size discretisation
-    cond_Dp_true_plot = np.zeros([Nplot_cond, NT])  # Initialising volume-based condensation rate
+    cond_Dp_true_plot = np.zeros([Nplot_cond, NT])  # Initialising condensation rate
     depo_true_plot = np.zeros([Nplot_depo, NT])  # Initialising deposition rate
     sorc_v_true_plot = np.zeros(NT)  # Initialising volume-based source (nucleation) rate
     for k in range(NT):
         sorc_v_true_plot[k] = sorc(t[k])  # Computing volume-based nucleation rate
         for i in range(Nplot_cond):
-            cond_Dp_true_plot[i, k] = cond(d_plot_cond[i])  # Computing volume-based condensation rate
+            cond_Dp_true_plot[i, k] = cond(d_plot_cond[i])  # Computing condensation rate
         for i in range(Nplot_depo):
             depo_true_plot[i, k] = depo(d_plot_depo[i])  # Computing deposition rate
     sorc_Dp_true_plot = change_basis_volume_to_diameter_sorc(sorc_v_true_plot, Dp_min)  # Computing diameter-based nucleation rate

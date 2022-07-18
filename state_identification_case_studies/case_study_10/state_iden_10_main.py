@@ -25,7 +25,7 @@ from observation_models.tools import Size_distribution_observation_model
 
 #######################################################
 # Importing parameter file:
-from state_identification_case_studies.case_study_08.state_iden_08_parameters import *
+from state_identification_case_studies.case_study_10.state_iden_10_parameters import *
 
 
 #######################################################
@@ -327,8 +327,6 @@ if __name__ == '__main__':
     sigma_eta_prior = np.array([sigma_eta_prior_0, sigma_eta_prior_1, sigma_eta_prior_2, sigma_eta_prior_3, sigma_eta_prior_4, sigma_eta_prior_5, sigma_eta_prior_6])  # Array of standard deviations
     Gamma_eta_prior = basic_tools.compute_correlated_covariance_matrix(N_eta, Np_eta, Ne_eta, sigma_eta_prior, 0.001, use_element_multiplier=eta_use_element_multipler)  # Covariance matrix computation
     Gamma_eta_prior[0: Np_eta, 0: Np_eta] = eta_first_element_multiplier * Gamma_eta_prior[0: Np_eta, 0: Np_eta]  # First element multiplier
-    # First element multiplier:
-    Gamma_eta_prior[0: Np_eta, 0: Np_eta] = eta_first_element_multiplier * Gamma_eta_prior[0: Np_eta, 0: Np_eta]
     # Prior for eta_tilde:
     eta_tilde_prior = np.zeros([eta_p * N_eta])
     Gamma_eta_tilde_prior = np.zeros([eta_p * N_eta, eta_p * N_eta])
@@ -467,13 +465,13 @@ if __name__ == '__main__':
     Nplot_depo = len(log_d_plot_depo)  # Length of size discretisation
     d_plot_cond = np.exp(log_d_plot_cond)  # Computing Dp plotting discretisation
     d_plot_depo = np.exp(log_d_plot_depo)  # Computing Dp plotting discretisation
-    cond_Dp_true_plot = np.zeros([Nplot_cond, NT])  # Initialising ln(volume)-based condensation rate
+    cond_Dp_true_plot = np.zeros([Nplot_cond, NT])  # Initialising condensation rate
     depo_true_plot = np.zeros([Nplot_depo, NT])  # Initialising deposition rate
     sorc_x_true_plot = np.zeros(NT)  # Initialising ln(volume)-based source (nucleation) rate
     for k in range(NT):
         sorc_x_true_plot[k] = sorc(t[k])  # Computing ln(volume)-based nucleation rate
         for i in range(Nplot_cond):
-            cond_Dp_true_plot[i, k] = cond(d_plot_cond[i])  # Computing ln(volume)-based condensation rate
+            cond_Dp_true_plot[i, k] = cond(d_plot_cond[i])  # Computing condensation rate
         for i in range(Nplot_depo):
             depo_true_plot[i, k] = depo(d_plot_depo[i])  # Computing deposition rate
     sorc_logDp_true_plot = change_basis_x_to_logDp_sorc(sorc_x_true_plot, vmin, Dp_min)  # Computing log10(diameter)-based nucleation rate

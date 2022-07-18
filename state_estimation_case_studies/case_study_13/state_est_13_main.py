@@ -216,7 +216,7 @@ if __name__ == '__main__':
     # Parameters for size distribution animation:
     xscale = 'log'  # x-axis scaling ('linear' or 'log')
     xticks = [0.1, 1, 10]  # Plot x-tick labels
-    xlimits = [d_plot[0], d_plot[-1]]  # Plot boundary limits for x-axis
+    xlimits = [0.1, 10]  # Plot boundary limits for x-axis
     ylimits = [0, 10000]  # Plot boundary limits for y-axis
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
