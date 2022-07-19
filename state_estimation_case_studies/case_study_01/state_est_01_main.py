@@ -224,7 +224,7 @@ if __name__ == '__main__':
     legend_cond = ['Guess', 'Truth']  # Adding legend to plot
     line_color_cond = ['blue', 'green']  # Colors of lines in plot
     line_style_cond = ['solid', 'solid']  # Style of lines in plot
-    delay_cond = 0  # Delay for each frame (ms)
+    delay_cond = 15  # Delay for each frame (ms)
 
     # Parameters for deposition plot:
     ylimits_depo = [0, 0.6]  # Plot boundary limits for y-axis

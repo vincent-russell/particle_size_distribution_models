@@ -248,7 +248,7 @@ if __name__ == '__main__':
     line_style = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
-    delay = 120  # Delay between frames in milliseconds
+    delay = 60  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
     yscale_cond = 'linear'  # y-axis scaling ('linear' or 'log')

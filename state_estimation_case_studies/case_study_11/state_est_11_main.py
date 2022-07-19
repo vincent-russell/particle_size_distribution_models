@@ -234,7 +234,7 @@ if __name__ == '__main__':
     line_style = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
-    delay = 120  # Delay between frames in milliseconds
+    delay = 60  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
     yscale_cond = 'linear'  # y-axis scaling ('linear' or 'log')
@@ -246,7 +246,7 @@ if __name__ == '__main__':
     legend_cond = ['Guess', 'Truth']  # Adding legend to plot
     line_color_cond = ['blue', 'green']  # Colors of lines in plot
     line_style_cond = ['solid', 'solid']  # Style of lines in plot
-    delay_cond = 0  # Delay for each frame (ms)
+    delay_cond = 30  # Delay for each frame (ms)
 
     # Parameters for deposition plot:
     yscale_depo = 'linear'  # y-axis scaling ('linear' or 'log')
