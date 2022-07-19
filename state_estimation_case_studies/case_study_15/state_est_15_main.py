@@ -17,14 +17,14 @@ from tqdm import tqdm
 # Local modules:
 import basic_tools
 from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
-from observation_models.data.CSTAR import get_CSTAR_data
-from evolution_models.tools import GDE_evolution_model, GDE_Jacobian
+from observation_models.data.simulated import load_observations
+from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_basis_x_to_logDp
 from observation_models.tools import Size_distribution_observation_model
 
 
 #######################################################
 # Importing parameter file:
-from state_estimation_case_studies.case_study_16_in_progress.state_est_16_parameters import *
+from state_estimation_case_studies.case_study_15.state_est_15_parameters import *
 
 
 #######################################################
@@ -36,8 +36,11 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Importing CSTAR observations:
-    d_obs, Y, _ = get_CSTAR_data()
+    # Importing simulated observations and true size distribution:
+    observation_data = load_observations(data_filename)  # Loading data file
+    d_obs, Y = observation_data['d_obs'], observation_data['Y']  # Extracting observations
+    d_true, n_x_true = observation_data['d_true'], observation_data['n_true']  # Extracting true size distribution
+    n_logDp_true = change_basis_x_to_logDp(n_x_true, diameter_to_volume(d_true), d_true)  # Computing diameter-based size distribution
 
 
     #######################################################
@@ -185,12 +188,16 @@ if __name__ == '__main__':
     # Computing true and guessed underlying parameters plotting discretisation:
     Nplot_cond = len(d_plot)  # Length of size discretisation
     Nplot_depo = len(d_plot)  # Length of size discretisation
+    cond_Dp_truth_plot = np.zeros([Nplot_cond, NT])  # Initialising condensation rate
     cond_Dp_guess_plot = np.zeros([Nplot_cond, NT])  # Initialising condensation rate
+    depo_truth_plot = np.zeros([Nplot_depo, NT])  # Initialising deposition rate
     depo_guess_plot = np.zeros([Nplot_depo, NT])  # Initialising deposition rate
     for k in range(NT):
         for i in range(Nplot_cond):
+            cond_Dp_truth_plot[i, k] = cond(d_plot[i])  # Computing condensation rate
             cond_Dp_guess_plot[i, k] = guess_cond(d_plot[i])  # Computing condensation rate
         for i in range(Nplot_depo):
+            depo_truth_plot[i, k] = depo(d_plot[i])  # Computing deposition rate
             depo_guess_plot[i, k] = guess_depo(d_plot[i])  # Computing deposition rate
 
 
@@ -214,8 +221,8 @@ if __name__ == '__main__':
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution estimation'  # Title for 1D animation plot
-    legend = ['Estimate', '$\pm 2 \sigma$', '', 'CSTAR Observations']  # Adding legend to plot
-    line_color = ['blue', 'blue', 'blue', 'red']  # Colors of lines in plot
+    legend = ['Estimate', '$\pm 2 \sigma$', '', 'Truth']  # Adding legend to plot
+    line_color = ['blue', 'blue', 'blue', 'green']  # Colors of lines in plot
     line_style = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
@@ -228,9 +235,9 @@ if __name__ == '__main__':
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate estimation'  # Title for plot
     location_cond = location + '2'  # Location for plot
-    legend_cond = ['Guess']  # Adding legend to plot
-    line_color_cond = ['blue']  # Colors of lines in plot
-    line_style_cond = ['solid']  # Style of lines in plot
+    legend_cond = ['Guess', 'Truth']  # Adding legend to plot
+    line_color_cond = ['blue', 'green']  # Colors of lines in plot
+    line_style_cond = ['solid', 'solid']  # Style of lines in plot
     delay_cond = 0  # Delay for each frame (ms)
 
     # Parameters for deposition plot:
@@ -240,21 +247,21 @@ if __name__ == '__main__':
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate estimation'  # Title for plot
     location_depo = location + '3'  # Location for plot
-    legend_depo = ['Guess']  # Adding legend to plot
-    line_color_depo = ['blue']  # Colors of lines in plot
-    line_style_depo = ['solid']  # Style of lines in plot
+    legend_depo = ['Guess', 'Truth']  # Adding legend to plot
+    line_color_depo = ['blue', 'green']  # Colors of lines in plot
+    line_style_depo = ['solid', 'solid']  # Style of lines in plot
     delay_depo = delay_cond  # Delay between frames in milliseconds
 
     # Size distribution animation:
-    basic_tools.plot_1D_animation(d_plot, n_logDp_plot, n_Dp_plot_lower, n_Dp_plot_upper, plot_add=(d_obs, Y), xticks=xticks, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
+    basic_tools.plot_1D_animation(d_plot, n_logDp_plot, n_Dp_plot_lower, n_Dp_plot_upper, plot_add=(d_true, n_logDp_true), xticks=xticks, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
                                   delay=delay, location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, line_style=line_style, doing_mainloop=False)
 
     # Condensation rate animation:
-    basic_tools.plot_1D_animation(d_plot, cond_Dp_guess_plot, xticks=xticks, xlimits=xlimits, ylimits=ylimits_cond, xscale=xscale, yscale=yscale_cond, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
+    basic_tools.plot_1D_animation(d_plot, cond_Dp_guess_plot, cond_Dp_truth_plot, xticks=xticks, xlimits=xlimits, ylimits=ylimits_cond, xscale=xscale, yscale=yscale_cond, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
                                   location=location_cond, delay=delay_cond, legend=legend_cond, time=time, timetext=timetext, line_color=line_color_cond, line_style=line_style_cond, doing_mainloop=False)
 
     # Deposition rate animation:
-    basic_tools.plot_1D_animation(d_plot, depo_guess_plot, xticks=xticks, xlimits=xlimits, ylimits=ylimits_depo, xscale=xscale, yscale=yscale_depo, xlabel=xlabel_depo, ylabel=ylabel_depo, title=title_depo,
+    basic_tools.plot_1D_animation(d_plot, depo_guess_plot, depo_truth_plot, xticks=xticks, xlimits=xlimits, ylimits=ylimits_depo, xscale=xscale, yscale=yscale_depo, xlabel=xlabel_depo, ylabel=ylabel_depo, title=title_depo,
                                   location=location_depo, delay=delay_depo, legend=legend_depo, time=time, timetext=timetext, line_color=line_color_depo, line_style=line_style_depo, doing_mainloop=False)
 
     # Mainloop and print:
@@ -273,7 +280,7 @@ if __name__ == '__main__':
     ylabel_image = '$D_p$ ($\mu$m)'  # y-axis label for image
     ylabelcoords = (-0.06, 1.05)  # y-axis label coordinates
     title_image = 'Size distribution estimation'  # Title for image
-    title_image_observations = 'CSTAR observations'  # Title for image
+    title_image_observations = 'Simulated observations'  # Title for image
     image_min = 1  # Minimum of image colour
     image_max = 300  # Maximum of image colour
     cmap = 'jet'  # Colour map of image
