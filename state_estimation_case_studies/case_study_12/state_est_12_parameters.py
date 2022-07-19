@@ -16,17 +16,21 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
+use_BAE = True  # Set to True to use BAE
+filename_BAE = 'state_est_12_BAE'  # Filename for BAE mean and covariance
+compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
+plot_norm_difference = True  # Set to True to plot norm difference between truth and estimates
 smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
 plot_animations = True  # Set to True to plot animations
 plot_nucleation = True  # Set to True to plot nucleation plot
-plot_images = False  # Set to True to plot images
+plot_images = True  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
-coagulation_suffix = '0004_to_1_micro_metres'  # Suffix of saved coagulation tensors file
+coagulation_suffix = '0004_to_1_1_micro_metres'  # Suffix of saved coagulation tensors file
 data_filename = 'observations_06'  # Filename for data of simulated observations
 
 # Spatial domain:
 Dp_min = 0.004  # Minimum diameter of particles (micro m)
-Dp_max = 1  # Maximum diameter of particles (micro m)
+Dp_max = 1.1  # Maximum diameter of particles (micro m)
 vmin = diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
 vmax = diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
 xmin = log(vmin)  # Lower limit in log-size
@@ -38,13 +42,13 @@ T = 24  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
 # Size distribution discretisation:
-Ne = 50  # Number of elements
-Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
+Ne = 25  # Number of elements
+Np = 1  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 
 # Prior noise parameters:
 # Prior covariance for alpha; Gamma_alpha_prior = sigma_alpha_prior^2 * I_N (Size distribution):
-sigma_alpha_prior_0 = 100
+sigma_alpha_prior_0 = 25
 sigma_alpha_prior_1 = sigma_alpha_prior_0 / 2
 sigma_alpha_prior_2 = sigma_alpha_prior_1 / 4
 sigma_alpha_prior_3 = 0
@@ -54,7 +58,7 @@ sigma_alpha_prior_6 = 0
 
 # Model noise parameters:
 # Observation noise covariance parameters:
-sigma_v = 2000  # Additive noise
+sigma_v = 4000  # Additive noise
 sigma_Y_multiplier = 0  # Noise multiplier proportional to Y
 # Evolution noise covariance Gamma_alpha_w = sigma_alpha_w^2 * I_N (Size distribution):
 sigma_alpha_w_0 = sigma_alpha_prior_0
@@ -67,7 +71,7 @@ sigma_alpha_w_6 = 0
 sigma_alpha_w_correlation = 2
 
 # Modifying first element covariance for alpha (size distribution):
-alpha_first_element_multiplier = 1000
+alpha_first_element_multiplier = 10
 
 # Initial guess of the size distribution n_0(x) = n(x, 0):
 N_0 = 1e3  # Amplitude of initial condition gaussian
@@ -84,16 +88,16 @@ def guess_cond(Dp):
     return I_cst_guess + I_linear_guess * Dp
 
 # Guess of the deposition rate d(Dp):
-d_cst_guess = 0.2  # Deposition parameter constant
-d_linear_guess = 0  # Deposition parameter linear
+d_cst_guess = 0.1  # Deposition parameter constant
+d_linear_guess = 0 # Deposition parameter linear
 d_inverse_quadratic_guess = 0  # Deposition parameter inverse quadratic
 def guess_depo(Dp):
     return d_cst_guess + d_linear_guess * Dp + d_inverse_quadratic_guess * (1 / Dp ** 2)
 
 # Guess of the source (nucleation event) model:
-N_s_guess = 2e3  # Amplitude of gaussian nucleation event
-t_s_guess = 7  # Mean time of gaussian nucleation event
-sigma_s_guess = 1.25  # Standard deviation time of gaussian nucleation event
+N_s_guess = 2.5e3  # Amplitude of gaussian nucleation event
+t_s_guess = 10  # Mean time of gaussian nucleation event
+sigma_s_guess = 1  # Standard deviation time of gaussian nucleation event
 def guess_sorc(t):  # Source (nucleation) at xmin
     return gaussian(t, N_s_guess, t_s_guess, sigma_s_guess)  # Gaussian source (nucleation event) model output
 
@@ -107,7 +111,7 @@ def cond(Dp):
     return I_cst + I_linear * Dp
 
 # True underlying deposition model d(Dp, t):
-d_cst = 0.01  # Deposition parameter constant
+d_cst = 0.02  # Deposition parameter constant
 d_linear = 0.05  # Deposition parameter linear
 d_inverse_quadratic = 0.00001  # Deposition parameter inverse quadratic
 def depo(Dp):

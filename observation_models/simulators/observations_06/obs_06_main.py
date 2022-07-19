@@ -203,7 +203,7 @@ if __name__ == '__main__':
     title_image = 'Size distribution'  # Title for image
     title_image_observations = 'Simulated observations'  # Title for image
     image_min = 10  # Minimum of image colour
-    image_max = 12000  # Maximum of image colour
+    image_max = 10000  # Maximum of image colour
     cmap = 'jet'  # Colour map of image
     cbarlabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # Label of colour bar
     cbarticks = [10, 100, 1000, 10000]  # Ticks of colorbar

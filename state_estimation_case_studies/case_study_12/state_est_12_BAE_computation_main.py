@@ -21,7 +21,7 @@ from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, compute_G
 
 #######################################################
 # Importing parameter file:
-from state_estimation_case_studies.case_study_10.state_est_10_BAE_computation_parameters import *
+from state_estimation_case_studies.case_study_12.state_est_12_BAE_computation_parameters import *
 
 
 #######################################################
@@ -46,8 +46,8 @@ if __name__ == '__main__':
 
     #######################################################
     # Initialising evolution model and reduced evolution model:
-    F_alpha = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero, print_status=False)  # Initialising evolution model
-    F_alpha_r = GDE_evolution_model(Ne_r, Np_r, vmin, vmax, dt, NT, boundary_zero=boundary_zero, print_status=False)  # Initialising reduced evolution model
+    F_alpha = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', print_status=False)  # Initialising evolution model
+    F_alpha_r = GDE_evolution_model(Ne_r, Np_r, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', print_status=False)  # Initialising reduced evolution model
 
 
     #######################################################
@@ -117,25 +117,24 @@ if __name__ == '__main__':
         #######################################################
         # Drawing sample of parameters for evolution model:
 
-        # Sample of the condensation rate I(Dp):
-        I_0 = random.uniform(0.125, 0.625)  # Condensation parameter constant
-        I_1 = 0  # Condensation parameter inverse quadratic
+        # True underlying condensation model I_Dp(Dp, t):
+        I_cst = random.uniform(0.001, 0.003)  # Condensation parameter constant
+        I_linear = random.uniform(0, 0.05)  # Condensation parameter linear
         def cond(Dp):
-            return I_0 + I_1 / (Dp ** 2)
+            return I_cst + I_linear * Dp
 
-        # Sample of the deposition rate d(Dp):
-        depo_Dpmin = 5  # Deposition parameter; diameter at which minimum
-        d_0 = random.uniform(0.01, 0.45)  # Deposition parameter constant
-        d_1 = 0  # Deposition parameter linear
-        d_2 = -d_1 / (2 * depo_Dpmin)  # Deposition parameter quadratic
+        # True underlying deposition model d(Dp, t):
+        d_cst = random.uniform(0, 0.12)  # Deposition parameter constant
+        d_linear = random.uniform(0, 0.1)  # Deposition parameter linear
+        d_inverse_quadratic = random.uniform(0, 0.000015)  # Deposition parameter inverse quadratic
         def depo(Dp):
-            return d_0 + d_1 * Dp + d_2 * Dp ** 2  # Quadratic model output
+            return d_cst + d_linear * Dp + d_inverse_quadratic * (1 / Dp ** 2)
 
-        # Sample of the source (nucleation event) model:
-        N_s = random.uniform(2e3, 6e3)  # Amplitude of gaussian nucleation event
-        t_s = random.uniform(5, 15)  # Mean time of gaussian nucleation event
-        sigma_s = 1.25  # Standard deviation time of gaussian nucleation event
-        def sorc(t):  # Source (nucleation) at vmin
+        # True underlying source (nucleation event) model:
+        N_s = random.uniform(1.3e3, 2.7e3)  # Amplitude of gaussian nucleation event
+        t_s = random.uniform(7, 12)  # Mean time of gaussian nucleation event
+        sigma_s = random.uniform(0.8, 1.6)  # Standard deviation time of gaussian nucleation event
+        def sorc(t):  # Source (nucleation) at xmin
             return gaussian(t, N_s, t_s, sigma_s)  # Gaussian source (nucleation event) model output
 
         #######################################################

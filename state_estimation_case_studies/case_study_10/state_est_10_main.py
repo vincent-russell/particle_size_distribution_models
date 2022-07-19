@@ -212,7 +212,7 @@ if __name__ == '__main__':
     #######################################################
     # Computing norm difference between truth and estimates:
     # Size distribution:
-    v_true = basic_tools.diameter_to_volume(d_true)  # Getting true discretisation
+    v_true = basic_tools.diameter_to_volume(d_true)
     _, _, n_v_estimate, sigma_n_v = F_alpha.get_nplot_discretisation(alpha, Gamma_alpha=Gamma_alpha, x_plot=v_true)  # Computing estimate on true discretisation
     norm_diff = compute_norm_difference(n_v_true, n_v_estimate, sigma_n_v, compute_weighted_norm=compute_weighted_norm)  # Computing norm difference
 
@@ -304,7 +304,7 @@ if __name__ == '__main__':
     # Plotting norm difference between truth and estimates:
     if plot_norm_difference:
         print('Plotting norm difference between truth and estimates...')
-        plt.figure(1)
+        plt.figure()
         plt.plot(t, norm_diff)
         plt.xlim([0, T])
         plt.ylim([0, np.max(norm_diff)])
