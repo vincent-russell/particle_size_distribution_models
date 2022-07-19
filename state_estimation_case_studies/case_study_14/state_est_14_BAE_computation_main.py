@@ -21,7 +21,7 @@ from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, compute_G
 
 #######################################################
 # Importing parameter file:
-from state_estimation_case_studies.case_study_12.state_est_12_BAE_computation_parameters import *
+from state_estimation_case_studies.case_study_14.state_est_14_BAE_computation_parameters import *
 
 
 #######################################################
@@ -61,7 +61,6 @@ if __name__ == '__main__':
     # Constructing reduced size distribution evolution model:
     F_alpha_r.add_process('condensation', guess_cond)  # Adding condensation to evolution model
     F_alpha_r.add_process('deposition', guess_depo)  # Adding deposition to evolution model
-    F_alpha_r.add_process('source', guess_sorc)  # Adding source to evolution model
     F_alpha_r.compile()  # Compiling evolution model
 
 
@@ -118,30 +117,22 @@ if __name__ == '__main__':
         # Drawing sample of parameters for evolution model:
 
         # True underlying condensation model I_Dp(Dp, t):
-        I_cst = random.uniform(0.001, 0.003)  # Condensation parameter constant
-        I_linear = random.uniform(0, 0.05)  # Condensation parameter linear
+        I_cst = random.uniform(0, 0.3)  # Condensation parameter constant
+        I_linear = random.uniform(0, 1)  # Condensation parameter linear
         def cond(Dp):
             return I_cst + I_linear * Dp
 
-        # True underlying deposition model d(Dp, t):
-        d_cst = random.uniform(0, 0.12)  # Deposition parameter constant
-        d_linear = random.uniform(0, 0.1)  # Deposition parameter linear
-        d_inverse_quadratic = random.uniform(0, 0.000015)  # Deposition parameter inverse quadratic
+        # Deposition model d(Dp, t):
+        d_cst = random.uniform(0, 0.5)  # Deposition parameter constant
+        d_linear = random.uniform(0, 0.75)  # Deposition parameter linear
+        d_inv_linear = random.uniform(0, 0.35)  # Deposition parameter inverse linear
         def depo(Dp):
-            return d_cst + d_linear * Dp + d_inverse_quadratic * (1 / Dp ** 2)
-
-        # True underlying source (nucleation event) model:
-        N_s = random.uniform(1.3e3, 2.7e3)  # Amplitude of gaussian nucleation event
-        t_s = random.uniform(7, 12)  # Mean time of gaussian nucleation event
-        sigma_s = random.uniform(0.8, 1.6)  # Standard deviation time of gaussian nucleation event
-        def sorc(t):  # Source (nucleation) at xmin
-            return gaussian(t, N_s, t_s, sigma_s)  # Gaussian source (nucleation event) model output
+            return d_cst + d_linear * Dp + d_inv_linear * (1 / Dp)
 
         #######################################################
         # Constructing size distribution evolution model:
         F_alpha.add_process('condensation', cond)  # Adding condensation to evolution model
         F_alpha.add_process('deposition', depo)  # Adding deposition to evolution model
-        F_alpha.add_process('source', sorc)  # Adding source to evolution model
         F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
         F_alpha.compile()  # Compiling evolution model
 

@@ -39,7 +39,7 @@ NT = int(T / dt)  # Total number of time steps
 
 # Size distribution discretisation:
 Ne = 50  # Number of elements
-Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
+Np = 1  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 
 # Prior noise parameters:
@@ -82,17 +82,17 @@ def initial_guess_size_distribution(x):
     return skewed_gaussian(x, N_0, x_0, sigma_0, skewness_0) + skewed_gaussian(x, N_1, x_1, sigma_1, skewness_1)
 
 # Guess of the condensation rate I(Dp):
-I_cst_guess = 0.2  # Condensation parameter constant
+I_cst_guess = 0.3  # Condensation parameter constant
 I_linear_guess = 0  # Condensation parameter linear
 def guess_cond(Dp):
     return I_cst_guess + I_linear_guess * Dp
 
 # Guess of the deposition rate d(Dp):
-d_cst_guess = 2  # Deposition parameter constant
+d_cst_guess = 1  # Deposition parameter constant
 d_linear_guess = 0  # Deposition parameter linear
-d_inverse_quadratic_guess = 0  # Deposition parameter inverse quadratic
+d_inv_linear_guess = 0  # Deposition parameter inverse linear
 def guess_depo(Dp):
-    return d_cst_guess + d_linear_guess * Dp + d_inverse_quadratic_guess * (1 / Dp ** 2)
+    return d_cst_guess + d_linear_guess * Dp + d_inv_linear_guess * (1 / Dp)
 
 # Set to True for imposing boundary condition n(vmin, t) = 0:
 boundary_zero = True
@@ -106,7 +106,7 @@ def cond(Dp):
 # True underlying deposition model d(Dp, t):
 d_cst = 0.1  # Deposition parameter constant
 d_linear = 0.5  # Deposition parameter linear
-d_inv_linear = 0.25  # Deposition parameter inverse quadratic
+d_inv_linear = 0.25  # Deposition parameter inverse linear
 def depo(Dp):
     return d_cst + d_linear * Dp + d_inv_linear * (1 / Dp)
 

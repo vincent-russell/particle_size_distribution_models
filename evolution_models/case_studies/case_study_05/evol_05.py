@@ -74,7 +74,7 @@ if __name__ == '__main__':
     # Deposition model d(Dp, t):
     d_cst = 0.1  # Deposition parameter constant
     d_linear = 0.5  # Deposition parameter linear
-    d_inv_linear = 0.25  # Deposition parameter inverse quadratic
+    d_inv_linear = 0.25  # Deposition parameter inverse linear
     def depo(Dp):
         return d_cst + d_linear * Dp + d_inv_linear * (1 / Dp)
 

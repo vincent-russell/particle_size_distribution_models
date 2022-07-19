@@ -122,7 +122,7 @@ def guess_cond(Dp):
 # Initial guess of the deposition rate d_0(Dp) = d(Dp, 0):
 d_cst_guess = 4  # Deposition parameter constant
 d_linear_guess = 0  # Deposition parameter linear
-d_inv_linear_guess = 0  # Deposition parameter inverse quadratic
+d_inv_linear_guess = 0  # Deposition parameter inverse linear
 def initial_guess_deposition_rate(Dp):
     return d_cst_guess + d_linear_guess * Dp + d_inv_linear_guess * (1 / Dp)
 
@@ -138,7 +138,7 @@ def cond(Dp):
 # True underlying deposition model d(Dp, t):
 d_cst = 0.1  # Deposition parameter constant
 d_linear = 0.5  # Deposition parameter linear
-d_inv_linear = 0.25  # Deposition parameter inverse quadratic
+d_inv_linear = 0.25  # Deposition parameter inverse linear
 def depo(Dp):
     return d_cst + d_linear * Dp + d_inv_linear * (1 / Dp)
 
