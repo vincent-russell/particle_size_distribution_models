@@ -36,7 +36,7 @@ NT = int(T / dt)  # Total number of time steps
 Ne = 50  # Number of elements
 Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
-# Solution discretisation for reduced model:
+# Size discretisation for reduced model:
 Ne_r = 25  # Number of elements (needs to be a multiple of Ne)
 Np_r = 1  # Np - 1 = degree of Legendre polynomial approximation in each element
 N_r = Ne_r * Np_r  # Total degrees of freedom

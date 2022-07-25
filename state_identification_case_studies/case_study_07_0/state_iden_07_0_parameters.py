@@ -16,6 +16,10 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
+use_BAE = True  # Set to True to use BAE
+filename_BAE = 'state_iden_07_0_BAE'  # Filename for BAE mean and covariance
+compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
+plot_norm_difference = True  # Set to True to plot norm difference between truth and estimates
 smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
 plot_animations = True  # Set to True to plot animations
 plot_nucleation = True  # Set to True to plot nucleation plot
@@ -36,18 +40,18 @@ T = 24  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
 # Size distribution discretisation:
-Ne = 50  # Number of elements
-Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
+Ne = 25  # Number of elements
+Np = 1  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 
 # Condensation rate discretisation:
-Ne_gamma = 2  # Number of elements
-Np_gamma = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
+Ne_gamma = 3  # Number of elements
+Np_gamma = 2  # Np - 1 = degree of Legendre polynomial approximation in each element
 N_gamma = Ne_gamma * Np_gamma  # Total degrees of freedom
 
 # Prior noise parameters:
 # Prior covariance for alpha; Gamma_alpha_prior = sigma_alpha_prior^2 * I_N (Size distribution):
-sigma_alpha_prior_0 = 10
+sigma_alpha_prior_0 = 1
 sigma_alpha_prior_1 = sigma_alpha_prior_0 / 2
 sigma_alpha_prior_2 = sigma_alpha_prior_1 / 4
 sigma_alpha_prior_3 = 0
@@ -67,7 +71,7 @@ sigma_J_prior = 500
 
 # Model noise parameters:
 # Observation noise covariance parameters:
-sigma_v = 2000  # Additive noise
+sigma_v = 4000  # Additive noise
 sigma_Y_multiplier = 0  # Noise multiplier proportional to Y
 # Evolution noise covariance Gamma_alpha_w = sigma_alpha_w^2 * I_N (Size distribution):
 sigma_alpha_w_0 = sigma_alpha_prior_0
@@ -126,14 +130,14 @@ def initial_guess_size_distribution(v):
     return gaussian(v, N_0, v_0, sigma_0)
 
 # Initial guess of the condensation rate I_0(Dp) = I_Dp(Dp, 0):
-I_0_guess = 0.6  # Condensation parameter constant
+I_0_guess = 0.5  # Condensation parameter constant
 I_1_guess = 0  # Condensation parameter inverse quadratic
 def initial_guess_condensation_rate(Dp):
     return I_0_guess + I_1_guess / (Dp ** 2)
 
 # Guess of the deposition rate d(Dp):
 depo_Dpmin_guess = 5  # Deposition parameter; diameter at which minimum
-d_0_guess = 0.3  # Deposition parameter constant
+d_0_guess = 0.4  # Deposition parameter constant
 d_1_guess = 0  # Deposition parameter linear
 d_2_guess = -d_1_guess / (2 * depo_Dpmin_guess)  # Deposition parameter quadratic
 def guess_depo(Dp):

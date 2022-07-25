@@ -17,7 +17,7 @@ from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
+from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother, compute_norm_difference
 from observation_models.data.simulated import load_observations
 from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, compute_U, change_basis_volume_to_diameter, change_basis_volume_to_diameter_sorc
 from observation_models.tools import Size_distribution_observation_model
@@ -25,7 +25,7 @@ from observation_models.tools import Size_distribution_observation_model
 
 #######################################################
 # Importing parameter file:
-from state_identification_case_studies.case_study_06_0.state_iden_06_0_parameters import *
+from state_identification_case_studies.case_study_07_0.state_iden_07_0_parameters import *
 
 
 #######################################################
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     F_alpha.add_process('deposition', guess_depo)  # Adding deposition to evolution model
     F_alpha.add_unknown('source')  # Adding source as unknown to evolution model
     # F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
-    F_alpha.compile()  # Compiling evolution model
+    F_alpha.compile()  # Compiling evolution model0
 
 
     #######################################################
@@ -296,8 +296,13 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Constructing extended Kalman filter model:
-    model = Kalman_filter(F[0], H, Gamma_tilde_c_w, Gamma_v, NT, additive_evolution_vector=b[:, 0])
+    # Constructing Kalman filter model:
+    if use_BAE:
+        BAE_data = np.load(filename_BAE + '.npz')  # Loading BAE data
+        BAE_mean, BAE_covariance = BAE_data['BAE_mean'], BAE_data['BAE_covariance']  # Extracting mean and covariance from data
+        model = Kalman_filter(F[0], H, Gamma_tilde_c_w, Gamma_v, NT, additive_evolution_vector=b[:, 0], mean_epsilon=BAE_mean, Gamma_epsilon=BAE_covariance)
+    else:
+        model = Kalman_filter(F[0], H, Gamma_tilde_c_w, Gamma_v, NT, additive_evolution_vector=b[:, 0])
 
 
     #######################################################
@@ -392,6 +397,14 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Computing norm difference between truth and estimates:
+    # Size distribution:
+    v_true = basic_tools.diameter_to_volume(d_true)
+    _, _, n_v_estimate, sigma_n_v = F_alpha.get_nplot_discretisation(alpha, Gamma_alpha=Gamma_alpha, x_plot=v_true)  # Computing estimate on true discretisation
+    norm_diff = compute_norm_difference(n_v_true, n_v_estimate, sigma_n_v, compute_weighted_norm=compute_weighted_norm)  # Computing norm difference
+
+
+    #######################################################
     # Printing total computation time:
     computation_time = round(tm.time() - initial_time, 3)  # Initial time stamp
     print('Total computation time:', str(computation_time), 'seconds.')  # Print statement
@@ -474,6 +487,25 @@ if __name__ == '__main__':
         axJ.set_title('Nucleation rate esimation', fontsize=12)
         axJ.grid()
         axJ.legend(fontsize=11, loc='upper left')
+
+
+    #######################################################
+    # Plotting norm difference between truth and estimates:
+    if plot_norm_difference:
+        print('Plotting norm difference between truth and estimates...')
+        plt.figure()
+        plt.plot(t, norm_diff)
+        plt.xlim([0, T])
+        plt.ylim([0, np.max(norm_diff)])
+        plt.xlabel('$t$', fontsize=15)
+        plt.ylabel(r'||$n_{est}(x, t) - n_{true}(x, t)$||$_W$', fontsize=14)
+        plt.grid()
+        plot_title = 'norm difference between truth and mean estimate'
+        if compute_weighted_norm:
+            plot_title = 'Weighted ' + plot_title
+        if use_BAE:
+            plot_title = plot_title + ' using BAE'
+        plt.title(plot_title, fontsize=12)
 
 
     #######################################################
