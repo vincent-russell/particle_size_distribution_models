@@ -17,7 +17,7 @@ from evolution_models.tools import Fuchs_Brownian
 
 # Setup and plotting:
 use_BAE = True  # Set to True to use BAE
-filename_BAE = 'state_iden_07_0_BAE'  # Filename for BAE mean and covariance
+filename_BAE = 'state_iden_07_0_BAE_truth'  # Filename for BAE mean and covariance
 compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
 plot_norm_difference = True  # Set to True to plot norm difference between truth and estimates
 smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
@@ -137,7 +137,7 @@ def initial_guess_condensation_rate(Dp):
 
 # Guess of the deposition rate d(Dp):
 depo_Dpmin_guess = 5  # Deposition parameter; diameter at which minimum
-d_0_guess = 0.4  # Deposition parameter constant
+d_0_guess = 1.5  # Deposition parameter constant
 d_1_guess = 0  # Deposition parameter linear
 d_2_guess = -d_1_guess / (2 * depo_Dpmin_guess)  # Deposition parameter quadratic
 def guess_depo(Dp):

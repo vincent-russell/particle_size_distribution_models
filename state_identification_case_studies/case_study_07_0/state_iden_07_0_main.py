@@ -398,10 +398,17 @@ if __name__ == '__main__':
 
     #######################################################
     # Computing norm difference between truth and estimates:
+
     # Size distribution:
     v_true = basic_tools.diameter_to_volume(d_true)
     _, _, n_v_estimate, sigma_n_v = F_alpha.get_nplot_discretisation(alpha, Gamma_alpha=Gamma_alpha, x_plot=v_true)  # Computing estimate on true discretisation
-    norm_diff = compute_norm_difference(n_v_true, n_v_estimate, sigma_n_v, compute_weighted_norm=compute_weighted_norm)  # Computing norm difference
+    norm_diff = compute_norm_difference(n_v_true, n_v_estimate, sigma_n_v, compute_weighted_norm=compute_weighted_norm, print_name='size distribution')  # Computing norm difference
+
+    # Condensation rate:
+    norm_diff_cond = compute_norm_difference(cond_Dp_true_plot, cond_Dp_plot, sigma_cond_Dp, compute_weighted_norm=compute_weighted_norm, print_name='condensation rate')  # Computing norm difference
+
+    # Source rate:
+    norm_diff_sorc = compute_norm_difference(sorc_Dp_true_plot, J_Dp_plot, sigma_J_Dp, compute_weighted_norm=compute_weighted_norm, print_name='nucleation rate', is_1D=True)  # Computing norm difference
 
 
     #######################################################
@@ -422,7 +429,10 @@ if __name__ == '__main__':
     ylimits = [0, 10000]  # Plot boundary limits for y-axis
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$'  # y-axis label for 1D animation plot
-    title = 'Size distribution estimation'  # Title for 1D animation plot
+    if use_BAE:
+        title = 'Size distribution estimation using BAE'  # Title for 1D animation plot
+    else:
+        title = 'Size distribution estimation'  # Title for 1D animation plot
     legend = ['Estimate', '$\pm 2 \sigma$', '', 'Truth']  # Adding legend to plot
     line_color = ['blue', 'blue', 'blue', 'green']  # Colors of lines in plot
     line_style = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
@@ -434,7 +444,10 @@ if __name__ == '__main__':
     ylimits_cond = [0, 1.2]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
-    title_cond = 'Condensation rate estimation'  # Title for plot
+    if use_BAE:
+        title_cond = 'Condensation rate estimation using BAE'  # Title for plot
+    else:
+        title_cond = 'Condensation rate estimation'  # Title for plot
     location_cond = location + '2'  # Location for plot
     legend_cond = ['Estimate', '$\pm 2 \sigma$', '', 'Truth']  # Adding legend to plot
     line_color_cond = ['blue', 'blue', 'blue', 'green']  # Colors of lines in plot
@@ -442,7 +455,7 @@ if __name__ == '__main__':
     delay_cond = 60  # Delay for each frame (ms)
 
     # Parameters for deposition plot:
-    ylimits_depo = [0, 0.6]  # Plot boundary limits for y-axis
+    ylimits_depo = [0, 2]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate estimation'  # Title for plot
@@ -484,7 +497,10 @@ if __name__ == '__main__':
         axJ.set_xlabel('$t$ (hour)', fontsize=12)
         axJ.set_ylabel('$J(t)$ \n $(\mu$m$^{-1}$cm$^{-3}$ hour$^{-1}$)', fontsize=12, rotation=0)
         axJ.yaxis.set_label_coords(-0.015, 1.02)
-        axJ.set_title('Nucleation rate esimation', fontsize=12)
+        if use_BAE:
+            axJ.set_title('Nucleation rate esimation using BAE', fontsize=12)
+        else:
+            axJ.set_title('Nucleation rate esimation', fontsize=12)
         axJ.grid()
         axJ.legend(fontsize=11, loc='upper left')
 
@@ -493,19 +509,51 @@ if __name__ == '__main__':
     # Plotting norm difference between truth and estimates:
     if plot_norm_difference:
         print('Plotting norm difference between truth and estimates...')
+
+        # Size distribution:
         plt.figure()
         plt.plot(t, norm_diff)
         plt.xlim([0, T])
-        plt.ylim([0, np.max(norm_diff)])
+        plt.ylim([np.min(norm_diff), np.max(norm_diff)])
         plt.xlabel('$t$', fontsize=15)
         plt.ylabel(r'||$n_{est}(x, t) - n_{true}(x, t)$||$_W$', fontsize=14)
         plt.grid()
-        plot_title = 'norm difference between truth and mean estimate'
+        plot_title = 'norm difference of size distribution estimate and truth'
         if compute_weighted_norm:
             plot_title = 'Weighted ' + plot_title
         if use_BAE:
             plot_title = plot_title + ' using BAE'
-        plt.title(plot_title, fontsize=12)
+        plt.title(plot_title, fontsize=11)
+
+        # Condensation rate:
+        plt.figure()
+        plt.plot(t, norm_diff_cond)
+        plt.xlim([0, T])
+        plt.ylim([np.min(norm_diff_cond), np.max(norm_diff_cond)])
+        plt.xlabel('$t$', fontsize=15)
+        plt.ylabel(r'||$I_{est}(x, t) - I_{true}(x, t)$||$_W$', fontsize=14)
+        plt.grid()
+        plot_title = 'norm difference of condensation rate estimate and truth'
+        if compute_weighted_norm:
+            plot_title = 'Weighted ' + plot_title
+        if use_BAE:
+            plot_title = plot_title + ' using BAE'
+        plt.title(plot_title, fontsize=11)
+
+        # Nucleation rate
+        plt.figure()
+        plt.plot(t, norm_diff_sorc)
+        plt.xlim([0, T])
+        plt.ylim([np.min(norm_diff_sorc), np.max(norm_diff_sorc)])
+        plt.xlabel('$t$', fontsize=15)
+        plt.ylabel(r'||$s_{est}(x, t) - s_{true}(x, t)$||$_W$', fontsize=14)
+        plt.grid()
+        plot_title = 'norm difference of nucleation rate estimate and truth'
+        if compute_weighted_norm:
+            plot_title = 'Weighted ' + plot_title
+        if use_BAE:
+            plot_title = plot_title + ' using BAE'
+        plt.title(plot_title, fontsize=11)
 
 
     #######################################################

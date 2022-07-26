@@ -65,8 +65,8 @@ J_a6 = 0
 J_a = array([J_a1, J_a2, J_a3, J_a4, J_a5, J_a6])  # Vector of AR(p) coefficients
 
 # Loop parameters:
-filename_BAE = 'state_iden_07_0_BAE'  # Filename for BAE mean and covariance
-N_iterations = 1000  # Number of samples from prior to compute BAE
+filename_BAE = 'state_iden_07_0_BAE_truth'  # Filename for BAE mean and covariance
+N_iterations = 2  # Number of samples from prior to compute BAE
 
 # Coagulation model:
 def coag(v_x, v_y):
@@ -97,7 +97,7 @@ def initial_guess_condensation_rate(Dp):
 
 # Guess of the deposition rate d(Dp):
 depo_Dpmin_guess = 5  # Deposition parameter; diameter at which minimum
-d_0_guess = 0.4  # Deposition parameter constant
+d_0_guess = 1.5  # Deposition parameter constant
 d_1_guess = 0  # Deposition parameter linear
 d_2_guess = -d_1_guess / (2 * depo_Dpmin_guess)  # Deposition parameter quadratic
 def guess_depo(Dp):
