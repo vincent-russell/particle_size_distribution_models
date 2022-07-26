@@ -21,7 +21,7 @@ from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, compute_G
 
 #######################################################
 # Importing parameter file:
-from state_identification_case_studies.case_study_07_0.state_iden_07_0_BAE_computation_parameters import *
+from state_identification_case_studies.case_study_07_1.state_iden_07_1_BAE_computation_parameters import *
 
 
 #######################################################
@@ -45,23 +45,23 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Continuity constraint computations for gamma (condensation):
-    num_constraints_gamma = Ne_gamma - 1  # Number of contraints
-    Nc_gamma = N_gamma - num_constraints_gamma  # Dimensions of constrained gamma
+    # Continuity constraint computations for eta (deposition):
+    num_constraints_eta = Ne_eta - 1  # Number of contraints
+    Nc_eta = N_eta - num_constraints_eta  # Dimensions of constrained eta
 
 
     #######################################################
     # Initialising approximation error, and computing projection matrix:
 
     # Initialising approximation error:
-    epsilon = np.zeros([N_iterations, N_r + gamma_p * Nc_gamma + J_p, NT])  # Initialising BAE
+    epsilon = np.zeros([N_iterations, N_r + eta_p * Nc_eta + J_p, NT])  # Initialising BAE
 
     # For alpha:
     G_alpha = compute_G(N, N_r, Np, Np_r, F_alpha.phi, F_alpha_r.phi, F_alpha.x_boundaries)  # Computing matrix G for projection operator
     P_alpha = np.matmul(np.linalg.inv(F_alpha_r.M), G_alpha)  # Computing projection operator
 
     # Assimilation:
-    P = np.zeros([N_r + gamma_p * Nc_gamma + J_p, N])  # Initialising projection operator
+    P = np.zeros([N_r + eta_p * Nc_eta + J_p, N])  # Initialising projection operator
     P[0:N_r, 0:N] = P_alpha  # Adding alpha projection
 
 
@@ -104,8 +104,8 @@ if __name__ == '__main__':
 
         #######################################################
         # Constructing reduced size distribution evolution model:
-        F_alpha_r.add_process('condensation', cond)  # Adding condensation to evolution model
-        F_alpha_r.add_process('deposition', guess_depo)  # Adding deposition to evolution model
+        F_alpha_r.add_process('condensation', guess_cond)  # Adding condensation to evolution model
+        F_alpha_r.add_process('deposition', depo)  # Adding deposition to evolution model
         F_alpha_r.add_process('source', sorc)  # Adding source to evolution model
         F_alpha_r.compile()  # Compiling evolution model
 
@@ -148,24 +148,24 @@ if __name__ == '__main__':
             matrix_multiplier = np.linalg.inv(np.eye(N_r) - (dt / 2) * J_alpha_star_r)  # Computing matrix multiplier for evolution operators and additive vector
             F_evol_alpha_r = np.matmul(matrix_multiplier, (np.eye(N_r) + (dt / 2) * J_alpha_star_r))
             # Computing evolution operator:
-            F_evolution_r = np.zeros([N_r + gamma_p * Nc_gamma + J_p, N_r + gamma_p * Nc_gamma + J_p])  # Initialising
+            F_evolution_r = np.zeros([N_r + eta_p * Nc_eta + J_p, N_r + eta_p * Nc_eta + J_p])  # Initialising
             F_evolution_r[0:N_r, 0:N_r] = F_evol_alpha_r
             # Computing evolution additive vector:
-            b_evolution_r = np.zeros(N_r + gamma_p * Nc_gamma + J_p)  # Initialising
+            b_evolution_r = np.zeros(N_r + eta_p * Nc_eta + J_p)  # Initialising
             b_evolution_r[0:N_r] = np.matmul(matrix_multiplier, (dt * F_star_r))
             return F_evolution_r, b_evolution_r
 
         #######################################################
         # Initialising evolution operator and additive evolution vector:
         F = np.zeros([NT, N, N])  # Initialising evolution operator F_0, F_1, ..., F_{NT - 1}
-        F_r = np.zeros([NT, N_r + gamma_p * Nc_gamma + J_p, N_r + gamma_p * Nc_gamma + J_p])  # Initialising evolution operator F_0, F_1, ..., F_{NT - 1}
+        F_r = np.zeros([NT, N_r + eta_p * Nc_eta + J_p, N_r + eta_p * Nc_eta + J_p])  # Initialising evolution operator F_0, F_1, ..., F_{NT - 1}
         b = np.zeros([N, NT])  # Initialising additive evolution vector b_0, b_1, ..., b_{NT - 1}
-        b_r = np.zeros([N_r + gamma_p * Nc_gamma + J_p, NT])  # Initialising additive evolution vector b_0, b_1, ..., b_{NT - 1}
+        b_r = np.zeros([N_r + eta_p * Nc_eta + J_p, NT])  # Initialising additive evolution vector b_0, b_1, ..., b_{NT - 1}
 
         #######################################################
         # Initialising states and adding priors:
         alpha = np.zeros([N, NT])  # Initialising
-        x_r = np.zeros([N_r + gamma_p * Nc_gamma + J_p, NT])  # Initialising
+        x_r = np.zeros([N_r + eta_p * Nc_eta + J_p, NT])  # Initialising
         alpha[:, 0] = F_alpha.compute_coefficients('alpha', initial_guess_size_distribution)  # Computing alpha coefficients from initial condition function
         x_r[0:N_r, 0] = F_alpha_r.compute_coefficients('alpha', initial_guess_size_distribution)  # Computing alpha coefficients from initial condition function
 
@@ -191,10 +191,10 @@ if __name__ == '__main__':
     # Computing BAE sample mean and sample covariance over all iterations:
     print('Computing BAE sample mean and covariance...')
     BAE_mean = np.average(epsilon, axis=0)  # Computing BAE mean
-    BAE_covariance = np.zeros([NT, N_r + gamma_p * Nc_gamma + J_p, N_r + gamma_p * Nc_gamma + J_p])  # Initialising
+    BAE_covariance = np.zeros([NT, N_r + eta_p * Nc_eta + J_p, N_r + eta_p * Nc_eta + J_p])  # Initialising
     for k in range(NT):  # Iterating over time
-        epsilon_difference = np.zeros([N_r + gamma_p * Nc_gamma + J_p, 1])  # Initialising difference vector
-        epsilon_difference_matrix = np.zeros([N_iterations, N_r + gamma_p * Nc_gamma + J_p, N_r + gamma_p * Nc_gamma + J_p])  # Initialising difference matrix
+        epsilon_difference = np.zeros([N_r + eta_p * Nc_eta + J_p, 1])  # Initialising difference vector
+        epsilon_difference_matrix = np.zeros([N_iterations, N_r + eta_p * Nc_eta + J_p, N_r + eta_p * Nc_eta + J_p])  # Initialising difference matrix
         for iteration in range(N_iterations):
             epsilon_difference[:, 0] = epsilon[iteration, :, k] - BAE_mean[:, k]  # Computing epsilon(i)_k - mu_epsilon_k
             epsilon_difference_matrix[iteration] = np.matmul(epsilon_difference, np.transpose(epsilon_difference))  # Computing (epsilon(i)_k - mu_epsilon_k) * (epsilon(i)_k - mu_epsilon_k)^T
