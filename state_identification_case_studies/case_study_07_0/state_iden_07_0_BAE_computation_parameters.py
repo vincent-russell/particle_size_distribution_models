@@ -1,12 +1,9 @@
 """
-Parameters for BAE computation for state estimation
+Parameters for BAE computation for state identification
 """
 
 
 #######################################################
-# Modules:
-from numpy import array, eye
-
 # Local modules:
 from basic_tools import gaussian, diameter_to_volume, volume_to_diameter
 from evolution_models.tools import Fuchs_Brownian
@@ -45,28 +42,14 @@ Np_gamma = 2  # Np - 1 = degree of Legendre polynomial approximation in each ele
 N_gamma = Ne_gamma * Np_gamma  # Total degrees of freedom
 
 # Condensation VAR(p) coefficients for model gamma_{t + 1} = A_1 gamma_t + ... + w_{gamma_t}:
-gamma_p = 1
-gamma_A1 = 1 * eye(N_gamma)
-gamma_A2 = 0 * eye(N_gamma)
-gamma_A3 = 0 * eye(N_gamma)
-gamma_A4 = 0 * eye(N_gamma)
-gamma_A5 = 0 * eye(N_gamma)
-gamma_A6 = 0 * eye(N_gamma)
-gamma_A = array([gamma_A1, gamma_A2, gamma_A3, gamma_A4, gamma_A5, gamma_A6])  # Tensor of VAR(p) coefficients
+gamma_p = 1  # Order of VAR model
 
 # Nucleation AR(p) coefficients for model J_{t + 1} = a_1 J_t + ... + w_{J_t}:
 J_p = 1  # Order of AR model
-J_a1 = 1
-J_a2 = 0
-J_a3 = 0
-J_a4 = 0
-J_a5 = 0
-J_a6 = 0
-J_a = array([J_a1, J_a2, J_a3, J_a4, J_a5, J_a6])  # Vector of AR(p) coefficients
 
 # Loop parameters:
-filename_BAE = 'state_iden_07_0_BAE_truth'  # Filename for BAE mean and covariance
-N_iterations = 2  # Number of samples from prior to compute BAE
+filename_BAE = 'state_iden_07_0_BAE'  # Filename for BAE mean and covariance
+N_iterations = 1000  # Number of samples from prior to compute BAE
 
 # Coagulation model:
 def coag(v_x, v_y):
@@ -89,15 +72,9 @@ sigma_0 = 15  # Standard deviation of initial condition gaussian
 def initial_guess_size_distribution(v):
     return gaussian(v, N_0, v_0, sigma_0)
 
-# Initial guess of the condensation rate I_0(Dp) = I_Dp(Dp, 0):
-I_0_guess = 0.5  # Condensation parameter constant
-I_1_guess = 0  # Condensation parameter inverse quadratic
-def initial_guess_condensation_rate(Dp):
-    return I_0_guess + I_1_guess / (Dp ** 2)
-
 # Guess of the deposition rate d(Dp):
 depo_Dpmin_guess = 5  # Deposition parameter; diameter at which minimum
-d_0_guess = 1.5  # Deposition parameter constant
+d_0_guess = 0  # Deposition parameter constant
 d_1_guess = 0  # Deposition parameter linear
 d_2_guess = -d_1_guess / (2 * depo_Dpmin_guess)  # Deposition parameter quadratic
 def guess_depo(Dp):

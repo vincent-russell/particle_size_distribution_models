@@ -455,7 +455,7 @@ if __name__ == '__main__':
     delay_cond = 60  # Delay for each frame (ms)
 
     # Parameters for deposition plot:
-    ylimits_depo = [0, 2]  # Plot boundary limits for y-axis
+    ylimits_depo = [0, 1]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate estimation'  # Title for plot
