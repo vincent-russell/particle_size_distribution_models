@@ -28,8 +28,8 @@ if __name__ == '__main__':
 
     # Setup and plotting:
     plot_animations = True  # Set to True to plot animations
-    plot_nucleation = False  # Set to True to plot nucleation plot
-    plot_images = False  # Set to True to plot images
+    plot_nucleation = True  # Set to True to plot nucleation plot
+    plot_images = True  # Set to True to plot images
     load_coagulation = True  # Set to True to load coagulation tensors
     save_coagulation = False  # Set to True to save coagulation tensors
     coagulation_suffix = '0004_to_1_micro_metres'  # Suffix of saved coagulation tensors file
@@ -43,8 +43,8 @@ if __name__ == '__main__':
     xmax = np.log(vmax)  # Upper limit in log-size
 
     # Time domain:
-    dt = (1 / 60) * 20  # Time step (hours)
-    T = 24  # End time (hours)
+    dt = (1 / 60) * 5  # Time step (hours)
+    T = 48  # End time (hours)
     NT = int(T / dt)  # Total number of time steps
 
     # Size distribution discretisation:
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     N = Ne * Np  # Total degrees of freedom
 
     # Initial condition n_0(x) = n(x, 0):
-    N_0 = 1e3  # Amplitude of initial condition gaussian
+    N_0 = 2e3  # Amplitude of initial condition gaussian
     x_0 = np.log(basic_tools.diameter_to_volume(0.01))  # Mean of initial condition gaussian
     sigma_0 = 3  # Standard deviation of initial condition gaussian
     skewness = 3  # Skewness factor for initial condition gaussian
@@ -64,22 +64,22 @@ if __name__ == '__main__':
     boundary_zero = True
 
     # Condensation model I_Dp(Dp, t):
-    I_cst = 0.002  # Condensation parameter constant
-    I_linear = 0.05  # Condensation parameter linear
+    I_cst = 0.001  # Condensation parameter constant
+    I_linear = 0.08  # Condensation parameter linear
     def cond(Dp):
         return I_cst + I_linear * Dp
 
     # Deposition model d(Dp, t):
-    d_cst = 0.02  # Deposition parameter constant
+    d_cst = 0.05  # Deposition parameter constant
     d_linear = 0.05  # Deposition parameter linear
-    d_inverse_quadratic = 0.00001  # Deposition parameter inverse quadratic
+    d_inverse_quadratic = 0.000002  # Deposition parameter inverse quadratic
     def depo(Dp):
         return d_cst + d_linear * Dp + d_inverse_quadratic * (1 / Dp ** 2)
 
     # Source (nucleation event) model:
-    N_s = 2e3  # Amplitude of gaussian nucleation event
+    N_s = 1.5e3  # Amplitude of gaussian nucleation event
     t_s = 8  # Mean time of gaussian nucleation event
-    sigma_s = 1.5   # Standard deviation time of gaussian nucleation event
+    sigma_s = 1.5  # Standard deviation time of gaussian nucleation event
     def sorc(t):  # Source (nucleation) at xmin
         return basic_tools.gaussian(t, N_s, t_s, sigma_s)  # Gaussian source (nucleation event) model output
 
@@ -184,11 +184,11 @@ if __name__ == '__main__':
     line_color = ['blue']  # Colors of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
-    delay = 60  # Delay between frames in milliseconds
+    delay = 30  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
     yscale_cond = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_cond = [0, 0.06]  # Plot boundary limits for y-axis
+    ylimits_cond = [0, 0.12]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate'  # Title for plot
@@ -197,7 +197,7 @@ if __name__ == '__main__':
 
     # Parameters for deposition plot:
     yscale_depo = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_depo = [0, 0.6]  # Plot boundary limits for y-axis
+    ylimits_depo = [0, 0.2]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate'  # Title for plot
@@ -229,7 +229,7 @@ if __name__ == '__main__':
         figJ, axJ = plt.subplots(figsize=(8.00, 5.00), dpi=100)
         plt.plot(time, sorc_logDp_plot, color='blue')
         axJ.set_xlim([0, T])
-        axJ.set_ylim([0, 16000])
+        axJ.set_ylim([0, 12000])
         axJ.set_xlabel('$t$ (hour)', fontsize=12)
         axJ.set_ylabel('$J(t)$ \n (cm$^{-3}$ hour$^{-1}$)', fontsize=12, rotation=0)
         axJ.yaxis.set_label_coords(-0.015, 1.02)

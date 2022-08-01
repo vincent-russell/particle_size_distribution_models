@@ -252,7 +252,7 @@ if __name__ == '__main__':
 
     # Parameters for condensation plot:
     yscale_cond = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_cond = [0, 0.06]  # Plot boundary limits for y-axis
+    ylimits_cond = [0, 0.12]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate estimation'  # Title for plot
@@ -264,7 +264,7 @@ if __name__ == '__main__':
 
     # Parameters for deposition plot:
     yscale_depo = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_depo = [0, 1]  # Plot boundary limits for y-axis
+    ylimits_depo = [0, 0.4]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate estimation'  # Title for plot
@@ -301,7 +301,7 @@ if __name__ == '__main__':
         plt.plot(time, sorc_logDp_truth_plot, color='green', label='Truth')
         plt.legend()
         axJ.set_xlim([0, T])
-        axJ.set_ylim([0, 2e4])
+        axJ.set_ylim([0, 12000])
         axJ.set_xlabel('$t$ (hour)', fontsize=12)
         axJ.set_ylabel('$J(t)$ \n (cm$^{-3}$ hour$^{-1}$)', fontsize=12, rotation=0)
         axJ.yaxis.set_label_coords(-0.015, 1.02)
@@ -316,7 +316,7 @@ if __name__ == '__main__':
         plt.figure()
         plt.plot(t, norm_diff)
         plt.xlim([0, T])
-        plt.ylim([0, 70])
+        plt.ylim([0, 24])
         plt.xlabel('$t$', fontsize=15)
         plt.ylabel(r'||$n_{est}(x, t) - n_{true}(x, t)$||$_W$', fontsize=14)
         plt.grid()

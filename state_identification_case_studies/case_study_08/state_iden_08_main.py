@@ -296,7 +296,7 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Constructing extended Kalman filter model:
+    # Constructing Kalman filter model:
     model = Kalman_filter(F[0], H, Gamma_tilde_c_w, Gamma_v, NT, additive_evolution_vector=b[:, 0])
 
 
@@ -417,11 +417,11 @@ if __name__ == '__main__':
     line_style = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
-    delay = 120  # Delay between frames in milliseconds
+    delay = 30  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
     yscale_cond = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_cond = [0, 0.06]  # Plot boundary limits for y-axis
+    ylimits_cond = [0, 0.12]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate estimation'  # Title for plot
@@ -429,11 +429,11 @@ if __name__ == '__main__':
     legend_cond = ['Estimate', '$\pm 2 \sigma$', '', 'Truth']  # Adding legend to plot
     line_color_cond = ['blue', 'blue', 'blue', 'green']  # Colors of lines in plot
     line_style_cond = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
-    delay_cond = 60  # Delay between frames in milliseconds
+    delay_cond = 10  # Delay between frames in milliseconds
 
     # Parameters for deposition plot:
     yscale_depo = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_depo = [0, 0.5]  # Plot boundary limits for y-axis
+    ylimits_depo = [0, 0.4]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate estimation'  # Title for plot
@@ -471,7 +471,7 @@ if __name__ == '__main__':
         plt.plot(time, J_logDp_plot_upper, 'b--')
         plt.plot(time, sorc_logDp_true_plot, 'g-', label='Truth')
         axJ.set_xlim([0, T])
-        axJ.set_ylim([0, 16000])
+        axJ.set_ylim([0, 12000])
         axJ.set_xlabel('$t$ (hour)', fontsize=12)
         axJ.set_ylabel('$J(t)$ \n (cm$^{-3}$ hour$^{-1}$)', fontsize=12, rotation=0)
         axJ.yaxis.set_label_coords(-0.015, 1.02)

@@ -224,7 +224,7 @@ if __name__ == '__main__':
     # Parameters for size distribution animation:
     xscale = 'log'  # x-axis scaling ('linear' or 'log')
     xticks = [0.01, 0.1, 1]  # Plot x-tick labels
-    xlimits = [d_plot[0], d_plot[-1]]  # Plot boundary limits for x-axis
+    xlimits = [0.004, 1]  # Plot boundary limits for x-axis
     ylimits = [0, 10000]  # Plot boundary limits for y-axis
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
@@ -238,7 +238,7 @@ if __name__ == '__main__':
 
     # Parameters for condensation plot:
     yscale_cond = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_cond = [0, 0.06]  # Plot boundary limits for y-axis
+    ylimits_cond = [0, 0.12]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate estimation'  # Title for plot
@@ -250,7 +250,7 @@ if __name__ == '__main__':
 
     # Parameters for deposition plot:
     yscale_depo = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_depo = [0, 0.6]  # Plot boundary limits for y-axis
+    ylimits_depo = [0, 0.4]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate estimation'  # Title for plot
@@ -287,7 +287,7 @@ if __name__ == '__main__':
         plt.plot(time, sorc_logDp_truth_plot, color='green', label='Truth')
         plt.legend()
         axJ.set_xlim([0, T])
-        axJ.set_ylim([0, 16000])
+        axJ.set_ylim([0, 12000])
         axJ.set_xlabel('$t$ (hour)', fontsize=12)
         axJ.set_ylabel('$J(t)$ \n (cm$^{-3}$ hour$^{-1}$)', fontsize=12, rotation=0)
         axJ.yaxis.set_label_coords(-0.015, 1.02)

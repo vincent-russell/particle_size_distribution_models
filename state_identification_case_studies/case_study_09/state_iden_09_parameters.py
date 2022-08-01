@@ -16,7 +16,7 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
-use_BAE = False  # Set to True to use BAE
+use_BAE = True  # Set to True to use BAE
 filename_BAE = 'state_iden_09_BAE'  # Filename for BAE mean and covariance
 compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
 plot_norm_difference = True  # Set to True to plot norm difference between truth and estimates
@@ -42,8 +42,8 @@ T = 48  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
 # Size distribution discretisation:
-Ne = 50  # Number of elements
-Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
+Ne = 25  # Number of elements
+Np = 1  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 
 # Condensation rate discretisation:
@@ -69,7 +69,7 @@ sigma_gamma_prior_4 = 0
 sigma_gamma_prior_5 = 0
 sigma_gamma_prior_6 = 0
 # Prior uncertainty for J (Nucleation rate):
-sigma_J_prior = 20
+sigma_J_prior = 10
 
 # Model noise parameters:
 # Observation noise covariance parameters:

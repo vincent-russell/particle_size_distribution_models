@@ -21,7 +21,7 @@ from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, compute_G
 
 #######################################################
 # Importing parameter file:
-from state_identification_case_studies.case_study_07_1.state_iden_07_1_BAE_computation_parameters import *
+from state_identification_case_studies.case_study_12.state_iden_12_BAE_computation_parameters import *
 
 
 #######################################################
@@ -40,8 +40,8 @@ if __name__ == '__main__':
 
     #######################################################
     # Initialising evolution model and reduced evolution model:
-    F_alpha = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero, print_status=False)  # Initialising evolution model
-    F_alpha_r = GDE_evolution_model(Ne_r, Np_r, vmin, vmax, dt, NT, boundary_zero=boundary_zero, print_status=False)  # Initialising reduced evolution model
+    F_alpha = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', print_status=False)  # Initialising evolution model
+    F_alpha_r = GDE_evolution_model(Ne_r, Np_r, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', print_status=False)  # Initialising reduced evolution model
 
 
     #######################################################
@@ -54,14 +54,14 @@ if __name__ == '__main__':
     # Initialising approximation error, and computing projection matrix:
 
     # Initialising approximation error:
-    epsilon = np.zeros([N_iterations, N_r + eta_p * Nc_eta + J_p, NT])  # Initialising BAE
+    epsilon = np.zeros([N_iterations, N_r + eta_p * Nc_eta, NT])  # Initialising BAE
 
     # For alpha:
     G_alpha = compute_G(N, N_r, Np, Np_r, F_alpha.phi, F_alpha_r.phi, F_alpha.x_boundaries)  # Computing matrix G for projection operator
     P_alpha = np.matmul(np.linalg.inv(F_alpha_r.M), G_alpha)  # Computing projection operator
 
     # Assimilation:
-    P = np.zeros([N_r + eta_p * Nc_eta + J_p, N])  # Initialising projection operator
+    P = np.zeros([N_r + eta_p * Nc_eta, N])  # Initialising projection operator
     P[0:N_r, 0:N] = P_alpha  # Adding alpha projection
 
 
@@ -74,31 +74,22 @@ if __name__ == '__main__':
         # Drawing sample of parameters for evolution model:
 
         # Sample of the initial condensation rate I_0(Dp) = I_Dp(Dp, 0):
-        I_0 = random.uniform(0.05, 0.3)  # Condensation parameter constant
-        I_1 = random.uniform(0, 1.25)  # Condensation parameter inverse quadratic
+        I_cst = random.uniform(0, 0.5)  # Condensation parameter constant
+        I_linear = random.uniform(0, 1)  # Condensation parameter linear
         def cond(Dp):
-            return I_0 + I_1 / (Dp ** 2)
+            return I_cst + I_linear * Dp
 
         # Sample of the deposition rate d(Dp):
-        depo_Dpmin = 5  # Deposition parameter; diameter at which minimum
-        d_0 = random.uniform(0.3, 0.5)  # Deposition parameter constant
-        d_1 = random.uniform(0, -0.1)  # Deposition parameter linear
-        d_2 = -d_1 / (2 * depo_Dpmin)  # Deposition parameter quadratic
+        d_cst = random.uniform(0, 1)  # Deposition parameter constant
+        d_linear = random.uniform(0, 1)  # Deposition parameter linear
+        d_inv_linear = random.uniform(0, 0.5)  # Deposition parameter inverse linear
         def depo(Dp):
-            return d_0 + d_1 * Dp + d_2 * Dp ** 2
-
-        # Sample of the source (nucleation event) model:
-        N_s = random.uniform(3e3, 7e3)  # Amplitude of gaussian nucleation event
-        t_s = random.uniform(6, 12)  # Mean time of gaussian nucleation event
-        sigma_s = random.uniform(1.25, 2.25)  # Standard deviation time of gaussian nucleation event
-        def sorc(t):  # Source (nucleation) at vmin
-            return gaussian(t, N_s, t_s, sigma_s)  # Gaussian source (nucleation event) model output
+            return d_cst + d_linear * Dp + d_inv_linear * (1 / Dp)
 
         #######################################################
         # Constructing size distribution evolution model:
         F_alpha.add_process('condensation', cond)  # Adding condensation to evolution model
         F_alpha.add_process('deposition', depo)  # Adding deposition to evolution model
-        F_alpha.add_process('source', sorc)  # Adding source to evolution model
         F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
         F_alpha.compile()  # Compiling evolution model
 
@@ -106,7 +97,6 @@ if __name__ == '__main__':
         # Constructing reduced size distribution evolution model:
         F_alpha_r.add_process('condensation', guess_cond)  # Adding condensation to evolution model
         F_alpha_r.add_process('deposition', depo)  # Adding deposition to evolution model
-        F_alpha_r.add_process('source', sorc)  # Adding source to evolution model
         F_alpha_r.compile()  # Compiling evolution model
 
         #######################################################
@@ -148,24 +138,24 @@ if __name__ == '__main__':
             matrix_multiplier = np.linalg.inv(np.eye(N_r) - (dt / 2) * J_alpha_star_r)  # Computing matrix multiplier for evolution operators and additive vector
             F_evol_alpha_r = np.matmul(matrix_multiplier, (np.eye(N_r) + (dt / 2) * J_alpha_star_r))
             # Computing evolution operator:
-            F_evolution_r = np.zeros([N_r + eta_p * Nc_eta + J_p, N_r + eta_p * Nc_eta + J_p])  # Initialising
+            F_evolution_r = np.zeros([N_r + eta_p * Nc_eta, N_r + eta_p * Nc_eta])  # Initialising
             F_evolution_r[0:N_r, 0:N_r] = F_evol_alpha_r
             # Computing evolution additive vector:
-            b_evolution_r = np.zeros(N_r + eta_p * Nc_eta + J_p)  # Initialising
+            b_evolution_r = np.zeros(N_r + eta_p * Nc_eta)  # Initialising
             b_evolution_r[0:N_r] = np.matmul(matrix_multiplier, (dt * F_star_r))
             return F_evolution_r, b_evolution_r
 
         #######################################################
         # Initialising evolution operator and additive evolution vector:
         F = np.zeros([NT, N, N])  # Initialising evolution operator F_0, F_1, ..., F_{NT - 1}
-        F_r = np.zeros([NT, N_r + eta_p * Nc_eta + J_p, N_r + eta_p * Nc_eta + J_p])  # Initialising evolution operator F_0, F_1, ..., F_{NT - 1}
+        F_r = np.zeros([NT, N_r + eta_p * Nc_eta, N_r + eta_p * Nc_eta])  # Initialising evolution operator F_0, F_1, ..., F_{NT - 1}
         b = np.zeros([N, NT])  # Initialising additive evolution vector b_0, b_1, ..., b_{NT - 1}
-        b_r = np.zeros([N_r + eta_p * Nc_eta + J_p, NT])  # Initialising additive evolution vector b_0, b_1, ..., b_{NT - 1}
+        b_r = np.zeros([N_r + eta_p * Nc_eta, NT])  # Initialising additive evolution vector b_0, b_1, ..., b_{NT - 1}
 
         #######################################################
         # Initialising states and adding priors:
         alpha = np.zeros([N, NT])  # Initialising
-        x_r = np.zeros([N_r + eta_p * Nc_eta + J_p, NT])  # Initialising
+        x_r = np.zeros([N_r + eta_p * Nc_eta, NT])  # Initialising
         alpha[:, 0] = F_alpha.compute_coefficients('alpha', initial_guess_size_distribution)  # Computing alpha coefficients from initial condition function
         x_r[0:N_r, 0] = F_alpha_r.compute_coefficients('alpha', initial_guess_size_distribution)  # Computing alpha coefficients from initial condition function
 
@@ -191,10 +181,10 @@ if __name__ == '__main__':
     # Computing BAE sample mean and sample covariance over all iterations:
     print('Computing BAE sample mean and covariance...')
     BAE_mean = np.average(epsilon, axis=0)  # Computing BAE mean
-    BAE_covariance = np.zeros([NT, N_r + eta_p * Nc_eta + J_p, N_r + eta_p * Nc_eta + J_p])  # Initialising
+    BAE_covariance = np.zeros([NT, N_r + eta_p * Nc_eta, N_r + eta_p * Nc_eta])  # Initialising
     for k in range(NT):  # Iterating over time
-        epsilon_difference = np.zeros([N_r + eta_p * Nc_eta + J_p, 1])  # Initialising difference vector
-        epsilon_difference_matrix = np.zeros([N_iterations, N_r + eta_p * Nc_eta + J_p, N_r + eta_p * Nc_eta + J_p])  # Initialising difference matrix
+        epsilon_difference = np.zeros([N_r + eta_p * Nc_eta, 1])  # Initialising difference vector
+        epsilon_difference_matrix = np.zeros([N_iterations, N_r + eta_p * Nc_eta, N_r + eta_p * Nc_eta])  # Initialising difference matrix
         for iteration in range(N_iterations):
             epsilon_difference[:, 0] = epsilon[iteration, :, k] - BAE_mean[:, k]  # Computing epsilon(i)_k - mu_epsilon_k
             epsilon_difference_matrix[iteration] = np.matmul(epsilon_difference, np.transpose(epsilon_difference))  # Computing (epsilon(i)_k - mu_epsilon_k) * (epsilon(i)_k - mu_epsilon_k)^T

@@ -66,7 +66,7 @@ sigma_eta_prior_6 = 0
 
 # Model noise parameters:
 # Observation noise covariance parameters:
-sigma_v = 2000  # Additive noise
+sigma_v = 4000  # Additive noise
 sigma_Y_multiplier = 0  # Noise multiplier proportional to Y
 # Evolution noise covariance Gamma_alpha_w = sigma_alpha_w^2 * I_N (Size distribution):
 sigma_alpha_w_0 = sigma_alpha_prior_0
@@ -114,8 +114,8 @@ def initial_guess_size_distribution(x):
     return skewed_gaussian(x, N_0, x_0, sigma_0, skewness_0) + skewed_gaussian(x, N_1, x_1, sigma_1, skewness_1)
 
 # Guess of the condensation rate I(Dp):
-I_cst_guess = 0.4  # Condensation parameter constant
-I_linear_guess = 0.2  # Condensation parameter linear
+I_cst_guess = 1  # Condensation parameter constant
+I_linear_guess = 0  # Condensation parameter linear
 def guess_cond(Dp):
     return I_cst_guess + I_linear_guess * Dp
 

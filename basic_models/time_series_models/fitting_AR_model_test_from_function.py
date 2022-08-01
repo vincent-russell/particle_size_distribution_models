@@ -25,18 +25,18 @@ if __name__ == '__main__':
     # Parameters:
 
     # Autoregressive model parameters:
-    p = 5  # Order of model, i.e. AR(p)
+    p = 6  # Order of model, i.e. AR(p)
 
     # Time parameters:
-    dt = (1 / 60) * 20  # Time step (hours)
-    T = 24  # End time (hours)
+    dt = (1 / 60) * 5  # Time step (hours)
+    T = 48  # End time (hours)
     NT = int(T / dt)  # Total number of time steps
 
     # Initial condition:
     x_0 = 0
 
     # Function to approximate by an AR(p) model:
-    Amp = 2e3  # Amplitude of gaussian
+    Amp = 1.5e3  # Amplitude of gaussian
     mean = 8  # Mean time of gaussian
     sigma = 1.5  # Standard deviation time of gaussian
     def function(t):

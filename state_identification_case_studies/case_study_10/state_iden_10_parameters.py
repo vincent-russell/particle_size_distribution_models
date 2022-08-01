@@ -33,8 +33,8 @@ xmin = log(vmin)  # Lower limit in log-size
 xmax = log(vmax)  # Upper limit in log-size
 
 # Time domain:
-dt = (1 / 60) * 20  # Time step (hours)
-T = 24  # End time (hours)
+dt = (1 / 60) * 5  # Time step (hours)
+T = 48  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
 # Size distribution discretisation:
@@ -48,8 +48,8 @@ Np_gamma = 3  # Np - 1 = degree of Legendre polynomial approximation in each ele
 N_gamma = Ne_gamma * Np_gamma  # Total degrees of freedom
 
 # Deposition rate discretisation:
-Ne_eta = 2  # Number of elements
-Np_eta = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
+Ne_eta = 3  # Number of elements
+Np_eta = 2  # Np - 1 = degree of Legendre polynomial approximation in each element
 N_eta = Ne_eta * Np_eta  # Total degrees of freedom
 
 # Prior noise parameters:
@@ -70,7 +70,7 @@ sigma_gamma_prior_4 = 0
 sigma_gamma_prior_5 = 0
 sigma_gamma_prior_6 = 0
 # Prior covariance for eta; Gamma_eta_prior = sigma_eta_prior^2 * I_N_eta (Deposition rate):
-sigma_eta_prior_0 = 0.2
+sigma_eta_prior_0 = 0.1
 sigma_eta_prior_1 = sigma_eta_prior_0 / 2
 sigma_eta_prior_2 = sigma_eta_prior_1 / 4
 sigma_eta_prior_3 = 0
@@ -78,11 +78,11 @@ sigma_eta_prior_4 = 0
 sigma_eta_prior_5 = 0
 sigma_eta_prior_6 = 0
 # Prior uncertainty for J (Nucleation rate):
-sigma_J_prior = 100
+sigma_J_prior = 20
 
 # Model noise parameters:
 # Observation noise covariance parameters:
-sigma_v = 2000  # Additive noise
+sigma_v = 4000  # Additive noise
 sigma_Y_multiplier = 0  # Noise multiplier proportional to Y
 # Evolution noise covariance Gamma_alpha_w = sigma_alpha_w^2 * I_N (Size distribution):
 sigma_alpha_w_0 = sigma_alpha_prior_0
@@ -135,17 +135,17 @@ eta_A6 = 0 * eye(N_eta)
 eta_A = array([eta_A1, eta_A2, eta_A3, eta_A4, eta_A5, eta_A6])  # Tensor of VAR(p) coefficients
 
 # Nucleation AR(p) coefficients for model J_{t + 1} = a_1 J_t + ... + w_{J_t}:
-J_p = 5  # Order of AR model
-J_a1 = 4.234
-J_a2 = -7.261
-J_a3 = 6.286
-J_a4 = -2.736
-J_a5 = 0.476
-J_a6 = 0
+J_p = 6  # Order of AR model
+J_a1 = 1.648
+J_a2 = 0.088
+J_a3 = -0.551
+J_a4 = -0.435
+J_a5 = -0.084
+J_a6 = 0.335
 J_a = array([J_a1, J_a2, J_a3, J_a4, J_a5, J_a6])  # Vector of AR(p) coefficients
 
 # Modifying first element covariance for alpha (size distribution):
-alpha_first_element_multiplier = 10
+alpha_first_element_multiplier = 1000
 gamma_first_element_multiplier = 1
 eta_first_element_multiplier = 1
 
@@ -155,7 +155,7 @@ gamma_use_element_multipler = False
 eta_use_element_multipler = False
 
 # Initial guess of the size distribution n_0(x) = n(x, 0):
-N_0 = 1e3  # Amplitude of initial condition gaussian
+N_0 = 2e3  # Amplitude of initial condition gaussian
 x_0 = log(diameter_to_volume(0.01))  # Mean of initial condition gaussian
 sigma_0 = 3  # Standard deviation of initial condition gaussian
 skewness = 3  # Skewness factor for initial condition gaussian
@@ -169,7 +169,7 @@ def initial_guess_condensation_rate(Dp):
     return I_cst_guess + I_linear_guess * Dp
 
 # Initial guess of the deposition rate d_0(Dp) = d(Dp, 0):
-d_cst_guess = 0.4  # Deposition parameter constant
+d_cst_guess = 0.2  # Deposition parameter constant
 d_linear_guess = 0  # Deposition parameter linear
 d_inverse_quadratic_guess = 0  # Deposition parameter inverse quadratic
 def initial_guess_deposition_rate(Dp):
@@ -179,22 +179,22 @@ def initial_guess_deposition_rate(Dp):
 boundary_zero = True
 
 # True underlying condensation model I_Dp(Dp, t):
-I_cst = 0.002  # Condensation parameter constant
-I_linear = 0.05  # Condensation parameter linear
+I_cst = 0.001  # Condensation parameter constant
+I_linear = 0.08  # Condensation parameter linear
 def cond(Dp):
     return I_cst + I_linear * Dp
 
 # True underlying deposition model d(Dp, t):
-d_cst = 0.02  # Deposition parameter constant
+d_cst = 0.05  # Deposition parameter constant
 d_linear = 0.05  # Deposition parameter linear
-d_inverse_quadratic = 0.00001  # Deposition parameter inverse quadratic
+d_inverse_quadratic = 0.000002  # Deposition parameter inverse quadratic
 def depo(Dp):
     return d_cst + d_linear * Dp + d_inverse_quadratic * (1 / Dp ** 2)
 
 # True underlying source (nucleation event) model:
-N_s = 2e3  # Amplitude of gaussian nucleation event
+N_s = 1.5e3  # Amplitude of gaussian nucleation event
 t_s = 8  # Mean time of gaussian nucleation event
-sigma_s = 1.5   # Standard deviation time of gaussian nucleation event
+sigma_s = 1.5  # Standard deviation time of gaussian nucleation event
 def sorc(t):  # Source (nucleation) at xmin
     return gaussian(t, N_s, t_s, sigma_s)  # Gaussian source (nucleation event) model output
 

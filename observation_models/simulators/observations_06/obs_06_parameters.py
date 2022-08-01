@@ -17,7 +17,7 @@ from evolution_models.tools import Fuchs_Brownian
 
 # Setup and plotting:
 plot_animations = True  # Set to True to plot animations
-plot_nucleation = False  # Set to True to plot nucleation plot
+plot_nucleation = True  # Set to True to plot nucleation plot
 plot_images = True  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 save_coagulation = False  # Set to True to save coagulation tensors
@@ -32,8 +32,8 @@ xmin = log(vmin)  # Lower limit in log-size
 xmax = log(vmax)  # Upper limit in log-size
 
 # Time domain:
-dt = (1 / 60) * 20  # Time step (hours)
-T = 24  # End time (hours)
+dt = (1 / 60) * 5  # Time step (hours)
+T = 48  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
 # Size distribution discretisation:
@@ -45,12 +45,14 @@ N = Ne * Np  # Total degrees of freedom
 M = 50  # Observation dimension size
 logDp_obs = linspace(log(Dp_min), log(Dp_max), M)  # Log(Diameters) that observations are made
 sample_volume = 0.0005  # Volume of sample used in counting, y = (1 / sample_volume) * Pois(sample_volume * n)
+additive_noise_mean = 10  # Mean of additive noise
+additive_noise_sigma = 5  # Standard deviation of additive noise
 
 # Save data parameters:
 data_filename = 'observations_06'  # Filename for data of simulated observations
 
 # Initial condition n_0(x) = n(x, 0):
-N_0 = 1e3  # Amplitude of initial condition gaussian
+N_0 = 2e3  # Amplitude of initial condition gaussian
 x_0 = log(diameter_to_volume(0.01))  # Mean of initial condition gaussian
 sigma_0 = 3  # Standard deviation of initial condition gaussian
 skewness = 3  # Skewness factor for initial condition gaussian
@@ -61,20 +63,20 @@ def initial_condition(x):
 boundary_zero = True
 
 # Condensation model I_Dp(Dp, t):
-I_cst = 0.002  # Condensation parameter constant
-I_linear = 0.05  # Condensation parameter linear
+I_cst = 0.001  # Condensation parameter constant
+I_linear = 0.08  # Condensation parameter linear
 def cond(Dp):
     return I_cst + I_linear * Dp
 
 # Deposition model d(Dp, t):
-d_cst = 0.02  # Deposition parameter constant
+d_cst = 0.05  # Deposition parameter constant
 d_linear = 0.05  # Deposition parameter linear
-d_inverse_quadratic = 0.00001  # Deposition parameter inverse quadratic
+d_inverse_quadratic = 0.000002  # Deposition parameter inverse quadratic
 def depo(Dp):
     return d_cst + d_linear * Dp + d_inverse_quadratic * (1 / Dp ** 2)
 
 # Source (nucleation event) model:
-N_s = 2e3  # Amplitude of gaussian nucleation event
+N_s = 1.5e3  # Amplitude of gaussian nucleation event
 t_s = 8  # Mean time of gaussian nucleation event
 sigma_s = 1.5  # Standard deviation time of gaussian nucleation event
 def sorc(t):  # Source (nucleation) at xmin

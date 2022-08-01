@@ -119,14 +119,14 @@ if __name__ == '__main__':
 
         # True underlying condensation model I_Dp(Dp, t):
         I_cst = random.uniform(0.001, 0.003)  # Condensation parameter constant
-        I_linear = random.uniform(0, 0.05)  # Condensation parameter linear
+        I_linear = random.uniform(0, 0.1)  # Condensation parameter linear
         def cond(Dp):
             return I_cst + I_linear * Dp
 
         # True underlying deposition model d(Dp, t):
-        d_cst = random.uniform(0, 0.12)  # Deposition parameter constant
+        d_cst = random.uniform(0, 0.1)  # Deposition parameter constant
         d_linear = random.uniform(0, 0.1)  # Deposition parameter linear
-        d_inverse_quadratic = random.uniform(0, 0.000015)  # Deposition parameter inverse quadratic
+        d_inverse_quadratic = random.uniform(0, 0.000003)  # Deposition parameter inverse quadratic
         def depo(Dp):
             return d_cst + d_linear * Dp + d_inverse_quadratic * (1 / Dp ** 2)
 

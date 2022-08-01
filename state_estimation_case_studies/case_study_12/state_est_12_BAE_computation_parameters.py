@@ -28,8 +28,8 @@ xmin = log(vmin)  # Lower limit in log-size
 xmax = log(vmax)  # Upper limit in log-size
 
 # Time domain:
-dt = (1 / 60) * 20  # Time step (hours)
-T = 24  # End time (hours)
+dt = (1 / 60) * 5  # Time step (hours)
+T = 48  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
 # Size distribution discretisation:
@@ -62,7 +62,7 @@ boundary_zero = True
 #=========================================================#
 
 # Initial guess of the size distribution n_0(x) = n(x, 0):
-N_0 = 1e3  # Amplitude of initial condition gaussian
+N_0 = 2e3  # Amplitude of initial condition gaussian
 x_0 = log(diameter_to_volume(0.01))  # Mean of initial condition gaussian
 sigma_0 = 3  # Standard deviation of initial condition gaussian
 skewness = 3  # Skewness factor for initial condition gaussian
@@ -76,15 +76,15 @@ def guess_cond(Dp):
     return I_cst_guess + I_linear_guess * Dp
 
 # Guess of the deposition rate d(Dp):
-d_cst_guess = 0.1  # Deposition parameter constant
+d_cst_guess = 0.2  # Deposition parameter constant
 d_linear_guess = 0  # Deposition parameter linear
 d_inverse_quadratic_guess = 0  # Deposition parameter inverse quadratic
 def guess_depo(Dp):
     return d_cst_guess + d_linear_guess * Dp + d_inverse_quadratic_guess * (1 / Dp ** 2)
 
 # Guess of the source (nucleation event) model:
-N_s_guess = 2.5e3  # Amplitude of gaussian nucleation event
-t_s_guess = 10  # Mean time of gaussian nucleation event
-sigma_s_guess = 1  # Standard deviation time of gaussian nucleation event
+N_s_guess = 2e3  # Amplitude of gaussian nucleation event
+t_s_guess = 7  # Mean time of gaussian nucleation event
+sigma_s_guess = 1.25  # Standard deviation time of gaussian nucleation event
 def guess_sorc(t):  # Source (nucleation) at xmin
     return gaussian(t, N_s_guess, t_s_guess, sigma_s_guess)  # Gaussian source (nucleation event) model output

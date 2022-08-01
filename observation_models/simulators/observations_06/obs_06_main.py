@@ -91,6 +91,8 @@ if __name__ == '__main__':
     _, _, n_x_obs, _ = F.get_nplot_discretisation(alpha, x_plot=x_obs)  # Computing plotting discretisation
     n_logDp_obs = change_basis_x_to_logDp(n_x_obs, v_obs, d_obs)  # Computing log_10(D_p)-based size distribution
     Y = (1 / sample_volume) * basic_tools.get_poisson(sample_volume * n_logDp_obs)  # Drawing observations from Poisson distribution
+    Y += np.random.normal(additive_noise_mean, additive_noise_sigma, [M, NT])  # Adding random noise
+    Y[Y < 0] = 0  # Setting negative values to zero
 
 
     #######################################################
@@ -138,11 +140,11 @@ if __name__ == '__main__':
     line_color = ['blue', 'red']  # Colors of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
-    delay = 60  # Delay between frames in milliseconds
+    delay = 30  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
     yscale_cond = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_cond = [0, 0.06]  # Plot boundary limits for y-axis
+    ylimits_cond = [0, 0.12]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate'  # Title for plot
@@ -151,7 +153,7 @@ if __name__ == '__main__':
 
     # Parameters for deposition plot:
     yscale_depo = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_depo = [0, 0.6]  # Plot boundary limits for y-axis
+    ylimits_depo = [0, 0.2]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate'  # Title for plot
@@ -183,7 +185,7 @@ if __name__ == '__main__':
         figJ, axJ = plt.subplots(figsize=(8.00, 5.00), dpi=100)
         plt.plot(time, sorc_logDp_plot, color='blue')
         axJ.set_xlim([0, T])
-        axJ.set_ylim([0, 16000])
+        axJ.set_ylim([0, 12000])
         axJ.set_xlabel('$t$ (hour)', fontsize=12)
         axJ.set_ylabel('$J(t)$ \n (cm$^{-3}$ hour$^{-1}$)', fontsize=12, rotation=0)
         axJ.yaxis.set_label_coords(-0.015, 1.02)
