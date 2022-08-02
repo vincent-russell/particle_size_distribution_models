@@ -5,7 +5,8 @@ Author: Vincent Russell
 Date: June 22, 2022
 
 """
-
+# todo: Do standard FEM (and possibly PGFEM) to compare to this version.
+# todo: Try to implement UQVAE, and also RNNs.
 
 #######################################################
 # Modules:
