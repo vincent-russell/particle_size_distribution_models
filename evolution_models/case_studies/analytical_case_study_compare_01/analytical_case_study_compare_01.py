@@ -1,24 +1,23 @@
 """
 
-Title: Computes solution approximations to the general dynamic equation of aerosols
+Title: Computes solution approximations to the condensation equation in log-space
 Author: Vincent Russell
-Date: June 22, 2022
+Date: June 7, 2022
 
 """
-## todo: Do standard FEM (and possibly PGFEM) to compare to this version.
-## todo: Try to implement UQVAE, and also RNNs.
+
+
 
 #######################################################
 # Modules:
 import numpy as np
 import time as tm
-import matplotlib.pyplot as plt
 from tkinter import mainloop
 from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from evolution_models.tools import Fuchs_Brownian, GDE_evolution_model, change_basis_volume_to_diameter, change_basis_volume_to_diameter_sorc
+from evolution_models.tools import Fuchs_Brownian, change_basis_volume_to_diameter, change_basis_volume_to_diameter_sorc
 
 
 #######################################################
@@ -29,11 +28,9 @@ if __name__ == '__main__':
 
     # Setup and plotting:
     plot_animations = True  # Set to True to plot animations
-    plot_nucleation = False  # Set to True to plot nucleation plot
     plot_images = False  # Set to True to plot images
     load_coagulation = True  # Set to True to load coagulation tensors
     save_coagulation = False  # Set to True to save coagulation tensors
-    coagulation_suffix = '1_to_10_micro_metres'  # Suffix of saved coagulation tensors file
 
     # Spatial domain:
     Dp_min = 1  # Minimum diameter of particles (micro m)
@@ -43,13 +40,11 @@ if __name__ == '__main__':
 
     # Time domain:
     dt = (1 / 60) * 2  # Time step (hours)
-    T = 24  # End time (hours)
+    T = 12  # End time (hours)
     NT = int(T / dt)  # Total number of time steps
 
     # Size distribution discretisation:
-    Ne = 50  # Number of elements
-    Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
-    N = Ne * Np  # Total degrees of freedom
+    N = 50  # Number of nodes in finite element mesh
 
     # Initial condition n_0(v) = n(v, 0):
     N_0 = 300  # Amplitude of initial condition gaussian
@@ -62,8 +57,8 @@ if __name__ == '__main__':
     boundary_zero = True
 
     # Condensation model I_Dp(Dp, t):
-    I_0 = 0.2  # Condensation parameter constant
-    I_1 = 1  # Condensation parameter inverse quadratic
+    I_0 = 0*0.2  # Condensation parameter constant
+    I_1 = 0*1  # Condensation parameter inverse quadratic
     def cond(Dp):
         return I_0 + I_1 / (Dp ** 2)
 
@@ -91,38 +86,166 @@ if __name__ == '__main__':
 
     #######################################################
     # Initialising timer for total computation:
+    basic_tools.print_lines()  # Print lines in console
     initial_time = tm.time()  # Initial time stamp
 
 
     #######################################################
-    # Constructing evolution model:
-    F = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero)  # Initialising evolution model
-    F.add_process('condensation', cond)  # Adding condensation to evolution model
-    F.add_process('deposition', depo)  # Adding deposition to evolution model
-    # F.add_process('source', sorc)  # Adding source to evolution model
-    # F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
-    F.compile(time_integrator='euler')  # Compiling evolution model and adding time integrator
+    # Function to get piecewise linear basis function:
+    def get_basis_function(v_i_minus_1, v_i, v_i_plus_1):
+        def basis_function(v):
+            if v_i_minus_1 < v < v_i:
+                return (v - v_i_minus_1) / (v_i - v_i_minus_1)
+            elif v_i < v < v_i_plus_1:
+                return (v_i_plus_1 - v) / (v_i_plus_1 - v_i)
+            elif v == v_i:
+                return 1
+            else:
+                return 0
+        return basis_function
+
+
+    #######################################################
+    # Function to get derivative of piecewise linear basis function:
+    def get_derivative_basis_function(v_i_minus_1, v_i, v_i_plus_1):
+        def derivative_basis_function(v):
+            if v_i_minus_1 < v < v_i:
+                return 1 / (v_i - v_i_minus_1)
+            elif v_i < v < v_i_plus_1:
+                return -1 / (v_i_plus_1 - v_i)
+            else:
+                return 0
+        return derivative_basis_function
+
+
+    #######################################################
+    # Computing basis functions:
+    v_disc = np.linspace(vmin, vmax, N)  # Discretisation of domain
+    phi = np.array([])  # Initialising array of basis functions
+    dphi = np.array([])  # Initialising array of derivative of basis functions
+    for i in range(N):  # Iterating over number of nodes (number of basis functions)
+        phi_i = get_basis_function(v_disc[max(i - 1, 0)], v_disc[i], v_disc[min(i + 1, N - 1)])  # Computing basis functions
+        dphi_i = get_derivative_basis_function(v_disc[max(i - 1, 0)], v_disc[i], v_disc[min(i + 1, N - 1)])  # Computing derivative of basis functions
+        phi = np.append(phi, phi_i)  # Appending i-th basis function to array
+        dphi = np.append(dphi, dphi_i)  # Appending i-th basis function to array
+
+
+    #######################################################
+    # Computing M matrix:
+    print()
+    print('Computing M matrix...')
+    M = np.zeros([N, N])
+    for i in tqdm(range(N)):
+        for j in range(N):
+            def M_integrand(v):
+                return phi[i](v) * phi[j](v)
+            M[j, i] = basic_tools.GLnpt(M_integrand, v_disc[max(i - 1, 0)], v_disc[min(i + 1, N - 1)], 8)
+
+
+    #######################################################
+    # Computing Q matrix:
+    print()
+    print('Computing Q matrix...')
+    Q = np.zeros([N, N])
+    for i in tqdm(range(N)):
+        for j in range(N):
+            def Q_integrand(v):
+                Dp = basic_tools.volume_to_diameter(v)
+                return (np.pi / 2) * (Dp ** 2) * cond(Dp) * phi[i](v) * dphi[j](v)
+            Q[j, i] = basic_tools.GLnpt(Q_integrand, v_disc[max(i - 1, 0)], v_disc[min(i + 1, N - 1)], 8)
+
+
+    #######################################################
+    # Computing or loading B and C tensors:
+    if load_coagulation:
+        coag_tensors = np.load('coag_tensors_N=' + str(N) + '.npz')
+        B, C = coag_tensors['B'], coag_tensors['C']
+    else:
+        print()
+        print('Computing tensors B and C...')
+        B = np.zeros([N, N, N])  # Initialising
+        C = np.zeros([N, N, N])  # Initialising
+
+        # Iterating over i-th matrix in tensor:
+        for i in tqdm(range(N)):
+            # Iterating over k-th entries in i-th matrix:
+            for k in range(N):
+                # Iterating over j-th entries in i-th matrix:
+                for j in range(N):
+
+                    def B_integrand(v):
+
+                        # Integrand:
+                        def B_sub_integrand(w):
+                            return coag(v - w, w) * phi[j](v - w) * phi[k](w)
+
+                        # Limit check:
+                        vlim = v - vmin
+                        if v_disc[min(k + 1, N - 1)] < vlim:
+                            return phi[i](v) * basic_tools.GLnpt(B_sub_integrand, v_disc[max(k - 1, 0)], v_disc[min(k + 1, N - 1)], 8)
+                        elif v_disc[max(k - 1, 0)] <= vlim <= v_disc[min(k + 1, N - 1)]:
+                            return phi[i](v) * basic_tools.GLnpt(B_sub_integrand, v_disc[max(k - 1, 0)], vlim, 8)
+                        else:
+                            return 0
+
+                    B[i, j, k] = (1 / 2) * basic_tools.GLnpt(B_integrand, v_disc[max(i - 1, 0)], v_disc[min(i + 1, N - 1)], 8)
+
+                    # Computing C^i_j,k elements:
+                    def C_integrand(v):
+                        def C_sub_integrand(w):
+                            return coag(v, w) * phi[k](w)
+                        C_sub_integral = basic_tools.GLnpt(C_sub_integrand, v_disc[max(k - 1, 0)], v_disc[min(k + 1, N - 1)], 8)
+                        return phi[j](v) * C_sub_integral * phi[i](v)
+
+                    C[i, j, k] = basic_tools.GLnpt(C_integrand, v_disc[max(i - 1, 0)], v_disc[min(i + 1, N - 1)], 8)
+
+    # Saving coagulation tensors B and C:
+    if save_coagulation:
+        np.savez('coag_tensors_N=' + str(N), B=B, C=C)
+
+
+    #######################################################
+    # Computing evolution model:
+
+    # Condensation:
+    R = np.linalg.solve(M, Q)
+    def f_cond(n):
+        return np.matmul(R, n)
+
+    # Coagulation:
+    BC = B - C
+    def f_coag(n):
+        quad_vec = np.zeros(N)
+        for i in range(N):
+            quad_alpha = np.dot(BC[i], n)
+            quad_vec[i] = np.dot(n, quad_alpha)
+        return np.linalg.solve(M, quad_vec)
+
+    # Evolution model:
+    def F(n):
+        return n + dt * (f_cond(n) + f_coag(n))
+
+
+    #######################################################
+    # Computing initial condition:
+    n_v = np.zeros([N, NT])  # Initialising n = [n_0, n_1, ..., n_NT]
+    for i in range(N):
+        n_v[i, 0] = initial_condition(v_disc[i])  # Computing initial condition
 
 
     #######################################################
     # Computing time evolution of model:
+    print()
     print('Computing time evolution...')
-    alpha = np.zeros([N, NT])  # Initialising alpha = [alpha_0, alpha_1, ..., alpha_NT]
-    alpha[:, 0] = F.compute_coefficients('alpha', initial_condition)  # Computing alpha coefficients from initial condition function
     t = np.zeros(NT)  # Initialising time array
     for k in tqdm(range(NT - 1)):  # Iterating over time
-        alpha[:, k + 1] = F.eval(alpha[:, k], t[k])  # Time evolution computation
+        n_v[:, k + 1] = F(n_v[:, k])  # Time evolution computation
         t[k + 1] = (k + 1) * dt  # Time (hours)
 
 
     #######################################################
-    # Computing plotting discretisation:
-    d_plot, v_plot, n_v_plot, _ = F.get_nplot_discretisation(alpha)  # Computing plotting discretisation
-    n_Dp_plot = change_basis_volume_to_diameter(n_v_plot, d_plot)  # Computing diameter-based size distribution
-
-
-    #######################################################
     # Computing parameters plotting discretisation:
+    d_plot = basic_tools.volume_to_diameter(v_disc)  # Diameter discretisation
     Nplot = len(d_plot)  # Length of size discretisation
     cond_Dp_plot = np.zeros([Nplot, NT])  # Initialising volume-based condensation rate
     depo_plot = np.zeros([Nplot, NT])  # Initialising deposition rate
@@ -133,6 +256,11 @@ if __name__ == '__main__':
             cond_Dp_plot[i, k] = cond(d_plot[i])  # Computing volume-based condensation rate
             depo_plot[i, k] = depo(d_plot[i])  # Computing deposition rate
     sorc_Dp_plot = change_basis_volume_to_diameter_sorc(sorc_v_plot, Dp_min)  # Computing diameter-based nucleation rate
+
+
+    #######################################################
+    # Computing plotting discretisation:
+    n_Dp = change_basis_volume_to_diameter(n_v, d_plot)  # Computing diameter-based size distribution
 
 
     #######################################################
@@ -157,6 +285,7 @@ if __name__ == '__main__':
     line_color = ['blue']  # Colors of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
+    delay = 0  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
     ylimits_cond = [0, 2]  # Plot boundary limits for y-axis
@@ -175,36 +304,17 @@ if __name__ == '__main__':
     line_color_depo = ['blue']  # Colors of lines in plot
 
     # Size distribution animation:
-    basic_tools.plot_1D_animation(d_plot, n_Dp_plot, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
-                                  location=location, time=time, timetext=timetext, line_color=line_color, doing_mainloop=False)
+    basic_tools.plot_1D_animation(d_plot, n_Dp, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
+                                  delay=delay, location=location, time=time, timetext=timetext, line_color=line_color, doing_mainloop=False)
 
     # Condensation rate animation:
     basic_tools.plot_1D_animation(d_plot, cond_Dp_plot, xlimits=xlimits, ylimits=ylimits_cond, xscale=xscale, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
                                   location=location_cond, time=time, timetext=timetext, line_color=line_color_cond, doing_mainloop=False)
 
-    # Deposition rate animation:
-    basic_tools.plot_1D_animation(d_plot, depo_plot, xlimits=xlimits, ylimits=ylimits_depo, xscale=xscale, xlabel=xlabel_depo, ylabel=ylabel_depo, title=title_depo,
-                                  location=location_depo, time=time, timetext=timetext, line_color=line_color_depo, doing_mainloop=False)
-
     # Mainloop and print:
     if plot_animations:
         print('Plotting animations...')
         mainloop()  # Runs tkinter GUI for plots and animations
-
-
-    #######################################################
-    # Plotting nucleation rate:
-    if plot_nucleation:
-        print('Plotting nucleation...')
-        figJ, axJ = plt.subplots(figsize=(8.00, 5.00), dpi=100)
-        plt.plot(time, sorc_Dp_plot, color='blue')
-        axJ.set_xlim([0, T])
-        axJ.set_ylim([0, 1e4])
-        axJ.set_xlabel('$t$ (hour)', fontsize=12)
-        axJ.set_ylabel('$J(t)$ \n $(\mu$m$^{-1}$cm$^{-3}$ hour$^{-1}$)', fontsize=12, rotation=0)
-        axJ.yaxis.set_label_coords(-0.015, 1.02)
-        axJ.set_title('Nucleation rate', fontsize=12)
-        axJ.grid()
 
 
     #######################################################
@@ -225,7 +335,7 @@ if __name__ == '__main__':
     # Plotting images:
     if plot_images:
         print('Plotting images...')
-        basic_tools.image_plot(time, d_plot, n_Dp_plot, xlabel=xlabel_image, ylabel=ylabel_image, title=title_image,
+        basic_tools.image_plot(time, d_plot, n_Dp, xlabel=xlabel_image, ylabel=ylabel_image, title=title_image,
                                yscale=yscale_image, ylabelcoords=ylabelcoords, image_min=image_min, image_max=image_max, cmap=cmap, cbarlabel=cbarlabel, cbarticks=cbarticks)
 
 
