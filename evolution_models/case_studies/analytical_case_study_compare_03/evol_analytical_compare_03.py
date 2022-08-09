@@ -17,7 +17,7 @@ from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from evolution_models.tools import Fuchs_Brownian, change_basis_volume_to_diameter, change_basis_volume_to_diameter_sorc
+from evolution_models.tools import GDE_evolution_model
 
 
 #######################################################
@@ -27,61 +27,56 @@ if __name__ == '__main__':
     # Parameters:
 
     # Setup and plotting:
+    N_plot = 12  # Plotting discretisation
     plot_animations = True  # Set to True to plot animations
-    plot_images = False  # Set to True to plot images
-    load_coagulation = True  # Set to True to load coagulation tensors
+    load_coagulation = False  # Set to True to load coagulation tensors
     save_coagulation = False  # Set to True to save coagulation tensors
+    coagulation_suffix = 'evol_analytical_compare_03'  # Suffix of saved coagulation tensors file
 
     # Spatial domain:
-    Dp_min = 1  # Minimum diameter of particles (micro m)
-    Dp_max = 10  # Maximum diameter of particles (micro m)
-    vmin = basic_tools.diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
-    vmax = basic_tools.diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
+    vmin = 1e-7  # Minimum volume of particles (micro m^3)
+    vmax = 1e-2  # Maximum volume of particles (micro m^3)
+    xmin = np.log(vmin)  # Lower limit in log-size
+    xmax = np.log(vmax)  # Upper limit in log-size
 
     # Time domain:
-    dt = (1 / 60) * 2  # Time step (hours)
-    T = 12  # End time (hours)
+    dt = 0.1  # Time step (hours)
+    T = 96  # End time (hours)
     NT = int(T / dt)  # Total number of time steps
 
     # Size distribution discretisation:
-    N = 50  # Number of nodes in finite element mesh
+    Ne = 12  # Number of elements
+    Np = 2  # Np - 1 = degree of Legendre polynomial approximation in each element
+    N = Ne * Np  # Total degrees of freedom
 
-    # Initial condition n_0(v) = n(v, 0):
-    N_0 = 300  # Amplitude of initial condition gaussian
-    v_0 = basic_tools.diameter_to_volume(4)  # Mean of initial condition gaussian
-    sigma_0 = 15  # Standard deviation of initial condition gaussian
-    def initial_condition(v):
-        return basic_tools.gaussian(v, N_0, v_0, sigma_0)
+    # Standard FEM size distribution discretisation:
+    N_standard = 12  # Number of nodes in finite element mesh
+
+    # Initial condition n_v(v, 0):
+    N_0 = 1e4  # Total initial number of particles (particles per cm^3)
+    v_0 = 2e-6  # Mean initial volume (micro m^3)
+    def initial_condition_v(v):
+        return ((N_0 * v) / (v_0 ** 2)) * np.exp(-v / v_0)
+    def initial_condition(x):
+        v = np.exp(x)
+        return v * initial_condition_v(v)
 
     # Set to True for imposing boundary condition n(vmin, t) = 0:
     boundary_zero = True
 
-    # Condensation model I_Dp(Dp, t):
-    I_0 = 0*0.2  # Condensation parameter constant
-    I_1 = 0*1  # Condensation parameter inverse quadratic
+    # Condensation model:
+    I_0 = 6e-2  # Condensation parameter (hour^-1)
+    def cond_v(v):
+        return I_0 * v
     def cond(Dp):
-        return I_0 + I_1 / (Dp ** 2)
-
-    # Deposition model d(Dp, t):
-    depo_Dpmin = 5  # Deposition parameter; diameter at which minimum
-    d_0 = 0.4  # Deposition parameter constant
-    d_1 = -0.15  # Deposition parameter linear
-    d_2 = -d_1 / (2 * depo_Dpmin)  # Deposition parameter quadratic
-    def depo(Dp):
-        return d_0 + d_1 * Dp + d_2 * Dp ** 2
-
-    # Source (nucleation event) model:
-    N_s = 5e3  # Amplitude of gaussian nucleation event
-    t_s = 8  # Mean time of gaussian nucleation event
-    sigma_s = 2  # Standard deviation time of gaussian nucleation event
-    def sorc(t):  # Source (nucleation) at vmin
-        return basic_tools.gaussian(t, N_s, t_s, sigma_s)  # Gaussian source (nucleation event) model output
+        v = basic_tools.diameter_to_volume(Dp)
+        cst = 2 / (np.pi * Dp ** 2)
+        return cst * cond_v(v)
 
     # Coagulation model:
-    def coag(v_x, v_y):
-        Dp_x = basic_tools.volume_to_diameter(v_x)  # Diameter of particle x (micro m)
-        Dp_y = basic_tools.volume_to_diameter(v_y)  # Diameter of particle y (micro m)
-        return Fuchs_Brownian(Dp_x, Dp_y)
+    beta_0 = 2.5e-6  # Coagulation parameter (cm^3 hour^-1)
+    def coag(*_):
+        return beta_0
 
 
     #######################################################
@@ -91,14 +86,57 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Computing plotting discretisation:
+    x_plot = np.linspace(xmin, xmax, N_plot)
+    v_plot = np.exp(x_plot)
+    d_plot = basic_tools.volume_to_diameter(v_plot)
+
+
+    # =========================================================#
+    # NOTE: The following is the proposed (new) model.
+    # =========================================================#
+
+
+    #######################################################
+    # Constructing evolution model:
+    print('Constructing proposed model...')
+    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', print_status=False)  # Initialising evolution model
+    F.add_process('condensation', cond)  # Adding condensation to evolution model
+    F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
+    F.compile(time_integrator='euler')  # Compiling evolution model and adding time integrator
+
+
+    #######################################################
+    # Computing time evolution of model:
+    print('Computing time evolution using proposed model...')
+    alpha = np.zeros([N, NT])  # Initialising alpha = [alpha_0, alpha_1, ..., alpha_NT]
+    alpha[:, 0] = F.compute_coefficients('alpha', initial_condition)  # Computing alpha coefficients from initial condition function
+    t = np.zeros(NT)  # Initialising time array
+    for k in tqdm(range(NT - 1)):  # Iterating over time
+        alpha[:, k + 1] = F.eval(alpha[:, k], t[k])  # Time evolution computation
+        t[k + 1] = (k + 1) * dt  # Time (hours)
+
+
+    #######################################################
+    # Computing plotting discretisation:
+    _, _, n_x_plot, _ = F.get_nplot_discretisation(alpha, x_plot=x_plot)  # Computing plotting discretisation
+
+
+    # =========================================================#
+    # NOTE: The following is the standard FEM (or PGFEM) model.
+    # =========================================================#
+    print('Constructing standard model...')
+
+
+    #######################################################
     # Function to get piecewise linear basis function:
-    def get_basis_function(v_i_minus_1, v_i, v_i_plus_1):
-        def basis_function(v):
-            if v_i_minus_1 < v < v_i:
-                return (v - v_i_minus_1) / (v_i - v_i_minus_1)
-            elif v_i < v < v_i_plus_1:
-                return (v_i_plus_1 - v) / (v_i_plus_1 - v_i)
-            elif v == v_i:
+    def get_basis_function(x_i_minus_1, x_i, x_i_plus_1):
+        def basis_function(x):
+            if x_i_minus_1 < x < x_i:
+                return (x - x_i_minus_1) / (x_i - x_i_minus_1)
+            elif x_i < x < x_i_plus_1:
+                return (x_i_plus_1 - x) / (x_i_plus_1 - x_i)
+            elif x == x_i:
                 return 1
             else:
                 return 0
@@ -107,12 +145,12 @@ if __name__ == '__main__':
 
     #######################################################
     # Function to get derivative of piecewise linear basis function:
-    def get_derivative_basis_function(v_i_minus_1, v_i, v_i_plus_1):
-        def derivative_basis_function(v):
-            if v_i_minus_1 < v < v_i:
-                return 1 / (v_i - v_i_minus_1)
-            elif v_i < v < v_i_plus_1:
-                return -1 / (v_i_plus_1 - v_i)
+    def get_derivative_basis_function(x_i_minus_1, x_i, x_i_plus_1):
+        def derivative_basis_function(x):
+            if x_i_minus_1 < x < x_i:
+                return 1 / (x_i - x_i_minus_1)
+            elif x_i < x < x_i_plus_1:
+                return -1 / (x_i_plus_1 - x_i)
             else:
                 return 0
         return derivative_basis_function
@@ -120,88 +158,90 @@ if __name__ == '__main__':
 
     #######################################################
     # Computing basis functions:
-    v_disc = np.linspace(vmin, vmax, N)  # Discretisation of domain
+    x_standard = np.linspace(xmin, xmax, N_standard)
+    v_standard = np.exp(x_standard)
+    d_standard = basic_tools.volume_to_diameter(v_standard)
     phi = np.array([])  # Initialising array of basis functions
     dphi = np.array([])  # Initialising array of derivative of basis functions
-    for i in range(N):  # Iterating over number of nodes (number of basis functions)
-        phi_i = get_basis_function(v_disc[max(i - 1, 0)], v_disc[i], v_disc[min(i + 1, N - 1)])  # Computing basis functions
-        dphi_i = get_derivative_basis_function(v_disc[max(i - 1, 0)], v_disc[i], v_disc[min(i + 1, N - 1)])  # Computing derivative of basis functions
+    for i in range(N_standard):  # Iterating over number of nodes (number of basis functions)
+        phi_i = get_basis_function(x_standard[max(i - 1, 0)], x_standard[i], x_standard[min(i + 1, N_standard - 1)])  # Computing basis functions
+        dphi_i = get_derivative_basis_function(x_standard[max(i - 1, 0)], x_standard[i], x_standard[min(i + 1, N_standard - 1)])  # Computing derivative of basis functions
         phi = np.append(phi, phi_i)  # Appending i-th basis function to array
         dphi = np.append(dphi, dphi_i)  # Appending i-th basis function to array
 
 
     #######################################################
     # Computing M matrix:
-    print()
     print('Computing M matrix...')
-    M = np.zeros([N, N])
-    for i in tqdm(range(N)):
-        for j in range(N):
-            def M_integrand(v):
-                return phi[i](v) * phi[j](v)
-            M[j, i] = basic_tools.GLnpt(M_integrand, v_disc[max(i - 1, 0)], v_disc[min(i + 1, N - 1)], 8)
+    M = np.zeros([N_standard, N_standard])
+    for i in tqdm(range(N_standard)):
+        for j in range(N_standard):
+            def M_integrand(x):
+                return phi[i](x) * phi[j](x)
+            M[j, i] = basic_tools.GLnpt(M_integrand, x_standard[max(i - 1, 0)], x_standard[min(i + 1, N_standard - 1)], 8)
 
 
     #######################################################
     # Computing Q matrix:
-    print()
     print('Computing Q matrix...')
-    Q = np.zeros([N, N])
-    for i in tqdm(range(N)):
-        for j in range(N):
-            def Q_integrand(v):
+    Q = np.zeros([N_standard, N_standard])
+    for i in tqdm(range(N_standard)):
+        for j in range(N_standard):
+            def Q_integrand(x):
+                v = np.exp(x)
                 Dp = basic_tools.volume_to_diameter(v)
-                return (np.pi / 2) * (Dp ** 2) * cond(Dp) * phi[i](v) * dphi[j](v)
-            Q[j, i] = basic_tools.GLnpt(Q_integrand, v_disc[max(i - 1, 0)], v_disc[min(i + 1, N - 1)], 8)
+                return (3 / Dp) * cond(Dp) * phi[i](x) * dphi[j](x)
+            Q[j, i] = basic_tools.GLnpt(Q_integrand, x_standard[max(i - 1, 0)], x_standard[min(i + 1, N_standard - 1)], 8)
 
 
     #######################################################
     # Computing or loading B and C tensors:
     if load_coagulation:
-        coag_tensors = np.load('coag_tensors_N=' + str(N) + '.npz')
+        coag_tensors = np.load('coag_tensors_N_standard=' + str(N_standard) + '_' + coagulation_suffix + '.npz')
         B, C = coag_tensors['B'], coag_tensors['C']
     else:
-        print()
         print('Computing tensors B and C...')
-        B = np.zeros([N, N, N])  # Initialising
-        C = np.zeros([N, N, N])  # Initialising
+        B = np.zeros([N_standard, N_standard, N_standard])  # Initialising
+        C = np.zeros([N_standard, N_standard, N_standard])  # Initialising
 
         # Iterating over i-th matrix in tensor:
-        for i in tqdm(range(N)):
+        for i in tqdm(range(N_standard)):
             # Iterating over k-th entries in i-th matrix:
-            for k in range(N):
+            for k in range(N_standard):
                 # Iterating over j-th entries in i-th matrix:
-                for j in range(N):
+                for j in range(N_standard):
 
-                    def B_integrand(v):
+                    def B_integrand(x):
 
                         # Integrand:
-                        def B_sub_integrand(w):
-                            return coag(v - w, w) * phi[j](v - w) * phi[k](w)
+                        def B_sub_integrand(y):
+                            xy = np.log(np.exp(x) - np.exp(y))
+                            cst = 1 / (np.exp(x) - np.exp(y))
+                            return cst * coag(xy, y) * phi[j](xy) * phi[k](y)
 
                         # Limit check:
-                        vlim = v - vmin
-                        if v_disc[min(k + 1, N - 1)] < vlim:
-                            return phi[i](v) * basic_tools.GLnpt(B_sub_integrand, v_disc[max(k - 1, 0)], v_disc[min(k + 1, N - 1)], 8)
-                        elif v_disc[max(k - 1, 0)] <= vlim <= v_disc[min(k + 1, N - 1)]:
-                            return phi[i](v) * basic_tools.GLnpt(B_sub_integrand, v_disc[max(k - 1, 0)], vlim, 8)
+                        xlim = np.log(np.exp(x) - np.exp(xmin))
+                        if x_standard[min(k + 1, N_standard - 1)] < xlim:
+                            return np.exp(x) * phi[i](x) * basic_tools.GLnpt(B_sub_integrand, x_standard[max(k - 1, 0)], x_standard[min(k + 1, N_standard - 1)], 8)
+                        elif x_standard[max(k - 1, 0)] <= xlim <= x_standard[min(k + 1, N_standard - 1)]:
+                            return np.exp(x) * phi[i](x) * basic_tools.GLnpt(B_sub_integrand, x_standard[max(k - 1, 0)], xlim, 8)
                         else:
                             return 0
 
-                    B[i, j, k] = (1 / 2) * basic_tools.GLnpt(B_integrand, v_disc[max(i - 1, 0)], v_disc[min(i + 1, N - 1)], 8)
+                    B[i, j, k] = (1 / 2) * basic_tools.GLnpt(B_integrand, x_standard[max(i - 1, 0)], x_standard[min(i + 1, N_standard - 1)], 8)
 
                     # Computing C^i_j,k elements:
-                    def C_integrand(v):
-                        def C_sub_integrand(w):
-                            return coag(v, w) * phi[k](w)
-                        C_sub_integral = basic_tools.GLnpt(C_sub_integrand, v_disc[max(k - 1, 0)], v_disc[min(k + 1, N - 1)], 8)
-                        return phi[j](v) * C_sub_integral * phi[i](v)
+                    def C_integrand(x):
+                        def C_sub_integrand(y):
+                            return coag(x, y) * phi[k](y)
+                        C_sub_integral = basic_tools.GLnpt(C_sub_integrand, x_standard[max(k - 1, 0)], x_standard[min(k + 1, N_standard - 1)], 8)
+                        return phi[j](x) * C_sub_integral * phi[i](x)
 
-                    C[i, j, k] = basic_tools.GLnpt(C_integrand, v_disc[max(i - 1, 0)], v_disc[min(i + 1, N - 1)], 8)
+                    C[i, j, k] = basic_tools.GLnpt(C_integrand, x_standard[max(i - 1, 0)], x_standard[min(i + 1, N_standard - 1)], 8)
 
     # Saving coagulation tensors B and C:
     if save_coagulation:
-        np.savez('coag_tensors_N=' + str(N), B=B, C=C)
+        np.savez('coag_tensors_N_standard=' + str(N_standard) + '_' + coagulation_suffix, B=B, C=C)
 
 
     #######################################################
@@ -215,52 +255,64 @@ if __name__ == '__main__':
     # Coagulation:
     BC = B - C
     def f_coag(n):
-        quad_vec = np.zeros(N)
-        for i in range(N):
+        quad_vec = np.zeros(N_standard)
+        for i in range(N_standard):
             quad_alpha = np.dot(BC[i], n)
             quad_vec[i] = np.dot(n, quad_alpha)
         return np.linalg.solve(M, quad_vec)
 
     # Evolution model:
-    def F(n):
+    def F_standard(n):
         return n + dt * (f_cond(n) + f_coag(n))
 
 
     #######################################################
     # Computing initial condition:
-    n_v = np.zeros([N, NT])  # Initialising n = [n_0, n_1, ..., n_NT]
-    for i in range(N):
-        n_v[i, 0] = initial_condition(v_disc[i])  # Computing initial condition
+    n_x_standard = np.zeros([N_standard, NT])  # Initialising n = [n_0, n_1, ..., n_NT]
+    for i in range(N_standard):
+        n_x_standard[i, 0] = initial_condition(x_standard[i])  # Computing initial condition
 
 
     #######################################################
     # Computing time evolution of model:
-    print()
-    print('Computing time evolution...')
-    t = np.zeros(NT)  # Initialising time array
+    print('Computing time evolution using standard model...')
     for k in tqdm(range(NT - 1)):  # Iterating over time
-        n_v[:, k + 1] = F(n_v[:, k])  # Time evolution computation
-        t[k + 1] = (k + 1) * dt  # Time (hours)
+        n_x_standard[:, k + 1] = F_standard(n_x_standard[:, k])  # Time evolution computation
 
 
     #######################################################
-    # Computing parameters plotting discretisation:
-    d_plot = basic_tools.volume_to_diameter(v_disc)  # Diameter discretisation
-    Nplot = len(d_plot)  # Length of size discretisation
-    cond_Dp_plot = np.zeros([Nplot, NT])  # Initialising volume-based condensation rate
-    depo_plot = np.zeros([Nplot, NT])  # Initialising deposition rate
-    sorc_v_plot = np.zeros(NT)  # Initialising volume-based source (nucleation) rate
+    # Computing analytical solution:
+    print('Computing analytical solution...')
+    x_analytical = np.linspace(xmin, xmax, N_plot)  # Log-discretisation for analytical solution
+    v_analytical = np.exp(x_analytical)  # Discretisation for analytical solution
+    n_v_analytical = np.zeros([len(v_analytical), NT])  # Initialising
+    n_x_analytical = np.zeros([len(v_analytical), NT])  # Initialising
+    for k in range(1, NT):  # Iterating over time
+        N_t = (2 * N_0) / (2 + (beta_0 * N_0 * t[k]))  # Total number of particles at time t
+        M_t = N_0 * v_0 * np.exp(I_0 * t[k])  # Total volume of particles at time t
+        A = (N_t ** 2) / (M_t * np.sqrt(1 - (N_t / N_0)))
+        for i in range(len(v_analytical)):  # Iterating over volume
+            B = (N_0 * v_analytical[i]) / M_t
+            C = B * np.sqrt(1 - (N_t / N_0))
+            n_v_analytical[i, k] = A * np.exp(-B) * np.sinh(C)
+            n_x_analytical[i, k] = n_v_analytical[i, k] * v_analytical[i]
+    n_v_analytical = np.nan_to_num(n_v_analytical)  # Replace NaN with zeros
+    n_x_analytical = np.nan_to_num(n_x_analytical)  # Replace NaN with zeros
+
+
+    #######################################################
+    # Computing total error (l2 norm):
+    n_diff_proposed = n_x_analytical - n_x_plot
+    n_diff_standard = n_x_analytical - n_x_standard
+    norm_diff_proposed = np.zeros(NT)  # Initialising
+    norm_diff_standard = np.zeros(NT)  # Initialising
     for k in range(NT):
-        sorc_v_plot[k] = sorc(t[k])  # Computing volume-based nucleation rate
-        for i in range(Nplot):
-            cond_Dp_plot[i, k] = cond(d_plot[i])  # Computing volume-based condensation rate
-            depo_plot[i, k] = depo(d_plot[i])  # Computing deposition rate
-    sorc_Dp_plot = change_basis_volume_to_diameter_sorc(sorc_v_plot, Dp_min)  # Computing diameter-based nucleation rate
-
-
-    #######################################################
-    # Computing plotting discretisation:
-    n_Dp = change_basis_volume_to_diameter(n_v, d_plot)  # Computing diameter-based size distribution
+        norm_diff_proposed[k] = np.sqrt(np.matmul(n_diff_proposed[:, k], n_diff_proposed[:, k]))
+        norm_diff_standard[k] = np.sqrt(np.matmul(n_diff_standard[:, k], n_diff_standard[:, k]))
+    total_error_proposed = np.sum(norm_diff_proposed)
+    total_error_standard = np.sum(norm_diff_standard)
+    print('Total error of proposed model:', round(total_error_proposed))
+    print('Total error of standard model:', round(total_error_standard))
 
 
     #######################################################
@@ -276,69 +328,31 @@ if __name__ == '__main__':
     location = 'Home'  # Set to 'Uni', 'Home', or 'Middle' (default)
 
     # Parameters for size distribution animation:
-    xscale = 'linear'  # x-axis scaling ('linear' or 'log')
-    xlimits = [d_plot[0], d_plot[-1]]  # Plot boundary limits for x-axis
-    ylimits = [0, 10000]  # Plot boundary limits for y-axis
-    xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
-    ylabel = '$\dfrac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$'  # y-axis label for 1D animation plot
+    xscale = 'log'  # x-axis scaling ('linear' or 'log')
+    xticks = [1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2]  # Plot x-tick labels
+    xticklabels = ['$10^{-7}$', '$10^{-6}$', '$10^{-5}$', '$10^{-4}$', '$10^{-3}$', '$10^{-2}$']  # Plot x-tick labels
+    xlimits = [vmin, vmax]  # Plot boundary limits for x-axis
+    ylimits = [0, 6000]  # Plot boundary limits for y-axis
+    xlabel = '$v$ ($\mu$m$^3$)'  # x-axis label for 1D animation plot
+    ylabel = '$\dfrac{dN}{d\ln(v)}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution'  # Title for 1D animation plot
-    line_color = ['blue']  # Colors of lines in plot
+    legend = ['Analytical solution', 'Collocation', 'FEM']  # Adding legend to plot
+    line_color = ['green', 'blue', 'red']  # Colors of lines in plot
+    line_style = ['solid', 'dashed', 'dotted']  # Style of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
     delay = 0  # Delay between frames in milliseconds
 
-    # Parameters for condensation plot:
-    ylimits_cond = [0, 2]  # Plot boundary limits for y-axis
-    xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
-    ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
-    title_cond = 'Condensation rate'  # Title for plot
-    location_cond = location + '2'  # Location for plot
-    line_color_cond = ['blue']  # Colors of lines in plot
-
-    # Parameters for deposition plot:
-    ylimits_depo = [0, 0.6]  # Plot boundary limits for y-axis
-    xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
-    ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
-    title_depo = 'Deposition rate'  # Title for plot
-    location_depo = location + '3'  # Location for plot
-    line_color_depo = ['blue']  # Colors of lines in plot
-
     # Size distribution animation:
-    basic_tools.plot_1D_animation(d_plot, n_Dp, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
-                                  delay=delay, location=location, time=time, timetext=timetext, line_color=line_color, doing_mainloop=False)
-
-    # Condensation rate animation:
-    basic_tools.plot_1D_animation(d_plot, cond_Dp_plot, xlimits=xlimits, ylimits=ylimits_cond, xscale=xscale, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
-                                  location=location_cond, time=time, timetext=timetext, line_color=line_color_cond, doing_mainloop=False)
+    basic_tools.plot_1D_animation(v_plot, n_x_analytical, n_x_plot, plot_add=(v_standard, n_x_standard), xticks=xticks, xticklabels=xticklabels, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
+                                  delay=delay, location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, line_style=line_style, doing_mainloop=False)
 
     # Mainloop and print:
     if plot_animations:
         print('Plotting animations...')
         mainloop()  # Runs tkinter GUI for plots and animations
 
-
-    #######################################################
-    # Images:
-
-    # Parameters for size distribution images:
-    yscale_image = 'linear'  # Change scale of y-axis (linear or log)
-    xlabel_image = 'Time (hours)'  # x-axis label for image
-    ylabel_image = '$D_p$ ($\mu$m)'  # y-axis label for image
-    ylabelcoords = (-0.06, 1.05)  # y-axis label coordinates
-    title_image = 'Size distribution'  # Title for image
-    image_min = 100  # Minimum of image colour
-    image_max = 10000  # Maximum of image colour
-    cmap = 'jet'  # Colour map of image
-    cbarlabel = '$\dfrac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$'  # Label of colour bar
-    cbarticks = [100, 1000, 10000]  # Ticks of colorbar
-
-    # Plotting images:
-    if plot_images:
-        print('Plotting images...')
-        basic_tools.image_plot(time, d_plot, n_Dp, xlabel=xlabel_image, ylabel=ylabel_image, title=title_image,
-                               yscale=yscale_image, ylabelcoords=ylabelcoords, image_min=image_min, image_max=image_max, cmap=cmap, cbarlabel=cbarlabel, cbarticks=cbarticks)
-
-
     # Final print statements
     basic_tools.print_lines()  # Print lines in console
     print()  # Print space in console
+
