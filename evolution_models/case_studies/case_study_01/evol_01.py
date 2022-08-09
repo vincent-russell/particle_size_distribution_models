@@ -99,8 +99,8 @@ if __name__ == '__main__':
     F = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero)  # Initialising evolution model
     F.add_process('condensation', cond)  # Adding condensation to evolution model
     F.add_process('deposition', depo)  # Adding deposition to evolution model
-    # F.add_process('source', sorc)  # Adding source to evolution model
-    # F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
+    F.add_process('source', sorc)  # Adding source to evolution model
+    F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F.compile(time_integrator='euler')  # Compiling evolution model and adding time integrator
 
 
