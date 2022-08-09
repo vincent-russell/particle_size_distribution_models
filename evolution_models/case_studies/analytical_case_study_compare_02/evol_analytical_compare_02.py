@@ -222,6 +222,11 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Implementing boundary condition n(xmin, t) = 0:
+    M[0, :] = 0; M[:, 0] = 0; M[0, 0] = 1
+
+
+    #######################################################
     # Computing evolution model:
 
     # Coagulation:

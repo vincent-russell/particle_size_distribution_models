@@ -27,7 +27,7 @@ if __name__ == '__main__':
     # Parameters:
 
     # Setup and plotting:
-    N_plot = 25  # Plotting discretisation
+    N_plot = 50  # Plotting discretisation
     plot_animations = True  # Set to True to plot animations
 
     # Spatial domain:
@@ -39,17 +39,21 @@ if __name__ == '__main__':
     xmax = np.log(vmax)  # Upper limit in log-size
 
     # Time domain:
-    dt = 0.1  # Time step (hours)
+    dt = 0.05  # Time step (hours)
     T = 96  # End time (hours)
     NT = int(T / dt)  # Total number of time steps
 
     # Size distribution discretisation:
-    Ne = 25  # Number of elements
+    Ne = 50  # Number of elements
     Np = 2  # Np - 1 = degree of Legendre polynomial approximation in each element
     N = Ne * Np  # Total degrees of freedom
 
     # Standard FEM size distribution discretisation:
-    N_standard = 25  # Number of nodes in finite element mesh
+    N_standard = 50  # Number of nodes in finite element mesh
+
+    # PGFEM parameters:
+    do_pgfem = True  # Set to True to do PGFEM, else False for FEM
+    epsilon = 0.2  # Upwinding factor
 
     # Initial condition n_Dp(Dp, 0):
     N_0 = 180  # Amplitude of initial condition gaussian
@@ -154,6 +158,52 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Function to get sigma modifier for PGFEM basis functions:
+    def get_sigma_modifier(x_i_minus_1, x_i):
+        h_i = x_i - x_i_minus_1
+        def sigma_modifier(x):
+            if x_i_minus_1 < x < x_i:
+                return (4 / (h_i ** 2)) * (x - x_i_minus_1) * (x_i - x)
+            else:
+                return 0
+        return sigma_modifier
+
+
+    #######################################################
+    # Function to get derivative of sigma modifier for PGFEM basis functions:
+    def get_derivative_sigma_modifier(x_i_minus_1, x_i):
+        h_i = x_i - x_i_minus_1
+        def derivative_sigma_modifier(x):
+            if x_i_minus_1 < x < x_i:
+                return (4 / (h_i ** 2)) * (x_i + x_i_minus_1 - 2 * x)
+            else:
+                return 0
+        return derivative_sigma_modifier
+
+
+    #######################################################
+    # Function to get PGFEM basis functions:
+    def get_pgfem_basis_functions(x_i_minus_1, x_i, x_i_plus_1, epsilon):
+        fem_basis_function_i = get_basis_function(x_i_minus_1, x_i, x_i_plus_1)
+        sigma_modifier_i = get_sigma_modifier(x_i_minus_1, x_i)
+        sigma_modifier_i_plus_1 = get_sigma_modifier(x_i, x_i_plus_1)
+        def pgfem_basis_function(x):
+            return fem_basis_function_i(x) + (3 / 2) * epsilon * (sigma_modifier_i(x) - sigma_modifier_i_plus_1(x))
+        return pgfem_basis_function
+
+
+    #######################################################
+    # Function to get derivative of PGFEM basis functions:
+    def get_derivative_pgfem_basis_functions(x_i_minus_1, x_i, x_i_plus_1, epsilon):
+        derivative_fem_basis_function_i = get_derivative_basis_function(x_i_minus_1, x_i, x_i_plus_1)
+        derivative_sigma_modifier_i = get_derivative_sigma_modifier(x_i_minus_1, x_i)
+        derivative_sigma_modifier_i_plus_1 = get_derivative_sigma_modifier(x_i, x_i_plus_1)
+        def derivative_pgfem_basis_function(x):
+            return derivative_fem_basis_function_i(x) + (3 / 2) * epsilon * (derivative_sigma_modifier_i(x) - derivative_sigma_modifier_i_plus_1(x))
+        return derivative_pgfem_basis_function
+
+
+    #######################################################
     # Computing basis functions:
     x_standard = np.linspace(xmin, xmax, N_standard)
     v_standard = np.exp(x_standard)
@@ -161,8 +211,12 @@ if __name__ == '__main__':
     phi = np.array([])  # Initialising array of basis functions
     dphi = np.array([])  # Initialising array of derivative of basis functions
     for i in range(N_standard):  # Iterating over number of nodes (number of basis functions)
-        phi_i = get_basis_function(x_standard[max(i - 1, 0)], x_standard[i], x_standard[min(i + 1, N_standard - 1)])  # Computing basis functions
-        dphi_i = get_derivative_basis_function(x_standard[max(i - 1, 0)], x_standard[i], x_standard[min(i + 1, N_standard - 1)])  # Computing derivative of basis functions
+        if do_pgfem:
+            phi_i = get_pgfem_basis_functions(x_standard[max(i - 1, 0)], x_standard[i], x_standard[min(i + 1, N_standard - 1)], epsilon)  # Computing basis functions
+            dphi_i = get_derivative_pgfem_basis_functions(x_standard[max(i - 1, 0)], x_standard[i], x_standard[min(i + 1, N_standard - 1)], epsilon)  # Computing derivative of basis functions
+        else:
+            phi_i = get_basis_function(x_standard[max(i - 1, 0)], x_standard[i], x_standard[min(i + 1, N_standard - 1)])  # Computing basis functions
+            dphi_i = get_derivative_basis_function(x_standard[max(i - 1, 0)], x_standard[i], x_standard[min(i + 1, N_standard - 1)])  # Computing derivative of basis functions
         phi = np.append(phi, phi_i)  # Appending i-th basis function to array
         dphi = np.append(dphi, dphi_i)  # Appending i-th basis function to array
 
@@ -175,7 +229,7 @@ if __name__ == '__main__':
         for j in range(N_standard):
             def M_integrand(x):
                 return phi[i](x) * phi[j](x)
-            M[j, i] = basic_tools.GLnpt(M_integrand, x_standard[max(i - 1, 0)], x_standard[min(i + 1, N_standard - 1)], 8)
+            M[j, i] = basic_tools.GLnpt(M_integrand, x_standard[max(i - 1, 0)], x_standard[min(i + 1, N_standard - 1)], 30)
 
 
     #######################################################
@@ -188,7 +242,13 @@ if __name__ == '__main__':
                 v = np.exp(x)
                 Dp = basic_tools.volume_to_diameter(v)
                 return (3 / Dp) * cond(Dp) * phi[i](x) * dphi[j](x)
-            Q[j, i] = basic_tools.GLnpt(Q_integrand, x_standard[max(i - 1, 0)], x_standard[min(i + 1, N_standard - 1)], 8)
+            Q[j, i] = basic_tools.GLnpt(Q_integrand, x_standard[max(i - 1, 0)], x_standard[min(i + 1, N_standard - 1)], 30)
+
+
+    #######################################################
+    # Implementing boundary condition n(xmin, t) = 0:
+    M[0, :] = 0; M[:, 0] = 0; M[0, 0] = 1
+    Q[0, :] = 0; Q[:, 0] = 0
 
 
     #######################################################
@@ -279,7 +339,10 @@ if __name__ == '__main__':
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution'  # Title for 1D animation plot
-    legend = ['Analytical solution', 'DGFEM', 'FEM']  # Adding legend to plot
+    if do_pgfem:
+        legend = ['Analytical solution', 'DGFEM', 'PGFEM']  # Adding legend to plot
+    else:
+        legend = ['Analytical solution', 'DGFEM', 'FEM']  # Adding legend to plot
     legend_position = 'upper left'  # Position of legend
     line_color = ['green', 'blue', 'red']  # Colors of lines in plot
     line_style = ['solid', 'dashed', 'dotted']  # Style of lines in plot
