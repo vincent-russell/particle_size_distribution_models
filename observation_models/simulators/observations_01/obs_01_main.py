@@ -85,10 +85,7 @@ if __name__ == '__main__':
     v_obs = diameter_to_volume(d_obs)  # Volumes that observations are made
     _, _, n_v_obs, _ = F.get_nplot_discretisation(alpha, x_plot=v_obs)  # Computing plotting discretisation
     n_Dp_obs = change_basis_volume_to_diameter(n_v_obs, d_obs)  # Computing diameter-based size distribution
-    if use_SMPS_observation_model:
-        DMA_transfer_function = compute_DMA_transfer_function()
-    else:
-        Y = (1 / sample_volume) * basic_tools.get_poisson(sample_volume * n_Dp_obs)  # Drawing observations from Poisson distribution
+    Y = (1 / sample_volume) * basic_tools.get_poisson(sample_volume * n_Dp_obs)  # Drawing observations from Poisson distribution
 
 
     #######################################################
