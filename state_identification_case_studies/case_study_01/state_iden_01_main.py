@@ -19,7 +19,7 @@ import basic_tools
 from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
 from observation_models.data.simulated import load_observations
 from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, compute_U, change_basis_volume_to_diameter
-from observation_models.tools import Size_distribution_observation_model
+from observation_models.tools import get_DMA_transfer_function, compute_alpha_to_z_operator, Size_distribution_observation_model
 
 
 #######################################################
@@ -245,10 +245,17 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing observation model:
-    M = len(Y)  # Dimension size of observations
-    H_alpha = Size_distribution_observation_model(F_alpha, d_obs, M)  # Observation model
-    H = np.zeros([M, N + gamma_p * Nc_gamma + eta_p * Nc_eta + J_p])  # Initialising
-    H[0:M, 0:N] = H_alpha.H_phi  # Observation operator
+    if use_DMPS_observation_model:
+        M = N_channels  # Setting M to number of channels (i.e. observation dimensions to number of channels)
+        DMA_transfer_function = get_DMA_transfer_function(R_inner, R_outer, length, Q_aerosol, Q_sheath, efficiency)  # Computes DMA transfer function
+        H_alpha = compute_alpha_to_z_operator(F_alpha, DMA_transfer_function, N_channels, voltage_min, voltage_max)  # Computes operator for computing z(t) given alpha(t)
+        H = np.zeros([M, N + gamma_p * Nc_gamma + eta_p * Nc_eta + J_p])  # Initialising
+        H[0:M, 0:N] = H_alpha  # Observation operator
+    else:
+        M = len(Y)  # Dimension size of observations
+        H_alpha = Size_distribution_observation_model(F_alpha, d_obs, M)  # Observation model
+        H = np.zeros([M, N + gamma_p * Nc_gamma + eta_p * Nc_eta + J_p])  # Initialising
+        H[0:M, 0:N] = H_alpha.H_phi  # Observation operator
 
 
     #######################################################

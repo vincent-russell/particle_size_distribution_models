@@ -43,6 +43,21 @@ M = 4  # Observation dimension size
 d_obs = linspace(Dp_min, Dp_max, M)  # Diameters that observations are made
 sample_volume = 0.05  # Volume of sample used in counting, y = (1 / sample_volume) * Pois(sample_volume * n)
 
+# DMPS observation parameters:
+use_DMPS_observation_model = True  # Set to True to use DMPS observation model
+plot_dma_transfer_functions = False  # Set to True to plot DMA transfer functions
+N_channels = 4  # Number of channels in DMA
+R_inner = 0.937  # Inner radius of DMA (cm)
+R_outer = 1.961  # Outer radius of DMA (cm)
+length = 44.369 # Length of DMA (cm)
+Q_aerosol = 0.3  # Aerosol sample flow (L/min)
+Q_sheath = 3  # Sheath flow (L/min)
+efficiency = 0.08  # Efficiency of DMA (flat percentage applied to particles passing through DMA); ranges from 0 to 1
+voltage_min = 12000  # Minimum voltage of DMA
+voltage_max = 130000  # Maximum voltage of DMA
+cpc_inlet_flow = 0.3  # CPC inlet flow (L/min)
+cpc_count_time = 10  # Counting time for CPC inlet flow (seconds)
+
 # Save data parameters:
 data_filename = 'observations_03_1'  # Filename for data of simulated observations
 

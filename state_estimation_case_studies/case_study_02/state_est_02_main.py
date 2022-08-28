@@ -19,7 +19,7 @@ import basic_tools
 from basic_tools import Extended_Kalman_filter, compute_fixed_interval_extended_Kalman_smoother
 from observation_models.data.simulated import load_observations
 from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_basis_volume_to_diameter
-from observation_models.tools import Size_distribution_observation_model, Size_distribution_observation_model_Jacobian
+from observation_models.tools import get_DMA_transfer_function, compute_alpha_to_z_operator, Size_distribution_observation_model, Size_distribution_observation_model_Jacobian
 
 
 #######################################################
@@ -72,20 +72,34 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing observation model:
-    M = len(Y)  # Dimension size of observations
-    H_alpha = Size_distribution_observation_model(F_alpha, d_obs, M)  # Observation model
-    def H(x, *_):
-        alpha = x[0: N]  # Extracting alpha from state x
-        return H_alpha.eval(alpha)
+    if use_DMPS_observation_model:
+        M = N_channels  # Setting M to number of channels (i.e. observation dimensions to number of channels)
+        DMA_transfer_function = get_DMA_transfer_function(R_inner, R_outer, length, Q_aerosol, Q_sheath, efficiency)  # Computes DMA transfer function
+        H_alpha = compute_alpha_to_z_operator(F_alpha, DMA_transfer_function, N_channels, voltage_min, voltage_max)  # Computes operator for computing z(t) given alpha(t)
+        def H(x, *_):
+            alpha = x[0: N]  # Extracting alpha from state x
+            return np.matmul(H_alpha, alpha)
+    else:
+        M = len(Y)  # Dimension size of observations
+        H_alpha = Size_distribution_observation_model(F_alpha, d_obs, M)  # Observation model
+        def H(x, *_):
+            alpha = x[0: N]  # Extracting alpha from state x
+            return H_alpha.eval(alpha)
 
 
     #######################################################
     # Constructing Jacobian of observation model:
-    J_H_alpha = Size_distribution_observation_model_Jacobian(H_alpha)  # Observation Jacobian
-    def J_H(*_):
-        output = np.zeros([M, N])
-        output[0:M, 0:N] = J_H_alpha.eval()
-        return output
+    if use_DMPS_observation_model:
+        def J_H(*_):
+            output = np.zeros([M, N])
+            output[0:M, 0:N] = H_alpha
+            return output
+    else:
+        J_H_alpha = Size_distribution_observation_model_Jacobian(H_alpha)  # Observation Jacobian
+        def J_H(*_):
+            output = np.zeros([M, N])
+            output[0:M, 0:N] = J_H_alpha.eval()
+            return output
 
 
     #######################################################

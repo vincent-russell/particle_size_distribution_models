@@ -47,6 +47,21 @@ Ne_gamma = 2  # Number of elements
 Np_gamma = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N_gamma = Ne_gamma * Np_gamma  # Total degrees of freedom
 
+# DMPS observation parameters:
+use_DMPS_observation_model = True  # Set to True to use DMPS observation model
+plot_dma_transfer_functions = False  # Set to True to plot DMA transfer functions
+N_channels = 50  # Number of channels in DMA
+R_inner = 0.937  # Inner radius of DMA (cm)
+R_outer = 1.961  # Outer radius of DMA (cm)
+length = 44.369 # Length of DMA (cm)
+Q_aerosol = 0.3  # Aerosol sample flow (L/min)
+Q_sheath = 3  # Sheath flow (L/min)
+efficiency = 0.08  # Efficiency of DMA (flat percentage applied to particles passing through DMA); ranges from 0 to 1
+voltage_min = 2  # Minimum voltage of DMA
+voltage_max = 10000  # Maximum voltage of DMA
+cpc_inlet_flow = 0.3  # CPC inlet flow (L/min)
+cpc_count_time = 2  # Counting time for CPC inlet flow (seconds)
+
 # Prior noise parameters:
 # Prior covariance for alpha; Gamma_alpha_prior = sigma_alpha_prior^2 * I_N (Size distribution):
 sigma_alpha_prior_0 = 10
@@ -69,7 +84,7 @@ sigma_J_prior = 20
 
 # Model noise parameters:
 # Observation noise covariance parameters:
-sigma_v = 4000  # Additive noise
+sigma_v = 100  # Additive noise
 sigma_Y_multiplier = 0  # Noise multiplier proportional to Y
 # Evolution noise covariance Gamma_alpha_w = sigma_alpha_w^2 * I_N (Size distribution):
 sigma_alpha_w_0 = sigma_alpha_prior_0
@@ -113,7 +128,7 @@ J_a6 = 0.335
 J_a = array([J_a1, J_a2, J_a3, J_a4, J_a5, J_a6])  # Vector of AR(p) coefficients
 
 # Modifying first element covariance for alpha (size distribution):
-alpha_first_element_multiplier = 1000
+alpha_first_element_multiplier = 10
 gamma_first_element_multiplier = 1
 
 # Option to use element multiplier in covariance matrices (covariance decreases as element increases):

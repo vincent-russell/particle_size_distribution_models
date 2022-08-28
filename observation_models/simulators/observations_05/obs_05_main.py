@@ -17,6 +17,7 @@ from tqdm import tqdm
 
 # Local modules:
 import basic_tools
+from observation_models.tools import get_DMA_transfer_function, compute_alpha_to_z_operator
 from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_basis_volume_to_diameter, change_basis_volume_to_diameter_sorc
 
 
@@ -84,10 +85,21 @@ if __name__ == '__main__':
 
     #######################################################
     # Computing observation discretisation:
-    v_obs = diameter_to_volume(d_obs)  # Volumes that observations are made
-    _, _, n_v_obs, _ = F.get_nplot_discretisation(alpha, x_plot=v_obs)  # Computing plotting discretisation
-    n_Dp_obs = change_basis_volume_to_diameter(n_v_obs, d_obs)  # Computing diameter-based size distribution
-    Y = (1 / sample_volume) * basic_tools.get_poisson(sample_volume * n_Dp_obs)  # Drawing observations from Poisson distribution
+    channels = np.linspace(1, N_channels, N_channels)  # Array of integers up to number of channels
+    if use_DMPS_observation_model:
+        M = N_channels  # Setting M to number of channels (i.e. observation dimensions to number of channels)
+        sample_volume = ((cpc_count_time / 60) * cpc_inlet_flow)  # Volume of aerosol sample (in litres)
+        DMA_transfer_function = get_DMA_transfer_function(R_inner, R_outer, length, Q_aerosol, Q_sheath, efficiency)  # Computes DMA transfer function
+        H_alpha_z = compute_alpha_to_z_operator(F, DMA_transfer_function, N_channels, voltage_min, voltage_max)  # Computes operator for computing z(t) given alpha(t)
+        Y = np.zeros([N_channels, NT])  # Initialising observations
+        for k in range(NT):
+            z_k = np.matmul(H_alpha_z, alpha[:, k])  # Computing z_k
+            Y[:, k] = (1 / sample_volume) * basic_tools.get_poisson(sample_volume * z_k)  # Drawing observations from Poisson distribution
+    else:
+        v_obs = diameter_to_volume(d_obs)  # Volumes that observations are made
+        _, _, n_v_obs, _ = F.get_nplot_discretisation(alpha, x_plot=v_obs)  # Computing plotting discretisation
+        n_Dp_obs = change_basis_volume_to_diameter(n_v_obs, d_obs)  # Computing diameter-based size distribution
+        Y = (1 / sample_volume) * basic_tools.get_poisson(sample_volume * n_Dp_obs)  # Drawing observations from Poisson distribution
 
 
     #######################################################
@@ -153,8 +165,21 @@ if __name__ == '__main__':
     line_color_depo = ['blue']  # Colors of lines in plot
 
     # Size distribution animation:
-    basic_tools.plot_1D_animation(d_true, n_Dp_true, plot_add=(d_obs, Y), xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
-                                  delay=delay, location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, doing_mainloop=False)
+    if use_DMPS_observation_model:
+        xlimits_SMPS = [1, N_channels]  # Plot boundary limits for x-axis
+        ylimits_SMPS = [0, 20000]  # Plot boundary limits for y-axis
+        xlabel_SMPS = 'Channel'  # x-axis label for 1D animation plot
+        ylabel_SMPS = 'Counts per litre'  # y-axis label for 1D animation plot
+        title_SMPS = 'DMPS Observations'  # Title for 1D animation plot
+        line_color_obs = ['red']  # Colors of lines in plot
+        line_color_true = ['green']  # Colors of lines in plot
+        basic_tools.plot_1D_animation(channels, Y, xlimits=xlimits_SMPS, ylimits=ylimits_SMPS, xlabel=xlabel_SMPS, ylabel=ylabel_SMPS, title=title_SMPS,
+                                      delay=delay, location=location, time=time, timetext=timetext, line_color=line_color_obs, doing_mainloop=False)
+        basic_tools.plot_1D_animation(d_true, n_Dp_true, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
+                                      delay=delay, location=location, time=time, timetext=timetext, line_color=line_color_true, doing_mainloop=False)
+    else:
+        basic_tools.plot_1D_animation(d_true, n_Dp_true, plot_add=(d_obs, Y), xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
+                                      delay=delay, location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, doing_mainloop=False)
 
     # Condensation rate animation:
     basic_tools.plot_1D_animation(d_true, cond_Dp_plot, xlimits=xlimits, ylimits=ylimits_cond, xscale=xscale, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
@@ -168,6 +193,28 @@ if __name__ == '__main__':
     if plot_animations:
         print('Plotting animations...')
         mainloop()  # Runs tkinter GUI for plots and animations
+
+
+    #######################################################
+    # Plotting DMA transfer functions
+    if plot_dma_transfer_functions:
+        N_plot = 1000
+        DMA_transfer_function = get_DMA_transfer_function(R_inner, R_outer, length, Q_aerosol, Q_sheath, efficiency)  # Computes DMA transfer function
+        N_voltages_plot = N_channels
+        Dp = np.linspace(Dp_min, Dp_max, N_plot)
+        voltage_plot = np.linspace(voltage_min, voltage_max, N_voltages_plot)
+        plt.figure()
+        plt.title('DMA Transfer Functions for channels $j = 1, \dots, M$', fontsize=14)
+        plt.xlabel('$D_p$ ($\mu$m)', fontsize=14)
+        plt.ylabel('$k_j(D_p)$', fontsize=14, rotation=0)
+        plt.xlim([Dp_min, Dp_max])
+        plt.ylim([0, efficiency])
+        plt.grid()
+        for j in range(N_voltages_plot):
+            dma_plot = np.zeros(N_plot)  # Initialising
+            for i in range(N_plot):
+                dma_plot[i] = DMA_transfer_function(Dp[i], voltage_plot[j], 1)  # Computing
+            plt.plot(Dp, dma_plot)
 
 
     #######################################################

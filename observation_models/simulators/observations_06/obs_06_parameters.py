@@ -17,8 +17,8 @@ from evolution_models.tools import Fuchs_Brownian
 
 # Setup and plotting:
 plot_animations = True  # Set to True to plot animations
-plot_nucleation = True  # Set to True to plot nucleation plot
-plot_images = True  # Set to True to plot images
+plot_nucleation = False  # Set to True to plot nucleation plot
+plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 save_coagulation = False  # Set to True to save coagulation tensors
 coagulation_suffix = '0004_to_1_micro_metres'  # Suffix of saved coagulation tensors file
@@ -47,6 +47,21 @@ logDp_obs = linspace(log(Dp_min), log(Dp_max), M)  # Log(Diameters) that observa
 sample_volume = 0.0005  # Volume of sample used in counting, y = (1 / sample_volume) * Pois(sample_volume * n)
 additive_noise_mean = 10  # Mean of additive noise
 additive_noise_sigma = 5  # Standard deviation of additive noise
+
+# DMPS observation parameters:
+use_DMPS_observation_model = True  # Set to True to use DMPS observation model
+plot_dma_transfer_functions = False  # Set to True to plot DMA transfer functions
+N_channels = 50  # Number of channels in DMA
+R_inner = 0.937  # Inner radius of DMA (cm)
+R_outer = 1.961  # Outer radius of DMA (cm)
+length = 44.369 # Length of DMA (cm)
+Q_aerosol = 0.3  # Aerosol sample flow (L/min)
+Q_sheath = 3  # Sheath flow (L/min)
+efficiency = 0.08  # Efficiency of DMA (flat percentage applied to particles passing through DMA); ranges from 0 to 1
+voltage_min = 2  # Minimum voltage of DMA
+voltage_max = 10000  # Maximum voltage of DMA
+cpc_inlet_flow = 0.3  # CPC inlet flow (L/min)
+cpc_count_time = 2  # Counting time for CPC inlet flow (seconds)
 
 # Save data parameters:
 data_filename = 'observations_06'  # Filename for data of simulated observations
