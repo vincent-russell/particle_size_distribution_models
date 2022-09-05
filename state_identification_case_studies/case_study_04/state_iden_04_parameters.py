@@ -22,7 +22,7 @@ plot_nucleation = True  # Set to True to plot nucleation plot
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 coagulation_suffix = '1_to_11_micro_metres'  # Suffix of saved coagulation tensors file
-data_filename = 'observations_05'  # Filename for data of simulated observations
+data_filename = 'observations_05_identity'  # Filename for data of simulated observations
 
 # Spatial domain:
 Dp_min = 1  # Minimum diameter of particles (micro m)
@@ -51,7 +51,7 @@ Np_eta = 3  # Np - 1 = degree of Legendre polynomial approximation in each eleme
 N_eta = Ne_eta * Np_eta  # Total degrees of freedom
 
 # DMPS observation parameters:
-use_DMPS_observation_model = True  # Set to True to use DMPS observation model
+use_DMPS_observation_model = False  # Set to True to use DMPS observation model
 plot_dma_transfer_functions = False  # Set to True to plot DMA transfer functions
 N_channels = 20  # Number of channels in DMA
 R_inner = 0.937  # Inner radius of DMA (cm)
@@ -148,13 +148,13 @@ eta_A6 = 0 * eye(N_eta)
 eta_A = array([eta_A1, eta_A2, eta_A3, eta_A4, eta_A5, eta_A6])  # Tensor of VAR(p) coefficients
 
 # Nucleation AR(p) coefficients for model J_{t + 1} = a_1 J_t + ... + w_{J_t}:
-J_p = 5  # Order of AR model
-J_a1 = 1.725
-J_a2 = 0.03
-J_a3 = -0.73
-J_a4 = -0.531
-J_a5 = 0.506
-J_a6 = 0
+J_p = 6  # Order of AR model
+J_a1 = 2.3949
+J_a2 = -0.923
+J_a3 = -1.487
+J_a4 = 0.749
+J_a5 = 0.647
+J_a6 = -0.383
 J_a = array([J_a1, J_a2, J_a3, J_a4, J_a5, J_a6])  # Vector of AR(p) coefficients
 
 # Modifying first element covariance for alpha (size distribution):

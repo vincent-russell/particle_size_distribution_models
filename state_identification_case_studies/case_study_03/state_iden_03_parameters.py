@@ -22,7 +22,7 @@ plot_nucleation = True  # Set to True to plot nucleation plot
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 coagulation_suffix = '1_to_11_micro_metres'  # Suffix of saved coagulation tensors file
-data_filename = 'observations_05'  # Filename for data of simulated observations
+data_filename = 'observations_05_identity'  # Filename for data of simulated observations
 
 # Spatial domain:
 Dp_min = 1  # Minimum diameter of particles (micro m)
@@ -51,7 +51,7 @@ Np_eta = 3  # Np - 1 = degree of Legendre polynomial approximation in each eleme
 N_eta = Ne_eta * Np_eta  # Total degrees of freedom
 
 # DMPS observation parameters:
-use_DMPS_observation_model = True  # Set to True to use DMPS observation model
+use_DMPS_observation_model = False  # Set to True to use DMPS observation model
 plot_dma_transfer_functions = False  # Set to True to plot DMA transfer functions
 N_channels = 20  # Number of channels in DMA
 R_inner = 0.937  # Inner radius of DMA (cm)
