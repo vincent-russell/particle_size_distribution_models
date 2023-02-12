@@ -12,6 +12,7 @@ Date: June 27, 2022
 import numpy as np
 import time as tm
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 from tkinter import mainloop
 from tqdm import tqdm
 
@@ -46,7 +47,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing size distribution evolution model:
-    F_alpha = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
+    F_alpha = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
     F_alpha.add_process('condensation', guess_cond)  # Adding condensation to evolution model
     F_alpha.add_unknown('deposition', Ne_eta, Np_eta)  # Adding deposition as unknown to evolution model
     # F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
@@ -490,3 +491,233 @@ if __name__ == '__main__':
     # Final print statements
     basic_tools.print_lines()  # Print lines in console
     print()  # Print space in console
+
+
+    #######################################################
+    # Temporary Loading:
+    state_iden_11_data = np.load('state_iden_11_data.npz')
+    n_logDp_plot_iden_11 = state_iden_11_data['n_logDp_plot']
+    n_logDp_plot_upper_iden_11 = state_iden_11_data['n_logDp_plot_upper']
+    n_logDp_plot_lower_iden_11 = state_iden_11_data['n_logDp_plot_lower']
+    depo_plot_iden_11 = state_iden_11_data['depo_plot']
+    depo_plot_upper_iden_11 = state_iden_11_data['depo_plot_upper']
+    depo_plot_lower_iden_11 = state_iden_11_data['depo_plot_lower']
+    norm_diff_iden_11 = state_iden_11_data['norm_diff']
+    norm_diff_depo_iden_11 = state_iden_11_data['norm_diff_depo']
+
+
+    #######################################################
+    # Computing parameter initial guesses:
+
+    # Deposition rate:
+    _, _, depo_plot_prior, sigma_depo_prior = F_alpha.get_parameter_estimation_discretisation('deposition', eta_prior, Gamma_eta_prior, time_varying=False)
+    depo_plot_upper_prior = depo_plot_prior + 2 * sigma_depo_prior
+    depo_plot_lower_prior = depo_plot_prior - 2 * sigma_depo_prior
+
+
+    #######################################################
+    # Temporary Plotting:
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "DejaVu Sans",
+    })
+
+
+    # fig 1; size distribution:
+    times = [0.99]
+    fig1 = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig1.add_subplot(111)
+    for plot_time in times:
+        # ax.plot(d_plot, n_logDp_plot[:, int(plot_time / dt)] - 100, '-', color='blue', linewidth=2, label='Mean Estimate')
+        # ax.plot(d_plot, n_logDp_plot_upper[:, int(plot_time / dt)] - 100, '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+        # ax.plot(d_plot, n_logDp_plot_lower[:, int(plot_time / dt)] - 100, '--', color='blue', linewidth=2)
+        ax.plot(d_plot, n_logDp_plot_iden_11[:, int(plot_time / dt)] - 100, '-', color='blue', linewidth=2, label='Mean Estimate')
+        ax.plot(d_plot, n_logDp_plot_upper_iden_11[:, int(plot_time / dt)] - 100, '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+        ax.plot(d_plot, n_logDp_plot_lower_iden_11[:, int(plot_time / dt)] - 100, '--', color='blue', linewidth=2)
+        ax.plot(d_true, n_logDp_true[:, int(plot_time / dt)] - 100, '-', color='green', linewidth=2, label='Truth')
+    ax.set_xlim([0.1, 10])
+    ax.set_ylim([0, 6000])
+    ax.set_xscale(xscale)
+    ax.set_xlabel(xlabel, fontsize=14)
+    ax.set_ylabel(r'$\displaystyle\frac{dN}{dlogD_p}$ (cm$^{-3})$', fontsize=14, rotation=0)
+    plt.setp(ax, xticks=xticks, xticklabels=xticks)
+    ax.yaxis.set_label_coords(-0.05, 1.025)
+    ax.set_title('Size distribution estimate without BAE at $t = 1$ hours', fontsize=14)
+    ax.legend(fontsize=12, loc='upper right')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig1.savefig('fig1_without_BAE')
+
+    # fig 1; condensation rate guess:
+    yticks_cond = [0.1, 1, 10]
+    fig1_cond = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig1_cond.add_subplot(111)
+    ax.plot(d_plot, cond_Dp_guess_plot[:, 0], '-', color='blue', linewidth=2, label='Guess')
+    ax.plot(d_plot, cond_Dp_truth_plot[:, 0], '-', color='green', linewidth=2, label='Truth')
+    ax.set_xlim([0.1, 10])
+    ax.set_ylim([1e-1, 1e1])
+    ax.set_xscale(xscale)
+    ax.set_yscale('log')
+    ax.set_xlabel(xlabel, fontsize=14)
+    ax.set_ylabel(r'$I(D_p)$ ($\mu$m hour$^{-1}$)', fontsize=14, rotation=0)
+    plt.setp(ax, xticks=xticks, xticklabels=xticks)
+    plt.setp(ax, yticks=yticks_cond, yticklabels=yticks_cond)
+    ax.yaxis.set_label_coords(-0.05, 1.025)
+    ax.set_title('Condensation rate', fontsize=14)
+    ax.legend(fontsize=12, loc='upper left')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig1_cond.savefig('fig1_cond_guess')
+
+    # fig 1; deposition rate initial guess:
+    fig1_depo_prior = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig1_depo_prior.add_subplot(111)
+    ax.plot(d_plot_depo, depo_plot_prior, '-', color='blue', linewidth=2, label='Mean Estimate')
+    ax.plot(d_plot_depo, depo_plot_upper_prior, '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    ax.plot(d_plot_depo, depo_plot_lower_prior, '--', color='blue', linewidth=2)
+    ax.plot(d_plot_depo, depo_true_plot[:, 0], '-', color='green', linewidth=2, label='Truth')
+    ax.set_xlim([0.1, 10])
+    ax.set_ylim([-0.5, 8.5])
+    ax.set_xscale(xscale)
+    ax.set_xlabel(xlabel, fontsize=14)
+    ax.set_ylabel(r'$d(D_p)$ (hour$^{-1}$)', fontsize=14, rotation=0)
+    plt.setp(ax, xticks=xticks, xticklabels=xticks)
+    ax.yaxis.set_label_coords(-0.05, 1.025)
+    ax.set_title('Deposition rate initial guess', fontsize=14)
+    ax.legend(fontsize=12, loc='upper right')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig1_depo_prior.savefig('fig1_depo_initial_guess')
+
+
+    # fig 1; deposition rate:
+    times = [0.5]
+    fig1_depo = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig1_depo.add_subplot(111)
+    for plot_time in times:
+        # ax.plot(d_plot_depo, depo_plot[:, int(plot_time / dt)], '-', color='blue', linewidth=2, label='Mean Estimate')
+        # ax.plot(d_plot_depo, depo_plot_upper[:, int(plot_time / dt)], '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+        # ax.plot(d_plot_depo, depo_plot_lower[:, int(plot_time / dt)], '--', color='blue', linewidth=2)
+        ax.plot(d_plot_depo, depo_plot_iden_11[:, int(plot_time / dt)], '-', color='blue', linewidth=2, label='Mean Estimate')
+        ax.plot(d_plot_depo, depo_plot_upper_iden_11[:, int(plot_time / dt)], '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+        ax.plot(d_plot_depo, depo_plot_lower_iden_11[:, int(plot_time / dt)], '--', color='blue', linewidth=2)
+        ax.plot(d_plot_depo, depo_true_plot[:, int(plot_time / dt)], '-', color='green', linewidth=2, label='Truth')
+    ax.set_xlim([0.1, 10])
+    ax.set_ylim([0, 5])
+    ax.set_xscale(xscale)
+    ax.set_xlabel(xlabel, fontsize=14)
+    ax.set_ylabel(r'$d(D_p)$ (hour$^{-1}$)', fontsize=14, rotation=0)
+    plt.setp(ax, xticks=xticks, xticklabels=xticks)
+    ax.yaxis.set_label_coords(-0.05, 1.025)
+    ax.set_title('Deposition rate estimate without BAE', fontsize=14)
+    ax.legend(fontsize=12, loc='upper right')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig1_depo.savefig('fig1_depo_without_BAE')
+
+
+    # fig 2; size distribution:
+    fig2 = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig2.add_subplot(111)
+    ax.plot(t, norm_diff_iden_11, '-', color='chocolate', linewidth=2, label='Without BAE')
+    ax.plot(t, norm_diff, '-', color='blue', linewidth=2, label='With BAE')
+    ax.set_xlim([0, T])
+    ax.set_ylim([0, 60])
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(r'$||n_{est} - n_{truth}||$', fontsize=15, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('Size distribution Mahalanobis norm \n between mean estimate and truth', fontsize=14)
+    ax.legend(fontsize=12, loc='upper right')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig2.savefig('fig2')
+
+
+    # fig 2; deposition rate:
+    fig2_depo = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig2_depo.add_subplot(111)
+    ax.plot(t, norm_diff_depo_iden_11, '-', color='chocolate', linewidth=2, label='Without BAE')
+    ax.plot(t, norm_diff_depo, '-', color='blue', linewidth=2, label='With BAE')
+    ax.set_xlim([0, T])
+    ax.set_ylim([0, 13])
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(r'$||d_{est} - d_{truth}||$', fontsize=15, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('Deposition rate Mahalanobis norm \n between mean estimate and truth', fontsize=14)
+    ax.legend(fontsize=12, loc='upper right')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig2_depo.savefig('fig2_depo')
+
+
+    # fig 3:
+    fig3, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    n_logDp_plot_iden_11 = n_logDp_plot_iden_11.clip(image_min, image_max)
+    im = plt.pcolor(time, d_plot, n_logDp_plot_iden_11, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    cbar = fig3.colorbar(im, ticks=cbarticks, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks]
+    cbar.ax.set_yticklabels(tick_labels)
+    cbar.set_label(r'$\displaystyle\frac{dN}{dlogD_p}$ (cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('Size distribution estimate without BAE', fontsize=14)
+    ax.set_xlim([0, T])
+    ax.set_ylim([0.1, 10])
+    ax.set_yscale('log')
+    plt.setp(ax, yticks=xticks, yticklabels=xticks)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig3.savefig('image_without_BAE')
+
+
+    # fig 4:
+    fig4, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    n_logDp_plot = n_logDp_plot.clip(image_min, image_max)
+    im = plt.pcolor(time, d_plot, n_logDp_plot, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    cbar = fig4.colorbar(im, ticks=cbarticks, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks]
+    cbar.ax.set_yticklabels(tick_labels)
+    cbar.set_label(r'$\displaystyle\frac{dN}{dlogD_p}$ (cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('Size distribution estimate with BAE', fontsize=14)
+    ax.set_xlim([0, T])
+    ax.set_ylim([0.1, 10])
+    ax.set_yscale('log')
+    plt.setp(ax, yticks=xticks, yticklabels=xticks)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig4.savefig('image_with_BAE')
+
+
+    # fig 5:
+    fig5, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    n_logDp_true = n_logDp_true.clip(image_min, image_max)
+    im = plt.pcolor(time, d_true, n_logDp_true, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    cbar = fig5.colorbar(im, ticks=cbarticks, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks]
+    cbar.ax.set_yticklabels(tick_labels)
+    cbar.set_label(r'$\displaystyle\frac{dN}{dlogD_p}$ (cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('True size distribution', fontsize=14)
+    ax.set_xlim([0, T])
+    ax.set_ylim([0.1, 10])
+    ax.set_yscale('log')
+    plt.setp(ax, yticks=xticks, yticklabels=xticks)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig5.savefig('image_truth')

@@ -16,6 +16,8 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
+compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
+plot_norm_difference = False  # Set to True to plot norm difference between truth and estimates
 smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
 plot_animations = True  # Set to True to plot animations
 plot_nucleation = True  # Set to True to plot nucleation plot
@@ -39,7 +41,7 @@ NT = int(T / dt)  # Total number of time steps
 
 # Size distribution discretisation:
 Ne = 50  # Number of elements
-Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
+Np = 1  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 
 # DMPS observation parameters:
@@ -59,7 +61,7 @@ cpc_count_time = 2  # Counting time for CPC inlet flow (seconds)
 
 # Prior noise parameters:
 # Prior covariance for alpha; Gamma_alpha_prior = sigma_alpha_prior^2 * I_N (Size distribution):
-sigma_alpha_prior_0 = 50
+sigma_alpha_prior_0 = 20
 sigma_alpha_prior_1 = sigma_alpha_prior_0 / 2
 sigma_alpha_prior_2 = sigma_alpha_prior_1 / 4
 sigma_alpha_prior_3 = 0

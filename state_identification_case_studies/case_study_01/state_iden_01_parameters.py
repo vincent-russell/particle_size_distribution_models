@@ -16,6 +16,8 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
+compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
+plot_norm_difference = True  # Set to True to plot norm difference between truth and estimates
 smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
 plot_animations = True  # Set to True to plot animations
 plot_images = False  # Set to True to plot images

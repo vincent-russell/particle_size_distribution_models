@@ -12,7 +12,6 @@ Date: August 10, 2021
 import numpy as np
 import time as tm
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 
 # Local modules:
 import basic_tools
@@ -25,9 +24,9 @@ if __name__ == '__main__':
     # Parameters:
 
     # Autoregressive model parameters:
-    p = 6  # Order of model, i.e. AR(p)
+    p = 3  # Order of model, i.e. AR(p)
 
-    # Time parameters:
+    # Time domain:
     dt = (1 / 60) * 5  # Time step (hours)
     T = 48  # End time (hours)
     NT = int(T / dt)  # Total number of time steps
@@ -43,7 +42,7 @@ if __name__ == '__main__':
         return basic_tools.gaussian(t, Amp, mean, sigma)  # Gaussian source model output
 
     # Standard deviation of simulated data from function:
-    sigma_e = 0.0001 * Amp
+    sigma_e = 0.001 * Amp
 
 
     #######################################################
@@ -62,7 +61,7 @@ if __name__ == '__main__':
     # Simulating time series x_t for t = 0, 1, ..., NT - 1:
     print('Simulating time series...')
     t = np.zeros(NT)  # Initialising time array
-    for k in tqdm(range(NT - 1)):
+    for k in range(NT - 1):
         x_simulated[k + 1] = function(t[k]) + np.random.normal(scale=sigma_e)
         t[k + 1] = (k + 1) * dt  # Time (hours)
 

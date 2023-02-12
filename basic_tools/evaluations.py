@@ -8,22 +8,21 @@ Evaluation functions
 import numpy as np
 
 # Local modules:
-from basic_tools import get_kwarg_value
+from basic_tools import get_kwarg_value, round_sf
 
 
 #######################################################
 # Function to compute norm difference between two arrays through time:
 def compute_norm_difference(n_truth, n_estimate, *sigma_n, **kwargs):
     # Parameters:
+    NT = get_kwarg_value(kwargs, 'specific_NT', len(n_truth))  # Set to True to compute norm for 1D array
     is_1D = get_kwarg_value(kwargs, 'is_1D', False)  # Set to True to compute norm for 1D array
     compute_weighted_norm = get_kwarg_value(kwargs, 'compute_weighted_norm', False)  # Set to True to compute weighted norm difference using variance (sigma_n)
     print_statements = get_kwarg_value(kwargs, 'print_statements', True)  # Set to False to disable print statements
-    print_rounding = get_kwarg_value(kwargs, 'print_rounding', 0)  # Option to control print round value
+    print_rounding = get_kwarg_value(kwargs, 'print_rounding', 3)  # Option to control print round value
     print_name = get_kwarg_value(kwargs, 'print_name', None)  # Set print name
     # Pre-computation:
-    if is_1D:
-        NT = len(n_truth)  # Dimensions
-    else:
+    if not is_1D:
         N, NT = np.shape(n_truth)  # Dimensions
     n_diff = n_estimate - n_truth  # Computing difference between estimate and truth
     norm_diff = np.zeros(NT)  # Initialising norm difference for each time step
@@ -44,7 +43,7 @@ def compute_norm_difference(n_truth, n_estimate, *sigma_n, **kwargs):
     # Print statements:
     if print_statements:
         if print_name is None:
-            print('Total norm difference between estimate and truth:', str(round(np.linalg.norm(norm_diff), print_rounding)))
+            print('Total norm difference between estimate and truth:', str(round_sf(np.linalg.norm(norm_diff), print_rounding)))
         else:
-            print('Total norm difference of ' + print_name + ' estimate and truth: ', str(round(np.linalg.norm(norm_diff), print_rounding)))
+            print('Total norm difference of ' + print_name + ' estimate and truth: ', str(round_sf(np.linalg.norm(norm_diff), print_rounding)))
     return norm_diff

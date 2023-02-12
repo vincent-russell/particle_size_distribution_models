@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing evolution model:
-    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
+    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
     F.add_process('condensation', cond)  # Adding condensation to evolution model
     F.add_process('deposition', depo)  # Adding deposition to evolution model
     F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model

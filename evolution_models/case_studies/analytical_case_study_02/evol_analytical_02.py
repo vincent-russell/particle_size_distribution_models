@@ -26,6 +26,7 @@ if __name__ == '__main__':
     # Parameters:
     # Setup and plotting:
     plot_animations = True  # Set to True to plot animations
+    discretise_with_diameter = False  # Set to True to discretise with diameter
 
     # Spatial domain:
     Dp_min = 0.1  # Minimum diameter of particles (micro m)
@@ -47,7 +48,7 @@ if __name__ == '__main__':
 
     # Initial condition n_Dp(Dp, 0):
     N_0 = 180  # Amplitude of initial condition gaussian
-    d_mean = 0.3  # Mean of initial condition gaussian
+    d_mean = 0.2  # Mean of initial condition gaussian
     sigma_g = 1.2  # Standard deviation of initial condition gaussian
     def initial_condition_Dp(Dp):
         amp = N_0 / (np.sqrt(2 * np.pi) * Dp * np.log(sigma_g))
@@ -75,7 +76,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing evolution model:
-    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
+    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
     F.add_process('condensation', cond)  # Adding condensation to evolution model
     F.compile(time_integrator='rk4')  # Compiling evolution model and adding time integrator
 
@@ -111,6 +112,8 @@ if __name__ == '__main__':
     for k in range(1, NT):  # Iterating over time
         for i in range(len(v_analytical)):  # Iterating over volume
             cst = (Dp_analytical[i] ** 2) - (2 * A * t[k])
+            if cst < 0:
+                cst = 1e-15
             B = (Dp_analytical[i] * N_0) / (np.sqrt(2 * np.pi) * np.log(sigma_g) * cst)
             C = (np.log(np.sqrt(cst) / d_mean) ** 2) / (2 * np.log(sigma_g) ** 2)
             n_Dp_analytical[i, k] = B * np.exp(-C)
@@ -133,7 +136,7 @@ if __name__ == '__main__':
     xscale = 'log'  # x-axis scaling ('linear' or 'log')
     xticks = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]  # Plot x-tick labels
     xlimits = [d_plot[0], d_plot[-1]]  # Plot boundary limits for x-axis
-    ylimits = [0, 3000]  # Plot boundary limits for y-axis
+    ylimits = [-500, 6000]  # Plot boundary limits for y-axis
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution'  # Title for 1D animation plot

@@ -12,6 +12,7 @@ Date: June 7, 2022
 # Modules:
 import numpy as np
 import time as tm
+from matplotlib.colors import LogNorm
 from tkinter import mainloop
 from tqdm import tqdm
 
@@ -27,11 +28,12 @@ if __name__ == '__main__':
     # Parameters:
 
     # Setup and plotting:
-    N_plot = 12  # Plotting discretisation
-    plot_animations = True  # Set to True to plot animations
+    N_plot = 300  # Plotting discretisation
+    plot_animations = False  # Set to True to plot animations
     load_coagulation = False  # Set to True to load coagulation tensors
     save_coagulation = False  # Set to True to save coagulation tensors
     coagulation_suffix = 'evol_analytical_compare_02'  # Suffix of saved coagulation tensors file
+    discretise_with_diameter = False  # Set to True to discretise with diameter
 
     # Spatial domain:
     vmin = 1e-7  # Minimum volume of particles (micro m^3)
@@ -89,9 +91,14 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Computation time of proposed model:
+    initial_time_proposed = tm.time()  # Time stamp
+
+
+    #######################################################
     # Constructing evolution model:
     print('Constructing proposed model...')
-    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', print_status=False)  # Initialising evolution model
+    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', print_status=False, discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
     F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F.compile(time_integrator='euler')  # Compiling evolution model and adding time integrator
 
@@ -102,9 +109,15 @@ if __name__ == '__main__':
     alpha = np.zeros([N, NT])  # Initialising alpha = [alpha_0, alpha_1, ..., alpha_NT]
     alpha[:, 0] = F.compute_coefficients('alpha', initial_condition)  # Computing alpha coefficients from initial condition function
     t = np.zeros(NT)  # Initialising time array
-    for k in tqdm(range(NT - 1)):  # Iterating over time
+    for k in range(NT - 1):  # Iterating over time
         alpha[:, k + 1] = F.eval(alpha[:, k], t[k])  # Time evolution computation
         t[k + 1] = (k + 1) * dt  # Time (hours)
+
+
+    #######################################################
+    # Printing computation time of proposed model:
+    computation_time_proposed = round(tm.time() - initial_time_proposed, 3)  # Time stamp
+    # print('Proposed computation time:', str(computation_time_proposed), 'seconds.')  # Print statement
 
 
     #######################################################
@@ -116,6 +129,11 @@ if __name__ == '__main__':
     # NOTE: The following is the standard FEM (or PGFEM) model.
     # =========================================================#
     print('Constructing standard model...')
+
+
+    #######################################################
+    # Computation time of standard model:
+    initial_time_standard = tm.time()  # Time stamp
 
 
     #######################################################
@@ -164,7 +182,7 @@ if __name__ == '__main__':
     # Computing M matrix:
     print('Computing M matrix...')
     M = np.zeros([N_standard, N_standard])
-    for i in tqdm(range(N_standard)):
+    for i in range(N_standard):
         for j in range(N_standard):
             def M_integrand(x):
                 return phi[i](x) * phi[j](x)
@@ -253,26 +271,42 @@ if __name__ == '__main__':
     #######################################################
     # Computing time evolution of model:
     print('Computing time evolution using standard model...')
-    for k in tqdm(range(NT - 1)):  # Iterating over time
+    for k in range(NT - 1):  # Iterating over time
         n_x_standard[:, k + 1] = F_standard(n_x_standard[:, k])  # Time evolution computation
+
+
+    #######################################################
+    # Printing computation time of standard model:
+    computation_time_standard = round(tm.time() - initial_time_proposed, 3)  # Time stamp
+    # print('Standard computation time:', str(computation_time_standard), 'seconds.')  # Print statement
+
+
+    #######################################################
+    # Interpolating standard model output to plotting discretisation:
+    print('Interpolating standard model output to plotting discretisation...')
+    n_x_standard_interp = np.zeros([len(v_plot), NT])  # Initialising
+    for k in range(NT):  # Iterating over time
+        for i in range(N_plot):  # Iterating over plotting discretisation
+            n_sum = 0  # Initialising
+            for j in range(N_standard):  # Iterating over basis functions
+                n_sum += n_x_standard[j, k] * phi[j](x_plot[i])  # Doing interpolation
+            n_x_standard_interp[i, k] = n_sum
 
 
     #######################################################
     # Computing analytical solution:
     print('Computing analytical solution...')
-    x_analytical = np.linspace(xmin, xmax, N_plot)  # Log-discretisation for analytical solution
-    v_analytical = np.exp(x_analytical)  # Discretisation for analytical solution
-    n_v_analytical = np.zeros([len(v_analytical), NT])  # Initialising
-    n_x_analytical = np.zeros([len(v_analytical), NT])  # Initialising
+    n_v_analytical = np.zeros([len(v_plot), NT])  # Initialising
+    n_x_analytical = np.zeros([len(v_plot), NT])  # Initialising
     for k in range(1, NT):  # Iterating over time
         M_T = (2 * N_0) / (2 + (beta_0 * N_0 * t[k]))
         N_T = 1 - (M_T / N_0)
-        for i in range(len(v_analytical)):  # Iterating over volume
+        for i in range(len(v_plot)):  # Iterating over volume
             A = ((1 - N_T) ** 2 / np.sqrt(N_T)) * (N_0 / v_0)
-            B = v_analytical[i] / v_0
-            C = (v_analytical[i] * np.sqrt(N_T)) / v_0
+            B = v_plot[i] / v_0
+            C = (v_plot[i] * np.sqrt(N_T)) / v_0
             n_v_analytical[i, k] = A * np.exp(-B) * np.sinh(C)
-            n_x_analytical[i, k] = n_v_analytical[i, k] * v_analytical[i]
+            n_x_analytical[i, k] = n_v_analytical[i, k] * v_plot[i]
     n_v_analytical = np.nan_to_num(n_v_analytical)  # Replace NaN with zeros
     n_x_analytical = np.nan_to_num(n_x_analytical)  # Replace NaN with zeros
 
@@ -280,7 +314,7 @@ if __name__ == '__main__':
     #######################################################
     # Computing total error (l2 norm):
     n_diff_proposed = n_x_analytical - n_x_plot
-    n_diff_standard = n_x_analytical - n_x_standard
+    n_diff_standard = n_x_analytical - n_x_standard_interp
     norm_diff_proposed = np.zeros(NT)  # Initialising
     norm_diff_standard = np.zeros(NT)  # Initialising
     for k in range(NT):
@@ -288,14 +322,15 @@ if __name__ == '__main__':
         norm_diff_standard[k] = np.sqrt(np.matmul(n_diff_standard[:, k], n_diff_standard[:, k]))
     total_error_proposed = np.sum(norm_diff_proposed)
     total_error_standard = np.sum(norm_diff_standard)
+    print('Proposed computation time:', str(computation_time_proposed), 'seconds.')  # Print statement
     print('Total error of proposed model:', round(total_error_proposed))
-    print('Total error of standard model:', round(total_error_standard))
+    # print('Total error of standard model:', round(total_error_standard))
 
 
     #######################################################
     # Printing total computation time:
-    computation_time = round(tm.time() - initial_time, 3)  # Initial time stamp
-    print('Total computation time:', str(computation_time), 'seconds.')  # Print statement
+    # computation_time = round(tm.time() - initial_time, 3)  # Initial time stamp
+    # print('Total computation time:', str(computation_time), 'seconds.')  # Print statement
 
 
     #######################################################
@@ -321,7 +356,7 @@ if __name__ == '__main__':
     delay = 0  # Delay between frames in milliseconds
 
     # Size distribution animation:
-    basic_tools.plot_1D_animation(v_plot, n_x_analytical, n_x_plot, plot_add=(v_standard, n_x_standard), xticks=xticks, xticklabels=xticklabels, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
+    basic_tools.plot_1D_animation(v_plot, n_x_analytical, n_x_plot, n_x_standard_interp, xticks=xticks, xticklabels=xticklabels, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
                                   delay=delay, location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, line_style=line_style, doing_mainloop=False)
 
     # Mainloop and print:
@@ -332,4 +367,234 @@ if __name__ == '__main__':
     # Final print statements
     basic_tools.print_lines()  # Print lines in console
     print()  # Print space in console
+
+
+    #######################################################
+    # Temporary Data:
+    error_stnd = np.array([
+        893874.0,
+        686248.0,
+        491406.0,
+        313854.0
+    ])
+    error_cnst = np.array([
+        643321.0,
+        546594.0,
+        430594.0,
+        371413.0
+    ])
+    error_linr = np.array([
+        748740.0,
+        444305.0,
+        170465.0,
+        153823.0
+    ])
+    error_quad = np.array([
+        679231.0,
+        635881.0,
+        486260.0,
+        323398.0,
+        233082.0
+    ])
+    time_stnd = np.array([
+        12.271,
+        17.757,
+        28.509,
+        55.446
+    ])
+    time_cnst = np.array([
+        11.826,
+        20.354,
+        39.177,
+        66.812
+    ])
+    time_linr = np.array([
+        7.771,
+        14.631,
+        24.714,
+        56.504
+    ])
+    time_quad = np.array([
+        9.896,
+        12.225,
+        14.86,
+        27.827,
+        52.452
+    ])
+
+
+    #######################################################
+    # Temporary Plotting:
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "DejaVu Sans",
+    })
+
+
+    # # fig 1; size distribution:
+    # times = [95.9]
+    # fig1 = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig1.add_subplot(111)
+    # for plot_time in times:
+    #     ax.plot(v_plot, n_x_analytical[:, int(plot_time / dt)], '-', linestyle='solid', color='green', linewidth=2, label='Analytical Solution')
+    #     ax.plot(v_plot, n_x_standard_interp[:, int(plot_time / dt)], '-', linestyle='dashed', color='blue', linewidth=2, label='Numerical Solution')
+    # ax.set_xlim(xlimits)
+    # ax.set_ylim([0, 1000])
+    # ax.set_xscale(xscale)
+    # ax.set_xlabel(xlabel, fontsize=14)
+    # ax.set_ylabel(r'$\displaystyle\frac{dN}{d\ln v}$ (cm$^{-3})$', fontsize=14, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.025)
+    # ax.set_title('Size distribution estimate at $t = 96$ hours \n using standard FEM', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper left')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig1.savefig('fig1_standard')
+
+
+    # # fig 2; size distribution:
+    # fig2 = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig2.add_subplot(111)
+    # ax.plot(elements, error_stnd, '-', color='purple', linewidth=2, label='Standard FEM with linear basis')
+    # ax.plot(elements, error_cnst, '-', color='cyan', linewidth=2, label='Collocation with constant basis')
+    # ax.plot(elements, error_linr, '-', color='chocolate', linewidth=2, label='Collocation with linear basis')
+    # ax.plot(elements, error_quad, '-', color='blue', linewidth=2, label='Collocation with quadratic basis')
+    # ax.set_xlim([6, 24])
+    # ax.set_ylim([1e5, 1e7])
+    # ax.set_xscale('linear')
+    # ax.set_yscale('log')
+    # ax.set_xlabel('Number of elements', fontsize=14)
+    # ax.set_ylabel(r'Total error', fontsize=15, rotation=0)
+    # plt.setp(ax, xticks=elements, xticklabels=elements)  # Modifies x-tick labels
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('Error estimate comparisons', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig2.savefig('fig2')
+
+
+    # # fig 3; size distribution:
+    # fig3 = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig3.add_subplot(111)
+    # ax.plot(elements, error_stnd / time_stnd, '-', color='purple', linewidth=2, label='Standard FEM with linear basis')
+    # ax.plot(elements, error_cnst / time_cnst, '-', color='cyan', linewidth=2, label='Collocation with constant basis')
+    # ax.plot(elements, error_linr / time_linr, '-', color='chocolate', linewidth=2, label='Collocation with linear basis')
+    # ax.plot(elements, error_quad / time_quad, '-', color='blue', linewidth=2, label='Collocation with quadratic basis')
+    # ax.set_xlim([6, 24])
+    # ax.set_ylim([5e3, 2e7])
+    # ax.set_xscale('linear')
+    # ax.set_yscale('log')
+    # ax.set_xlabel('Number of elements', fontsize=14)
+    # ax.set_ylabel(r'Total error / Computation time', fontsize=13, rotation=0)
+    # plt.setp(ax, xticks=elements, xticklabels=elements)  # Modifies x-tick labels
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('Error estimate comparisons', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig3.savefig('fig3')
+
+
+    # fig 4; size distribution:
+    # fig4 = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig4.add_subplot(111)
+    # ax.plot(time_stnd, error_stnd, '-', color='purple', linewidth=2, label='Standard FEM with linear basis')
+    # ax.plot(time_cnst, error_cnst, '-', color='cyan', linewidth=2, label='Collocation with constant basis')
+    # ax.plot(time_linr, error_linr, '-', color='chocolate', linewidth=2, label='Collocation with linear basis')
+    # ax.plot(time_quad, error_quad, '-', color='blue', linewidth=2, label='Collocation with quadratic basis')
+    # ax.set_xlim([10, 50])
+    # ax.set_ylim([0, 1e6])
+    # ax.set_xscale('linear')
+    # ax.set_yscale('linear')
+    # ax.set_xlabel(r'Computation time (seconds)', fontsize=13)
+    # ax.set_ylabel(r'Total error', fontsize=13, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('Error estimate comparisons', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig4.savefig('fig4')
+
+
+    # Parameters for size distribution images:
+    yticks_image = [1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2]  # Plot y-tick labels
+    ylabelcoords = (-0.06, 0.96)  # y-axis label coordinates
+    title_image = 'Size distribution estimation'  # Title for image
+    title_image_observations = 'CSTAR observations'  # Title for image
+    image_min = 10  # Minimum of image colour
+    image_max = 10000  # Maximum of image colour
+    cmap = 'jet'  # Colour map of image
+    cbarlabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # Label of colour bar
+    cbarticks = [10, 100, 1000, 10000]  # Ticks of colorbar
+
+
+    # fig 4:
+    fig4, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    n_x_plot = n_x_plot.clip(image_min, image_max)
+    im = plt.pcolor(time, v_plot, n_x_plot, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    cbar = fig4.colorbar(im, ticks=cbarticks, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks]
+    cbar.ax.set_yticklabels(tick_labels)
+    cbar.set_label(r'$\displaystyle\frac{dN}{d\ln v}$ (cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('Size distribution estimate using \n collocation FEM with quadratic basis', fontsize=14)
+    ax.set_xlim([0, T])
+    ax.set_ylim(xlimits)
+    ax.set_yscale('log')
+    plt.setp(ax, yticks=xticks, yticklabels=xticklabels)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig4.savefig('image_estimate_CCFEM')
+
+
+    # fig 4:
+    fig4, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    n_x_standard_interp = n_x_standard_interp.clip(image_min, image_max)
+    im = plt.pcolor(time, v_plot, n_x_standard_interp, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    cbar = fig4.colorbar(im, ticks=cbarticks, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks]
+    cbar.ax.set_yticklabels(tick_labels)
+    cbar.set_label(r'$\displaystyle\frac{dN}{d\ln v}$ (cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('Size distribution estimate using \n standard FEM', fontsize=14)
+    ax.set_xlim([0, T])
+    ax.set_ylim(xlimits)
+    ax.set_yscale('log')
+    plt.setp(ax, yticks=xticks, yticklabels=xticklabels)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig4.savefig('image_estimate_fem')
+
+
+    # fig 5:
+    fig5, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    n_x_analytical = n_x_analytical.clip(image_min, image_max)
+    im = plt.pcolor(time, v_plot, n_x_analytical, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    cbar = fig5.colorbar(im, ticks=cbarticks, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks]
+    cbar.ax.set_yticklabels(tick_labels)
+    cbar.set_label(r'$\displaystyle\frac{dN}{d\ln v}$ (cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('True size distribution', fontsize=14)
+    ax.set_xlim([0, T])
+    ax.set_ylim(xlimits)
+    ax.set_yscale('log')
+    plt.setp(ax, yticks=xticks, yticklabels=xticklabels)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig5.savefig('image_analytical')
 

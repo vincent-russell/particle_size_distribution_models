@@ -28,6 +28,7 @@ if __name__ == '__main__':
     plot_animations = True  # Set to True to plot animations
     load_coagulation = False  # Set to True to load coagulation tensors
     save_coagulation = False  # Set to True to save coagulation tensors
+    discretise_with_diameter = True  # Set to True to discretise with diameter
 
     # Spatial domain:
     vmin = 1e-7  # Minimum volume of particles (micro m^3)
@@ -70,7 +71,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing evolution model:
-    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
+    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
     F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation)  # Adding coagulation to evolution model
     F.compile(time_integrator='rk4')  # Compiling evolution model and adding time integrator
 

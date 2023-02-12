@@ -30,79 +30,53 @@ if __name__ == '__main__':
     # Parameters:
 
     # Setup parameters:
-    scale_type = 'log'
+    scale_type = 'linear'
     plotting_series = False
     save_VAR_coefficients = True
-    save_name = 'gamma_6_coefficients_low_noise'
+    save_name = 'eta_2_coefficients'
 
     # Spatial domain:
-    Dp_min = 0.01  # Minimum diameter of particles (micro m)
-    Dp_max = 1.1  # Maximum diameter of particles (micro m)
+    Dp_min = 1  # Minimum diameter of particles (micro m)
+    Dp_max = 11  # Maximum diameter of particles (micro m)
     vmin = basic_tools.diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
     vmax = basic_tools.diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
-    xmin = np.log(vmin)  # Lower limit in log-size
-    xmax = np.log(vmax)  # Upper limit in log-size
 
     # Discretisation:
-    Ne = 3  # Number of elements
+    Ne = 5  # Number of elements
     Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
     N = Ne * Np  # Total degrees of freedom
 
     # Time domain:
-    dt = ((1 / 60) * 5) / 100  # Time step (hours)
-    T = 48  # End time (hours)
+    dt = (1 / 60) * 20  # Time step (hours)
+    T = 24  # End time (hours)
     NT = int(T / dt)  # Total number of time steps
 
     # Autoregressive model parameters:
-    VAR_p = 6  # Order of VAR(p) model
+    VAR_p = 2  # Order of VAR(p) model
 
     # Noise model (numbers are for order, i.e. e_list should be len(Np)):
-    e_0 = 0.003 / 10
+    e_0 = 0.15 / 0.1
     e_1 = e_0 / 2
     e_2 = e_1 / 4
     e_list = [e_0, e_1, e_2]
 
     # Condensation Function to approximate by a VAR(p) model:
-    I_cst = 0.0075  # Condensation parameter constant
-    I_linear = 0.04  # Condensation parameter linear
-    def function_time(t):
-        # Constant multiplier:
-        cond_t_cst_amp = 1  # Amplitude
-        cond_t_cst_mean = 8  # Mean time
-        cond_t_cst_sigma = 3  # Standard deviation time
-        cond_t_cst_multiplier = gaussian(t, cond_t_cst_amp, cond_t_cst_mean, cond_t_cst_sigma)
-        # Linear multiplier:
-        cond_t_linear_amp = 1  # Amplitude
-        cond_t_linear_mean = 36  # Mean time
-        cond_t_linear_sigma = 18  # Standard deviation time
-        cond_t_linear_multiplier = gaussian(t, cond_t_linear_amp, cond_t_linear_mean, cond_t_linear_sigma)
-        def function(Dp):
-            return cond_t_cst_multiplier * I_cst + cond_t_linear_multiplier * I_linear * Dp
-        return function
-
-    # # Deposition function to approximate by a VAR(p) model:
-    # d_cst = 0.1  # Deposition parameter constant
-    # d_linear = 0.1  # Deposition parameter linear
-    # d_inverse_quadratic = 0.00001  # Deposition parameter inverse quadratic
-    # def function_time(t):
-    #     # Constant multiplier:
-    #     depo_t_cst_amp = 1  # Amplitude
-    #     depo_t_cst_mean = 18  # Mean time
-    #     depo_t_cst_sigma = 8  # Standard deviation time
-    #     depo_t_cst_multiplier = gaussian(t, depo_t_cst_amp, depo_t_cst_mean, depo_t_cst_sigma)
-    #     # Linear multiplier:
-    #     depo_t_linear_amp = 1  # Amplitude
-    #     depo_t_linear_mean = 36  # Mean time
-    #     depo_t_linear_sigma = 8  # Standard deviation time
-    #     depo_t_linear_multiplier = gaussian(t, depo_t_linear_amp, depo_t_linear_mean, depo_t_linear_sigma)
-    #     # Quadratic multiplier:
-    #     depo_t_quad_amp = 1  # Amplitude
-    #     depo_t_quad_mean = 8  # Mean time
-    #     depo_t_quad_sigma = 3  # Standard deviation time
-    #     depo_t_quad_multiplier = gaussian(t, depo_t_quad_amp, depo_t_quad_mean, depo_t_quad_sigma)
+    # I_0 = 0.2  # Condensation parameter constant
+    # I_1 = 1  # Condensation parameter inverse quadratic
+    # def function_time(_):
     #     def function(Dp):
-    #         return depo_t_cst_multiplier * d_cst + depo_t_linear_multiplier * d_linear * Dp + depo_t_quad_multiplier * d_inverse_quadratic * (1 / Dp ** 2)
+    #         return I_0 + I_1 / (Dp ** 2)
     #     return function
+
+    # Deposition function to approximate by a VAR(p) model:
+    depo_Dpmin = 5  # Deposition parameter; diameter at which minimum
+    d_0 = 0.4  # Deposition parameter constant
+    d_1 = -0.15  # Deposition parameter linear
+    d_2 = -d_1 / (2 * depo_Dpmin)  # Deposition parameter quadratic
+    def function_time(_):
+        def function(Dp):
+            return d_0 + d_1 * Dp + d_2 * Dp ** 2  # Quadratic model output
+        return function
 
 
     #######################################################
@@ -121,7 +95,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Computing discretisation:
-    _, x_boundaries, _ = get_discretisation(Ne, Np, np.log(Dp_min), np.log(Dp_max))
+    _, x_boundaries, _ = get_discretisation(Ne, Np, Dp_min, Dp_max)
     h = np.zeros(Ne)
     for ell in range(Ne):
         h[ell] = x_boundaries[ell + 1] - x_boundaries[ell]

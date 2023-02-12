@@ -12,12 +12,13 @@ Date: June 27, 2022
 import numpy as np
 import time as tm
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 from tkinter import mainloop
 from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
+from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother, compute_norm_difference
 from observation_models.data.simulated import load_observations
 from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, compute_U, change_basis_volume_to_diameter, change_basis_volume_to_diameter_sorc
 from observation_models.tools import get_DMA_transfer_function, compute_alpha_to_z_operator, Size_distribution_observation_model
@@ -46,12 +47,36 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing size distribution evolution model:
-    F_alpha = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero)  # Initialising evolution model
+    F_alpha = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero, discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
     F_alpha.add_unknown('condensation', Ne_gamma, Np_gamma)  # Adding condensation as unknown to evolution model
     F_alpha.add_unknown('deposition', Ne_eta, Np_eta)  # Adding deposition as unknown to evolution model
     F_alpha.add_unknown('source')  # Adding source as unknown to evolution model
-    # F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
+    F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F_alpha.compile()  # Compiling evolution model
+
+
+    #######################################################
+    # Loading VAR(p) coefficients for gamma (condensation):
+    if gamma_loading_coefficients:
+        print('Loading gamma VAR(p) coefficients...')
+        gamma_A_file = np.load(gamma_loading_name + '.npz')
+        gamma_A = gamma_A_file['A_estimate_array']
+        gamma_p = len(gamma_A)
+    else:
+        gamma_p = gamma_p  # Fixes Pycharm errors
+        gamma_A = array([gamma_A1, gamma_A2, gamma_A3, gamma_A4, gamma_A5, gamma_A6])  # Tensor of VAR(p) coefficients
+
+
+    #######################################################
+    # Loading VAR(p) coefficients for eta (deposition):
+    if eta_loading_coefficients:
+        print('Loading eta VAR(p) coefficients...')
+        eta_A_file = np.load(eta_loading_name + '.npz')
+        eta_A = eta_A_file['A_estimate_array']
+        eta_p = len(eta_A)
+    else:
+        eta_p = eta_p  # Fixes Pycharm errors
+        eta_A = array([eta_A1, eta_A2, eta_A3, eta_A4, eta_A5, eta_A6])  # Tensor of VAR(p) coefficients
 
 
     #######################################################
@@ -483,6 +508,24 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Computing norm difference between truth and estimates:
+
+    # Size distribution:
+    v_true = basic_tools.diameter_to_volume(d_true)
+    _, _, n_v_estimate, sigma_n_v = F_alpha.get_nplot_discretisation(alpha, Gamma_alpha=Gamma_alpha, x_plot=v_true)  # Computing estimate on true discretisation
+    norm_diff = compute_norm_difference(n_v_true, n_v_estimate, sigma_n_v, compute_weighted_norm=compute_weighted_norm, print_name='size distribution')  # Computing norm difference
+
+    # Condensation rate:
+    norm_diff_cond = compute_norm_difference(cond_Dp_true_plot, cond_Dp_plot, sigma_cond_Dp, compute_weighted_norm=compute_weighted_norm, print_name='condensation rate')  # Computing norm difference
+
+    # Deposition rate:
+    norm_diff_depo = compute_norm_difference(depo_true_plot, depo_plot, sigma_depo, compute_weighted_norm=compute_weighted_norm, print_name='deposition rate')  # Computing norm difference
+
+    # Source rate:
+    norm_diff_sorc = compute_norm_difference(sorc_Dp_true_plot, J_Dp_plot, sigma_J_Dp, compute_weighted_norm=compute_weighted_norm, print_name='nucleation rate', is_1D=True)  # Computing norm difference
+
+
+    #######################################################
     # Printing total computation time:
     computation_time = round(tm.time() - initial_time, 3)  # Initial time stamp
     print('Total computation time:', str(computation_time), 'seconds.')  # Print statement
@@ -568,6 +611,64 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Plotting norm difference between truth and estimates:
+    if plot_norm_difference:
+        print('Plotting norm difference between truth and estimates...')
+
+        # Size distribution:
+        plt.figure()
+        plt.plot(t, norm_diff)
+        plt.xlim([0, T])
+        plt.ylim([np.min(norm_diff), np.max(norm_diff)])
+        plt.xlabel('$t$', fontsize=15)
+        plt.ylabel(r'||$n_{est}(x, t) - n_{true}(x, t)$||$_W$', fontsize=14)
+        plt.grid()
+        plot_title = 'norm difference of size distribution estimate and truth'
+        if compute_weighted_norm:
+            plot_title = 'Weighted ' + plot_title
+        plt.title(plot_title, fontsize=11)
+
+        # Condensation rate:
+        plt.figure()
+        plt.plot(t, norm_diff_cond)
+        plt.xlim([0, T])
+        plt.ylim([np.min(norm_diff_cond), np.max(norm_diff_cond)])
+        plt.xlabel('$t$', fontsize=15)
+        plt.ylabel(r'||$I_{est}(x, t) - I_{true}(x, t)$||$_W$', fontsize=14)
+        plt.grid()
+        plot_title = 'norm difference of condensation rate estimate and truth'
+        if compute_weighted_norm:
+            plot_title = 'Weighted ' + plot_title
+        plt.title(plot_title, fontsize=11)
+
+        # Deposition rate:
+        plt.figure()
+        plt.plot(t, norm_diff_depo)
+        plt.xlim([0, T])
+        plt.ylim([np.min(norm_diff_depo), np.max(norm_diff_depo)])
+        plt.xlabel('$t$', fontsize=15)
+        plt.ylabel(r'||$d_{est}(x, t) - d_{true}(x, t)$||$_W$', fontsize=14)
+        plt.grid()
+        plot_title = 'norm difference of deposition rate estimate and truth'
+        if compute_weighted_norm:
+            plot_title = 'Weighted ' + plot_title
+        plt.title(plot_title, fontsize=11)
+
+        # Nucleation rate
+        plt.figure()
+        plt.plot(t, norm_diff_sorc)
+        plt.xlim([0, T])
+        plt.ylim([np.min(norm_diff_sorc), np.max(norm_diff_sorc)])
+        plt.xlabel('$t$', fontsize=15)
+        plt.ylabel(r'||$s_{est}(x, t) - s_{true}(x, t)$||$_W$', fontsize=14)
+        plt.grid()
+        plot_title = 'norm difference of nucleation rate estimate and truth'
+        if compute_weighted_norm:
+            plot_title = 'Weighted ' + plot_title
+        plt.title(plot_title, fontsize=11)
+
+
+    #######################################################
     # Images:
 
     # Parameters for size distribution images:
@@ -595,3 +696,346 @@ if __name__ == '__main__':
     # Final print statements
     basic_tools.print_lines()  # Print lines in console
     print()  # Print space in console
+
+
+    # #######################################################
+    # # Temporary saving:
+    # np.savez('state_iden_05_data_RW',
+    #          n_Dp_plot=n_Dp_plot,
+    #          n_Dp_plot_upper=n_Dp_plot_upper,
+    #          n_Dp_plot_lower=n_Dp_plot_lower,
+    #          cond_Dp_plot=cond_Dp_plot,
+    #          cond_Dp_plot_upper=cond_Dp_plot_upper,
+    #          cond_Dp_plot_lower=cond_Dp_plot_lower,
+    #          depo_plot=depo_plot,
+    #          depo_plot_upper=depo_plot_upper,
+    #          depo_plot_lower=depo_plot_lower,
+    #          J_Dp_plot=J_Dp_plot,
+    #          J_Dp_plot_upper=J_Dp_plot_upper,
+    #          J_Dp_plot_lower=J_Dp_plot_lower,
+    #          norm_diff=norm_diff,
+    #          norm_diff_cond=norm_diff_cond,
+    #          norm_diff_depo=norm_diff_depo,
+    #          norm_diff_sorc=norm_diff_sorc)
+
+
+    #######################################################
+    # Temporary Loading:
+    state_iden_05_data_RW = np.load('state_iden_05_data_RW.npz')
+    n_Dp_plot_iden_05_RW = state_iden_05_data_RW['n_Dp_plot']
+    n_Dp_plot_upper_iden_05_RW = state_iden_05_data_RW['n_Dp_plot_upper']
+    n_Dp_plot_lower_iden_05_RW = state_iden_05_data_RW['n_Dp_plot_lower']
+    cond_Dp_plot_iden_05_RW = state_iden_05_data_RW['cond_Dp_plot']
+    cond_Dp_plot_upper_iden_05_RW = state_iden_05_data_RW['cond_Dp_plot_upper']
+    cond_Dp_plot_lower_iden_05_RW = state_iden_05_data_RW['cond_Dp_plot_lower']
+    depo_plot_iden_05_RW = state_iden_05_data_RW['depo_plot']
+    depo_plot_upper_iden_05_RW = state_iden_05_data_RW['depo_plot_upper']
+    depo_plot_lower_iden_05_RW = state_iden_05_data_RW['depo_plot_lower']
+    J_Dp_plot_iden_05_RW = state_iden_05_data_RW['J_Dp_plot']
+    J_Dp_plot_upper_iden_05_RW = state_iden_05_data_RW['J_Dp_plot_upper']
+    J_Dp_plot_lower_iden_05_RW = state_iden_05_data_RW['J_Dp_plot_lower']
+    norm_diff_iden_05_RW = state_iden_05_data_RW['norm_diff']
+    norm_diff_cond_iden_05_RW = state_iden_05_data_RW['norm_diff_cond']
+    norm_diff_depo_iden_05_RW = state_iden_05_data_RW['norm_diff_depo']
+    norm_diff_sorc_iden_05_RW = state_iden_05_data_RW['norm_diff_sorc']
+
+
+    #######################################################
+    # Computing parameter initial guesses:
+
+    # Condensation rate:
+    _, _, cond_Dp_plot_prior, sigma_cond_Dp_prior = F_alpha.get_parameter_estimation_discretisation('condensation', gamma_prior, Gamma_gamma_prior, time_varying=False)
+    cond_Dp_plot_upper_prior = cond_Dp_plot_prior + 2 * sigma_cond_Dp_prior
+    cond_Dp_plot_lower_prior = cond_Dp_plot_prior - 2 * sigma_cond_Dp_prior
+    # Deposition rate:
+    _, _, depo_plot_prior, sigma_depo_prior = F_alpha.get_parameter_estimation_discretisation('deposition', eta_prior, Gamma_eta_prior, time_varying=False)
+    depo_plot_upper_prior = depo_plot_prior + 2 * sigma_depo_prior
+    depo_plot_lower_prior = depo_plot_prior - 2 * sigma_depo_prior
+
+
+    # #######################################################
+    # # Temporary Plotting:
+    # import matplotlib.pyplot as plt
+    # plt.rcParams.update({
+    #     "text.usetex": True,
+    #     "font.family": "DejaVu Sans",
+    # })
+    #
+    #
+    # # fig 1; size distribution:
+    # times = [10]
+    # fig1 = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig1.add_subplot(111)
+    # for plot_time in times:
+    #     ax.plot(d_plot, n_Dp_plot[:, int(plot_time / dt)] - 100, '-', color='blue', linewidth=2, label='Mean Estimate')
+    #     ax.plot(d_plot, n_Dp_plot_upper[:, int(plot_time / dt)] - 100, '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    #     ax.plot(d_plot, n_Dp_plot_lower[:, int(plot_time / dt)] - 100, '--', color='blue', linewidth=2)
+    #     # ax.plot(d_plot, n_Dp_plot_iden_05_RW[:, int(plot_time / dt)] - 100, '-', color='blue', linewidth=2, label='Mean Estimate')
+    #     # ax.plot(d_plot, n_Dp_plot_upper_iden_05_RW[:, int(plot_time / dt)] - 100, '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    #     # ax.plot(d_plot, n_Dp_plot_lower_iden_05_RW[:, int(plot_time / dt)] - 100, '--', color='blue', linewidth=2)
+    #     ax.plot(d_true, n_Dp_true[:, int(plot_time / dt)] - 100, '-', color='green', linewidth=2, label='Truth')
+    # ax.set_xlim([1, 10])
+    # ax.set_ylim([0, 8000])
+    # ax.set_xscale(xscale)
+    # ax.set_xlabel(xlabel, fontsize=14)
+    # ax.set_ylabel(r'$\displaystyle\frac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$', fontsize=14, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.025)
+    # ax.set_title('Size distribution estimate using \n autoregressive model at $t = 10$ hours', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig1.savefig('fig1_with_AR')
+    #
+    #
+    # # fig 1; condensation rate initial guess:
+    # fig1_cond_prior = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig1_cond_prior.add_subplot(111)
+    # ax.plot(d_plot_cond, cond_Dp_plot_prior, '-', color='blue', linewidth=2, label='Mean Estimate')
+    # ax.plot(d_plot_cond, cond_Dp_plot_upper_prior, '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    # ax.plot(d_plot_cond, cond_Dp_plot_lower_prior, '--', color='blue', linewidth=2)
+    # ax.plot(d_plot_cond, cond_Dp_true_plot[:, 0], '-', color='green', linewidth=2, label='Truth')
+    # ax.set_xlim([1, 10])
+    # ax.set_ylim([-0.1, 1.3])
+    # ax.set_xscale(xscale)
+    # ax.set_xlabel(xlabel, fontsize=14)
+    # ax.set_ylabel(r'$I(D_p)$ ($\mu$m hour$^{-1}$)', fontsize=14, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.025)
+    # ax.set_title('Condensation rate initial guess', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig1_cond_prior.savefig('fig1_cond_initial_guess')
+    #
+    #
+    # # fig 1; condensation rate:
+    # times = [12]
+    # fig1_cond = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig1_cond.add_subplot(111)
+    # for plot_time in times:
+    #     ax.plot(d_plot_cond, cond_Dp_plot[:, int(plot_time / dt)], '-', color='blue', linewidth=2, label='Mean Estimate')
+    #     ax.plot(d_plot_cond, cond_Dp_plot_upper[:, int(plot_time / dt)], '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    #     ax.plot(d_plot_cond, cond_Dp_plot_lower[:, int(plot_time / dt)], '--', color='blue', linewidth=2)
+    #     # ax.plot(d_plot_cond, cond_Dp_plot_iden_05_RW[:, int(plot_time / dt)], '-', color='blue', linewidth=2, label='Mean Estimate')
+    #     # ax.plot(d_plot_cond, cond_Dp_plot_upper_iden_05_RW[:, int(plot_time / dt)], '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    #     # ax.plot(d_plot_cond, cond_Dp_plot_lower_iden_05_RW[:, int(plot_time / dt)], '--', color='blue', linewidth=2)
+    #     ax.plot(d_plot_cond, cond_Dp_true_plot[:, int(plot_time / dt)], '-', color='green', linewidth=2, label='Truth')
+    # ax.set_xlim([1, 10])
+    # ax.set_ylim([-0.1, 1.3])
+    # ax.set_xscale(xscale)
+    # ax.set_xlabel(xlabel, fontsize=14)
+    # ax.set_ylabel(r'$I(D_p)$ ($\mu$m hour$^{-1}$)', fontsize=14, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.025)
+    # ax.set_title('Condensation rate estimate \n using autoregressive model', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig1_cond.savefig('fig1_cond_with_AR')
+    #
+    #
+    # # fig 1; deposition rate initial guess:
+    # fig1_depo = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig1_depo.add_subplot(111)
+    # ax.plot(d_plot_depo, depo_plot_prior, '-', color='blue', linewidth=2, label='Mean Estimate')
+    # ax.plot(d_plot_depo, depo_plot_upper_prior, '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    # ax.plot(d_plot_depo, depo_plot_lower_prior, '--', color='blue', linewidth=2)
+    # ax.plot(d_plot_depo, depo_true_plot[:, 0], '-', color='green', linewidth=2, label='Truth')
+    # ax.set_xlim([1, 10])
+    # ax.set_ylim([-0.05, 0.65])
+    # ax.set_xscale(xscale)
+    # ax.set_xlabel(xlabel, fontsize=14)
+    # ax.set_ylabel(r'$d(D_p)$ (hour$^{-1}$)', fontsize=14, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.025)
+    # ax.set_title('Deposition rate initial guess', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig1_depo.savefig('fig1_depo_initial_guess')
+    #
+    #
+    # # fig 1; deposition rate:
+    # times = [12]
+    # fig1_depo = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig1_depo.add_subplot(111)
+    # for plot_time in times:
+    #     # ax.plot(d_plot_depo, depo_plot[:, int(plot_time / dt)], '-', color='blue', linewidth=2, label='Mean Estimate')
+    #     # ax.plot(d_plot_depo, depo_plot_upper[:, int(plot_time / dt)], '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    #     # ax.plot(d_plot_depo, depo_plot_lower[:, int(plot_time / dt)], '--', color='blue', linewidth=2)
+    #     ax.plot(d_plot_depo, depo_plot_iden_05_RW[:, int(plot_time / dt)], '-', color='blue', linewidth=2, label='Mean Estimate')
+    #     ax.plot(d_plot_depo, depo_plot_upper_iden_05_RW[:, int(plot_time / dt)], '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    #     ax.plot(d_plot_depo, depo_plot_lower_iden_05_RW[:, int(plot_time / dt)], '--', color='blue', linewidth=2)
+    #     ax.plot(d_plot_depo, depo_true_plot[:, int(plot_time / dt)], '-', color='green', linewidth=2, label='Truth')
+    # ax.set_xlim([1, 10])
+    # ax.set_ylim([-0.05, 0.65])
+    # ax.set_xscale(xscale)
+    # ax.set_xlabel(xlabel, fontsize=14)
+    # ax.set_ylabel(r'$d(D_p)$ (hour$^{-1}$)', fontsize=14, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.025)
+    # ax.set_title('Deposition rate estimate \n using random walk model', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig1_depo.savefig('fig1_depo_with_RW')
+    #
+    #
+    # # fig 1; nucleation rate:
+    # fig1_sorc = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig1_sorc.add_subplot(111)
+    # ax.plot(time, J_Dp_plot, '-', color='blue', linewidth=2, label='Mean Estimate')
+    # ax.plot(time, J_Dp_plot_upper, '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    # ax.plot(time, J_Dp_plot_lower, '--', color='blue', linewidth=2)
+    # # ax.plot(time, J_Dp_plot_iden_05_RW, '-', color='blue', linewidth=2, label='Mean Estimate')
+    # # ax.plot(time, J_Dp_plot_upper_iden_05_RW, '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    # # ax.plot(time, J_Dp_plot_lower_iden_05_RW, '--', color='blue', linewidth=2)
+    # ax.plot(time, sorc_Dp_true_plot, '-', color='green', linewidth=2, label='Truth')
+    # ax.set_xlim([0, 16])
+    # ax.set_ylim([0, 10000])
+    # ax.set_xscale(xscale)
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel(r'$s(t)$ $(\mu$m$^{-1}$cm$^{-3}$ hour$^{-1}$)', fontsize=13, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.075)
+    # ax.set_title('Nucleation rate estimate \n using autoregressive model', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig1_sorc.savefig('fig1_sorc_with_AR')
+    #
+    #
+    # # fig 2; size distribution:
+    # fig2 = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig2.add_subplot(111)
+    # ax.plot(t, norm_diff_iden_05_RW, '-', color='chocolate', linewidth=2, label='Random Walk Model')
+    # ax.plot(t, norm_diff, '-', color='blue', linewidth=2, label='Autoregressive Model')
+    # ax.set_xlim([0, T])
+    # ax.set_ylim([0, 70])
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel(r'$||n_{est} - n_{truth}||$', fontsize=15, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('Size distribution Mahalanobis norm \n between mean estimate and truth', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig2.savefig('fig2')
+    #
+    #
+    # # fig 2; condensation rate:
+    # fig2_cond = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig2_cond.add_subplot(111)
+    # ax.plot(t, norm_diff_cond_iden_05_RW, '-', color='chocolate', linewidth=2, label='Random Walk Model')
+    # ax.plot(t, norm_diff_cond, '-', color='blue', linewidth=2, label='Autoregressive Model')
+    # ax.set_xlim([0, T])
+    # ax.set_ylim([0, 8])
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel(r'$||I_{est} - I_{truth}||$', fontsize=15, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('Condensation rate Mahalanobis norm \n between mean estimate and truth', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig2_cond.savefig('fig2_cond')
+    #
+    #
+    # # fig 2; deposition rate:
+    # fig2_depo = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig2_depo.add_subplot(111)
+    # ax.plot(t, norm_diff_depo_iden_05_RW, '-', color='chocolate', linewidth=2, label='Random Walk Model')
+    # ax.plot(t, norm_diff_depo, '-', color='blue', linewidth=2, label='Autoregressive Model')
+    # ax.set_xlim([0, T])
+    # ax.set_ylim([0, 5])
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel(r'$||d_{est} - d_{truth}||$', fontsize=15, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('Deposition rate Mahalanobis norm \n between mean estimate and truth', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig2_depo.savefig('fig2_depo')
+    #
+    #
+    # # fig 2; nucleation rate:
+    # fig2_sorc = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig2_sorc.add_subplot(111)
+    # ax.plot(t, norm_diff_sorc_iden_05_RW, '-', color='chocolate', linewidth=2, label='Random Walk Model')
+    # ax.plot(t, norm_diff_sorc, '-', color='blue', linewidth=2, label='Autoregressive Model')
+    # ax.set_xlim([0, T])
+    # ax.set_ylim([0, 8])
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel(r'$||s_{est} - s_{truth}||$', fontsize=15, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('Nucleation rate Mahalanobis norm \n between mean estimate and truth', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig2_sorc.savefig('fig2_sorc')
+    #
+    #
+    # # fig 3:
+    # fig3, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    # n_Dp_plot_iden_05_RW = n_Dp_plot_iden_05_RW.clip(image_min, image_max)
+    # im = plt.pcolor(time, d_plot, n_Dp_plot_iden_05_RW, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    # cbar = fig3.colorbar(im, ticks=cbarticks, orientation='vertical')
+    # tick_labels = [str(tick) for tick in cbarticks]
+    # cbar.ax.set_yticklabels(tick_labels)
+    # cbar.set_label(r'$\displaystyle\frac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('Size distribution estimate using random walk model', fontsize=14)
+    # ax.set_xlim([0, T])
+    # ax.set_ylim([1, 10])
+    # ax.set_yscale('linear')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig3.savefig('image_with_RW')
+    #
+    #
+    # # fig 4:
+    # fig4, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    # n_Dp_plot = n_Dp_plot.clip(image_min, image_max)
+    # im = plt.pcolor(time, d_plot, n_Dp_plot, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    # cbar = fig4.colorbar(im, ticks=cbarticks, orientation='vertical')
+    # tick_labels = [str(tick) for tick in cbarticks]
+    # cbar.ax.set_yticklabels(tick_labels)
+    # cbar.set_label(r'$\displaystyle\frac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('Size distribution estimate using autoregressive model', fontsize=14)
+    # ax.set_xlim([0, T])
+    # ax.set_ylim([1, 10])
+    # ax.set_yscale('linear')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig4.savefig('image_with_AR')
+    #
+    #
+    # # fig 5:
+    # fig5, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    # n_Dp_true = n_Dp_true.clip(image_min, image_max)
+    # im = plt.pcolor(time, d_true, n_Dp_true, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    # cbar = fig5.colorbar(im, ticks=cbarticks, orientation='vertical')
+    # tick_labels = [str(tick) for tick in cbarticks]
+    # cbar.ax.set_yticklabels(tick_labels)
+    # cbar.set_label(r'$\displaystyle\frac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('True size distribution', fontsize=14)
+    # ax.set_xlim([0, T])
+    # ax.set_ylim([1, 10])
+    # ax.set_yscale('linear')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig5.savefig('image_truth')

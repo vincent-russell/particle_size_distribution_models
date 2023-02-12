@@ -11,6 +11,7 @@ Date: June 27, 2022
 # Modules:
 import numpy as np
 import time as tm
+from matplotlib.colors import LogNorm
 from tkinter import mainloop
 from tqdm import tqdm
 
@@ -42,7 +43,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing evolution model:
-    F_alpha = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
+    F_alpha = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
     F_alpha.add_unknown('condensation', Ne_gamma, Np_gamma)  # Adding condensation as unknown to evolution model
     F_alpha.add_unknown('deposition', Ne_eta, Np_eta)  # Adding deposition as unknown to evolution model
     F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
@@ -425,7 +426,7 @@ if __name__ == '__main__':
     line_style = ['solid', 'dashed', 'dashed', 'solid']  # Style of lines in plot
     time = t  # Array where time[i] is plotted (and animated)
     timetext = ('Time = ', ' hours')  # Tuple where text to be animated is: timetext[0] + 'time[i]' + timetext[1]
-    delay = 60  # Delay between frames in milliseconds
+    delay = 30  # Delay between frames in milliseconds
 
     # Parameters for condensation plot:
     yscale_cond = 'linear'  # y-axis scaling ('linear' or 'log')
@@ -441,7 +442,7 @@ if __name__ == '__main__':
 
     # Parameters for deposition plot:
     yscale_depo = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_depo = [0, 1.2]  # Plot boundary limits for y-axis
+    ylimits_depo = [0, 1]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate estimation'  # Title for plot
@@ -498,3 +499,181 @@ if __name__ == '__main__':
     # Final print statements
     basic_tools.print_lines()  # Print lines in console
     print()  # Print space in console
+
+
+    #######################################################
+    # Computing parameter initial guesses:
+
+    # Condensation rate:
+    _, _, cond_plot_prior, sigma_cond_prior = F_alpha.get_parameter_estimation_discretisation('condensation', gamma_prior, Gamma_gamma_prior, time_varying=False)
+    cond_plot_upper_prior = cond_plot_prior + 2 * sigma_cond_prior
+    cond_plot_lower_prior = cond_plot_prior - 2 * sigma_cond_prior
+
+    # Deposition rate:
+    _, _, depo_plot_prior, sigma_depo_prior = F_alpha.get_parameter_estimation_discretisation('deposition', eta_prior, Gamma_eta_prior, time_varying=False)
+    depo_plot_upper_prior = depo_plot_prior + 2 * sigma_depo_prior
+    depo_plot_lower_prior = depo_plot_prior - 2 * sigma_depo_prior
+
+
+    #######################################################
+    # Temporary Plotting:
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "DejaVu Sans",
+    })
+
+
+    # fig 1; size distribution:
+    times = [6]
+    fig1 = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig1.add_subplot(111)
+    for plot_time in times:
+        ax.plot(d_plot, n_logDp_plot[:, int(plot_time / dt)], '-', color='blue', linewidth=2, label='Mean Estimate')
+        ax.plot(d_plot, n_logDp_plot_upper[:, int(plot_time / dt)], '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+        ax.plot(d_plot, n_logDp_plot_lower[:, int(plot_time / dt)], '--', color='blue', linewidth=2)
+    ax.set_xlim(xlimits)
+    ax.set_ylim([0, 200])
+    ax.set_xscale(xscale)
+    ax.set_xlabel(xlabel, fontsize=14)
+    ax.set_ylabel(r'$\displaystyle\frac{dN}{dlogD_p}$ (cm$^{-3})$', fontsize=14, rotation=0)
+    plt.setp(ax, xticks=xticks, xticklabels=xticks)
+    ax.yaxis.set_label_coords(-0.05, 1.025)
+    ax.set_title('Size distribution estimate at $t = 6$ hours', fontsize=14)
+    ax.legend(fontsize=12, loc='upper right')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig1.savefig('fig1')
+
+
+    # fig 1; condensation rate initial guess:
+    fig1_cond_prior = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig1_cond_prior.add_subplot(111)
+    ax.plot(d_plot_cond, cond_plot_prior, '-', color='blue', linewidth=2, label='Mean Estimate')
+    ax.plot(d_plot_cond, cond_plot_upper_prior, '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    ax.plot(d_plot_cond, cond_plot_lower_prior, '--', color='blue', linewidth=2)
+    ax.set_xlim(xlimits)
+    ax.set_ylim([0, 0.02])
+    ax.set_xscale(xscale)
+    ax.set_xlabel(xlabel, fontsize=14)
+    ax.set_ylabel(r'$I(D_p, t)$ ($\mu$m hour$^{-1}$)', fontsize=14, rotation=0)
+    plt.setp(ax, xticks=xticks, xticklabels=xticks)
+    ax.yaxis.set_label_coords(-0.05, 1.025)
+    ax.set_title('Condensation rate initial guess', fontsize=14)
+    ax.legend(fontsize=12, loc='upper left')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig1_cond_prior.savefig('fig1_cond_initial_guess')
+
+
+    # fig 1; deposition rate initial guess:
+    fig1_depo_prior = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig1_depo_prior.add_subplot(111)
+    ax.plot(d_plot_depo, depo_plot_prior, '-', color='blue', linewidth=2, label='Mean Estimate')
+    ax.plot(d_plot_depo, depo_plot_upper_prior, '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    ax.plot(d_plot_depo, depo_plot_lower_prior, '--', color='blue', linewidth=2)
+    ax.set_xlim(xlimits)
+    ax.set_ylim([0, 1.2])
+    ax.set_xscale(xscale)
+    ax.set_xlabel(xlabel, fontsize=14)
+    ax.set_ylabel(r'$d(D_p, t)$ (hour$^{-1}$)', fontsize=14, rotation=0)
+    plt.setp(ax, xticks=xticks, xticklabels=xticks)
+    ax.yaxis.set_label_coords(-0.05, 1.025)
+    ax.set_title('Deposition rate initial guess', fontsize=14)
+    ax.legend(fontsize=12, loc='upper left')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig1_depo_prior.savefig('fig1_depo_initial_guess')
+
+
+    # fig 1; condensation rate:
+    times = [1]
+    fig1_depo = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig1_depo.add_subplot(111)
+    for plot_time in times:
+        ax.plot(d_plot_cond, cond_Dp_plot[:, int(plot_time / dt)], '-', color='blue', linewidth=2, label='Mean Estimate')
+        ax.plot(d_plot_cond, cond_Dp_plot_upper[:, int(plot_time / dt)], '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+        ax.plot(d_plot_cond, cond_Dp_plot_lower[:, int(plot_time / dt)], '--', color='blue', linewidth=2)
+    ax.set_xlim(xlimits)
+    ax.set_ylim([0, 0.02])
+    ax.set_xscale(xscale)
+    ax.set_xlabel(xlabel, fontsize=14)
+    ax.set_ylabel(r'$I(D_p, t)$ ($\mu$m hour$^{-1}$)', fontsize=14, rotation=0)
+    plt.setp(ax, xticks=xticks, xticklabels=xticks)
+    ax.yaxis.set_label_coords(-0.05, 1.025)
+    ax.set_title('Condensation rate estimate at $t = 1$ hours', fontsize=14)
+    ax.legend(fontsize=12, loc='upper left')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig1_depo.savefig('fig1_cond_t_1')
+
+
+    # fig 1; deposition rate:
+    times = [1]
+    fig1_depo = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig1_depo.add_subplot(111)
+    for plot_time in times:
+        ax.plot(d_plot_depo, depo_plot[:, int(plot_time / dt)], '-', color='blue', linewidth=2, label='Mean Estimate')
+        ax.plot(d_plot_depo, depo_plot_upper[:, int(plot_time / dt)], '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+        ax.plot(d_plot_depo, depo_plot_lower[:, int(plot_time / dt)], '--', color='blue', linewidth=2)
+    ax.set_xlim(xlimits)
+    ax.set_ylim([0, 1.2])
+    ax.set_xscale(xscale)
+    ax.set_xlabel(xlabel, fontsize=14)
+    ax.set_ylabel(r'$d(D_p, t)$ (hour$^{-1}$)', fontsize=14, rotation=0)
+    plt.setp(ax, xticks=xticks, xticklabels=xticks)
+    ax.yaxis.set_label_coords(-0.05, 1.025)
+    ax.set_title('Deposition rate estimate at $t = 1$ hours', fontsize=14)
+    ax.legend(fontsize=12, loc='upper left')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig1_depo.savefig('fig1_depo_t_1')
+
+
+    # fig 4:
+    fig4, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    n_logDp_plot = n_logDp_plot.clip(image_min, image_max)
+    im = plt.pcolor(time, d_plot, n_logDp_plot, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    cbar = fig4.colorbar(im, ticks=cbarticks, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks]
+    cbar.ax.set_yticklabels(tick_labels)
+    cbar.set_label(r'$\displaystyle\frac{dN}{dlogD_p}$ (cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('Size distribution estimate', fontsize=14)
+    ax.set_xlim([0, T])
+    ax.set_ylim(xlimits)
+    ax.set_yscale('log')
+    plt.setp(ax, yticks=xticks, yticklabels=xticks)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig4.savefig('image_estimate')
+
+
+    # fig 5:
+    fig5, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    Y = Y.clip(image_min, image_max)
+    im = plt.pcolor(time, d_obs, Y, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    cbar = fig5.colorbar(im, ticks=cbarticks, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks]
+    cbar.ax.set_yticklabels(tick_labels)
+    cbar.set_label(r'$\displaystyle\frac{dN}{dlogD_p}$ (cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('CSTAR Observations', fontsize=14)
+    ax.set_xlim([0, T])
+    ax.set_ylim(xlimits)
+    ax.set_yscale('log')
+    plt.setp(ax, yticks=xticks, yticklabels=xticks)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig5.savefig('image_observations')

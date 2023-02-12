@@ -8,7 +8,7 @@ General dynamic equation evolution operator
 import numpy as np
 
 # Local modules:
-from basic_tools import print_lines, get_kwarg_value, Zero, volume_to_diameter
+from basic_tools import print_lines, get_kwarg_value, Zero, volume_to_diameter, diameter_to_volume
 from evolution_models.data import load_coagulation_tensors
 from evolution_models.tools import (get_Legendre_basis, get_Legendre_basis_derivative,
                                     get_discretisation, get_plotting_discretisation, compute_coefficients,
@@ -28,6 +28,7 @@ class GDE_evolution_model:
 
     def __init__(self, Ne, Np, xmin, xmax, dt, NT, **kwargs):
         # Setup parameters:
+        self.discretise_with_diameter = get_kwarg_value(kwargs, 'discretise_with_diameter', False)  # Set to True to discretise with diameter
         self.print_status = get_kwarg_value(kwargs, 'print_status', True)  # Set to False to remove print statements
         self.scale_type = get_kwarg_value(kwargs, 'scale_type', 'linear')  # Size discretisation linear or log formulation ('linear' or 'log')
         self.boundary_zero = get_kwarg_value(kwargs, 'boundary_zero', True)  # Set to True for imposing boundary condition n(vmin, t) = 0
@@ -50,12 +51,25 @@ class GDE_evolution_model:
         self.Np = Np  # Np - 1 = degree of Legendre polynomial approximation in each element
         self.N = Ne * Np  # Total degrees of freedom
         # Uniform discretisation; x_boundaries into Ne elements, with element size h, and Gauss nodes in each element:
-        self.x_Gauss, self.x_boundaries, self.h = get_discretisation(self.Ne, self.Np, self.xlim[0], self.xlim[1])
+        if self.discretise_with_diameter:  # Set to True to create uniform discretisation with respect to diameter (or log(diameter))
+            if self.scale_type == 'log':
+                logDp_Gauss, logDp_boundaries, logDp_h = get_discretisation(self.Ne, self.Np, self.logDp_lim[0], self.logDp_lim[1])
+                Dp_Gauss, Dp_boundaries = np.exp(logDp_Gauss), np.exp(logDp_boundaries)
+                self.x_Gauss, self.x_boundaries = np.log(diameter_to_volume(Dp_Gauss)), np.log(diameter_to_volume(Dp_boundaries))
+            else:
+                Dp_Gauss, Dp_boundaries, Dp_h = get_discretisation(self.Ne, self.Np, self.Dp_lim[0], self.Dp_lim[1])
+                self.x_Gauss, self.x_boundaries = diameter_to_volume(Dp_Gauss), diameter_to_volume(Dp_boundaries)
+        else:
+            self.x_Gauss, self.x_boundaries, self.h = get_discretisation(self.Ne, self.Np, self.xlim[0], self.xlim[1])
+        # Computing element size:
+        self.h = np.zeros(self.Ne)  # Initialising element size
+        for ell in range(self.Ne):  # Iterating over elements
+            self.h[ell] = self.x_boundaries[ell + 1] - self.x_boundaries[ell]  # Computing element size
         # Basis functions:
         self.phi = get_Legendre_basis(self.N, self.Np, self.x_boundaries)  # Basis function; phi[j](x) = phi_j(x) for j = 0, 1, ..., N - 1
         self.dphi = get_Legendre_basis_derivative(self.N, self.Np, self.x_boundaries, self.phi)  # Derivative of basis function; dphi[j](x) = phi_j'(x) for j = 0, 1, ..., N - 1
         # Model-independent matrix computations:
-        self.M = compute_M(self.N, self.Np, self.h)
+        self.M = compute_M(self.N, self.Np, self.x_boundaries, self.phi)
         self.A = compute_A(self.N, self.x_Gauss, self.phi)
         # Matrix M_ell^-1 computation:
         self.inv_M = np.zeros([self.Ne, self.Np, self.Np])  # Initialising set of elemental matrices M_ell^-1
@@ -144,9 +158,12 @@ class GDE_evolution_model:
             self.Ne_gamma, self.Np_gamma = Ne_process, Np_process
             self.N_gamma = self.Ne_gamma * self.Np_gamma
             if self.scale_type == 'log':
-                _, self.x_boundaries_gamma, self.h_gamma = get_discretisation(self.Ne_gamma, self.Np_gamma, self.logDp_lim[0], self.logDp_lim[1])
+                _, self.x_boundaries_gamma, _ = get_discretisation(self.Ne_gamma, self.Np_gamma, self.logDp_lim[0], self.logDp_lim[1])
             else:
-                _, self.x_boundaries_gamma, self.h_gamma = get_discretisation(self.Ne_gamma, self.Np_gamma, self.Dp_lim[0], self.Dp_lim[1])
+                _, self.x_boundaries_gamma, _ = get_discretisation(self.Ne_gamma, self.Np_gamma, self.Dp_lim[0], self.Dp_lim[1])
+            self.h_gamma = np.zeros(self.Ne_gamma)
+            for ell in range(self.Ne_gamma):
+                self.h_gamma[ell] = self.x_boundaries_gamma[ell + 1] - self.x_boundaries_gamma[ell]
             self.phi_gamma = get_Legendre_basis(self.N_gamma, self.Np_gamma, self.x_boundaries_gamma)
             self.Q_gamma = compute_Q_gamma(self.Ne, self.Np, self.Np_gamma, self.N_gamma, self.phi, self.dphi, self.phi_gamma, self.x_boundaries, self.scale_type)
             self.R1_gamma = compute_R1_gamma(self.Ne, self.Np, self.N_gamma, self.phi, self.phi_gamma, self.x_boundaries, self.scale_type)
@@ -158,9 +175,12 @@ class GDE_evolution_model:
             self.Ne_eta, self.Np_eta = Ne_process, Np_process
             self.N_eta = self.Ne_eta * self.Np_eta
             if self.scale_type == 'log':
-                _, self.x_boundaries_eta, self.h_eta = get_discretisation(self.Ne_eta, self.Np_eta, self.logDp_lim[0], self.logDp_lim[1])
+                _, self.x_boundaries_eta, _ = get_discretisation(self.Ne_eta, self.Np_eta, self.logDp_lim[0], self.logDp_lim[1])
             else:
-                _, self.x_boundaries_eta, self.h_eta = get_discretisation(self.Ne_eta, self.Np_eta, self.Dp_lim[0], self.Dp_lim[1])
+                _, self.x_boundaries_eta, _ = get_discretisation(self.Ne_eta, self.Np_eta, self.Dp_lim[0], self.Dp_lim[1])
+            self.h_eta = np.zeros(self.Ne_eta)
+            for ell in range(self.Ne_eta):
+                self.h_eta[ell] = self.x_boundaries_eta[ell + 1] - self.x_boundaries_eta[ell]
             self.phi_eta = get_Legendre_basis(self.N_eta, self.Np_eta, self.x_boundaries_eta)
             self.D_eta = compute_D_eta(self.N, self.Np, self.Np_eta, self.N_eta, self.phi, self.phi_eta, self.x_boundaries, self.scale_type)
             self.f_depo = Deposition_unknown_evolution(self).eval
@@ -200,32 +220,33 @@ class GDE_evolution_model:
         Gamma_alpha = get_kwarg_value(kwargs, 'Gamma_alpha', np.zeros([self.NT, self.N, self.N]))  # Covariance matrix of alpha
         convert_v_to_Dp = get_kwarg_value(kwargs, 'convert_v_to_Dp', False)  # Set to True to convert from n_v to n_Dp (and covariance)
         convert_x_to_logDp = get_kwarg_value(kwargs, 'convert_x_to_logDp', False)  # Set to True to convert from n_x to n_logDp (and covariance)
+        x_plot = get_kwarg_value(kwargs, 'x_plot', None)  # Return custom discretisation
         if convert_v_to_Dp:
-            d_plot, v_plot, n_v_plot, Gamma_n_v = get_plotting_discretisation(alpha, Gamma_alpha, self.x_boundaries, self.h, self.phi, self.N, self.Ne, self.Np, self.scale_type, return_Gamma=True)
+            d_plot, v_plot, n_v_plot, Gamma_n_v = get_plotting_discretisation(alpha, Gamma_alpha, self.x_boundaries, self.h, self.phi, self.N, self.Ne, self.Np, self.scale_type, return_Gamma=True, x_plot=x_plot)
             matrix_v_to_Dp = np.diag((np.pi / 2) * (d_plot ** 2))
             n_Dp_plot, sigma_n_Dp = change_basis_operator(n_v_plot, Gamma_n_v, matrix_v_to_Dp, time_varying=True, return_sigma=True)
             return d_plot, v_plot, n_Dp_plot, sigma_n_Dp
         elif convert_x_to_logDp:
-            d_plot, v_plot, n_x_plot, Gamma_n_x = get_plotting_discretisation(alpha, Gamma_alpha, self.x_boundaries, self.h, self.phi, self.N, self.Ne, self.Np, self.scale_type, return_Gamma=True)
+            d_plot, v_plot, n_x_plot, Gamma_n_x = get_plotting_discretisation(alpha, Gamma_alpha, self.x_boundaries, self.h, self.phi, self.N, self.Ne, self.Np, self.scale_type, return_Gamma=True, x_plot=x_plot)
             matrix_x_to_logDp = (3 / np.log10(np.e)) * np.eye(len(d_plot))
             n_logDp_plot, sigma_n_logDp = change_basis_operator(n_x_plot, Gamma_n_x, matrix_x_to_logDp, time_varying=True, return_sigma=True)
             return d_plot, v_plot, n_logDp_plot, sigma_n_logDp
         else:
-            x_plot = get_kwarg_value(kwargs, 'x_plot', None)  # Return custom discretisation
             d_plot, v_plot, n_plot, sigma_n = get_plotting_discretisation(alpha, Gamma_alpha, self.x_boundaries, self.h, self.phi, self.N, self.Ne, self.Np, self.scale_type, x_plot=x_plot)
             return d_plot, v_plot, n_plot, sigma_n
 
     # Computing plotting discretisation parameter over [0, T]:
     def get_parameter_estimation_discretisation(self, process, coefficient, Gamma, **kwargs):
+        time_varying = get_kwarg_value(kwargs, 'time_varying', True)  # Check if time varying
         if process == 'condensation':
             if self.print_status:
                 print('Computing condensation plotting discretisation...')
-            _, d_plot, cond_plot, sigma_cond = get_plotting_discretisation(coefficient, Gamma, self.x_boundaries_gamma, self.h_gamma, self.phi_gamma, self.N_gamma, self.Ne_gamma, self.Np_gamma, 'linear')
+            _, d_plot, cond_plot, sigma_cond = get_plotting_discretisation(coefficient, Gamma, self.x_boundaries_gamma, self.h_gamma, self.phi_gamma, self.N_gamma, self.Ne_gamma, self.Np_gamma, 'linear', time_varying=time_varying)
             return _, d_plot, cond_plot, sigma_cond
         elif process == 'deposition':
             if self.print_status:
                 print('Computing deposition plotting discretisation...')
-            _, d_plot, depo_plot, sigma_depo = get_plotting_discretisation(coefficient, Gamma, self.x_boundaries_eta, self.h_eta, self.phi_eta, self.N_eta, self.Ne_eta, self.Np_eta, 'linear')
+            _, d_plot, depo_plot, sigma_depo = get_plotting_discretisation(coefficient, Gamma, self.x_boundaries_eta, self.h_eta, self.phi_eta, self.N_eta, self.Ne_eta, self.Np_eta, 'linear', time_varying=time_varying)
             return _, d_plot, depo_plot, sigma_depo
         elif process == 'nucleation':
             if self.print_status:
@@ -241,11 +262,13 @@ class GDE_evolution_model:
             Dp_min = volume_to_diameter(self.xlim[0])
             if convert_v_to_Dp:
                 matrix_v_to_Dp = (np.pi / 2) * (Dp_min ** 2) * np.eye(NT)
-                J_Dp, sigma_J_Dp = change_basis_operator(J, Gamma_J, matrix_v_to_Dp, return_sigma=True)
+                J_Dp, var_J_Dp = change_basis_operator(J, Gamma_J, matrix_v_to_Dp, return_sigma=False)
+                sigma_J_Dp = np.sqrt(var_J_Dp)
                 return J_Dp, sigma_J_Dp
             elif convert_x_to_logDp:
                 matrix_x_to_logDp = (3 / np.log10(np.e)) * np.eye(NT)
-                J_logDp, sigma_J_logDp = change_basis_operator(J, Gamma_J, matrix_x_to_logDp, return_sigma=True)
+                J_logDp, var_J_logDp = change_basis_operator(J, Gamma_J, matrix_x_to_logDp, return_sigma=False)
+                sigma_J_logDp = np.sqrt(var_J_logDp)
                 return J_logDp, sigma_J_logDp
             else:
                 sigma_J = np.sqrt(Gamma_J)

@@ -16,11 +16,12 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
-plot_animations = True  # Set to True to plot animations
+plot_animations = False  # Set to True to plot animations
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 save_coagulation = False  # Set to True to save coagulation tensors
-coagulation_suffix = '1_to_10_micro_metres'  # Suffix of saved coagulation tensors file
+coagulation_suffix = '1_to_10_micro_metres_diameter_true'  # Suffix of saved coagulation tensors file
+discretise_with_diameter = True  # Set to True to uniformally discretise with diameter instead of volume
 
 # Spatial domain:
 Dp_min = 1  # Minimum diameter of particles (micro m)
@@ -44,7 +45,7 @@ d_obs = linspace(Dp_min, Dp_max, M)  # Diameters that observations are made
 sample_volume = 0.005  # Volume of sample used in counting, y = (1 / sample_volume) * Pois(sample_volume * n)
 
 # DMPS observation parameters:
-use_DMPS_observation_model = True  # Set to True to use DMPS observation model
+use_DMPS_observation_model = False  # Set to True to use DMPS observation model
 plot_dma_transfer_functions = False  # Set to True to plot DMA transfer functions
 N_channels = 10  # Number of channels in DMA
 R_inner = 0.937  # Inner radius of DMA (cm)
@@ -59,7 +60,7 @@ cpc_inlet_flow = 0.3  # CPC inlet flow (L/min)
 cpc_count_time = 1  # Counting time for CPC inlet flow (seconds)
 
 # Save data parameters:
-data_filename = 'observations_04'  # Filename for data of simulated observations
+data_filename = 'observations_04_identity'  # Filename for data of simulated observations
 
 # Initial condition n_0(v) = n(v, 0):
 N_0 = 300  # Amplitude of initial condition gaussian

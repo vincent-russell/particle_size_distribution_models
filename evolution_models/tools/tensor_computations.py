@@ -10,13 +10,13 @@ from scipy.linalg import null_space
 from math import floor
 
 # Local modules:
-from basic_tools import GLnpt, volume_to_diameter, timer
+from basic_tools import GLnpt, volume_to_diameter  # ,timer
 from evolution_models.tools import get_element_vector, get_element_matrix, Phi_ell_vector
 
 
 #######################################################
 # Computes matrix M:
-def compute_M(N, Np, h):
+def compute_M(N, Np, x_boundaries, phi):
     M = np.zeros([N, N])  # Initialising
     for i in range(N):
         ell_i = floor(i / Np)  # ell-th element for phi_i
@@ -24,9 +24,11 @@ def compute_M(N, Np, h):
         for j in range(N):
             ell_j = floor(j / Np)  # ell-th element for phi_j
             degree_j = j - ell_j * Np  # Degree of polynomial j
-            if ell_i == ell_j:  # Non-zero if in same element
-                if degree_i == degree_j:  # Orthogonality property
-                    M[j, i] = (h / 2) * (2 / (2 * degree_i + 1))  # Computing entries
+            # Integrand in M:
+            def M_integrand(x):
+                return phi[i](x) * phi[j](x)
+            GLorder = floor((degree_i + degree_j + 1) / 2) + 2  # Order of integration of Gauss-Legendre quadrature
+            M[j, i] = GLnpt(M_integrand, x_boundaries[ell_i], x_boundaries[ell_i + 1], GLorder)  # Computing entries
     return M
 
 
@@ -50,9 +52,9 @@ def compute_Q(cond, N, Np, x_boundaries, phi, dphi, scale_type):
                     GLorder = floor((degree_i + degree_j + 1) / 2) + 3  # Order of integration of Gauss-Legendre quadrature
                 else:
                     # Integrand in Q:
-                    def Q_integrand(x):
-                        Dp = volume_to_diameter(x)
-                        return (np.pi / 2) * (Dp ** 2) * cond(Dp) * phi[i](x) * dphi[j](x)
+                    def Q_integrand(v):
+                        Dp = volume_to_diameter(v)
+                        return (np.pi / 2) * (Dp ** 2) * cond(Dp) * phi[i](v) * dphi[j](v)
                     GLorder = floor((degree_i + degree_j + 1) / 2) + 3  # Order of integration of Gauss-Legendre quadrature
                 Q[j, i] = GLnpt(Q_integrand, x_boundaries[ell_i], x_boundaries[ell_i + 1], GLorder)  # Computing entries
     return Q
@@ -124,9 +126,9 @@ def compute_Q_gamma(Ne, Np, Np_gamma, N_gamma, phi, dphi, phi_gamma, x_boundarie
                         GLorder = floor((degree_k + i + j + 1) / 2) + 2  # Order of integration of Gauss-Legendre quadrature
                     else:
                         # Integrand in Q_ell:
-                        def Q_ell_integrand(x):
-                            Dp = volume_to_diameter(x)
-                            return (np.pi / 2) * (Dp ** 2) * phi_gamma[k](Dp) * phi_ell[i](x) * dphi_ell[j](x)
+                        def Q_ell_integrand(v):
+                            Dp = volume_to_diameter(v)
+                            return (np.pi / 2) * (Dp ** 2) * phi_gamma[k](Dp) * phi_ell[i](v) * dphi_ell[j](v)
                         GLorder = floor((degree_k + i + j + 1) / 2) + 2  # Order of integration of Gauss-Legendre quadrature
                     Q[ell, j, k, i] = GLnpt(Q_ell_integrand, x_boundaries[ell], x_boundaries[ell + 1], GLorder)  # Computing entries
     return Q

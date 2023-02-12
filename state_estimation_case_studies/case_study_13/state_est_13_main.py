@@ -11,12 +11,13 @@ Date: June 27, 2022
 # Modules:
 import numpy as np
 import time as tm
+import matplotlib.pyplot as plt
 from tkinter import mainloop
 from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
+from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother, compute_norm_difference
 from observation_models.data.simulated import load_observations
 from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_basis_x_to_logDp
 from observation_models.tools import get_DMA_transfer_function, compute_alpha_to_z_operator, Size_distribution_observation_model
@@ -48,7 +49,7 @@ if __name__ == '__main__':
     F_alpha = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
     F_alpha.add_process('condensation', guess_cond)  # Adding condensation to evolution model
     F_alpha.add_process('deposition', guess_depo)  # Adding deposition to evolution model
-    F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
+    # F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F_alpha.compile()  # Compiling evolution model
 
 
@@ -187,8 +188,8 @@ if __name__ == '__main__':
     # Computing plotting discretisation:
     # Size distribution:
     d_plot, v_plot, n_logDp_plot, sigma_n_logDp = F_alpha.get_nplot_discretisation(alpha, Gamma_alpha=Gamma_alpha, convert_x_to_logDp=True)
-    n_Dp_plot_upper = n_logDp_plot + 2 * sigma_n_logDp
-    n_Dp_plot_lower = n_logDp_plot - 2 * sigma_n_logDp
+    n_logDp_plot_upper = n_logDp_plot + 2 * sigma_n_logDp
+    n_logDp_plot_lower = n_logDp_plot - 2 * sigma_n_logDp
 
 
     #######################################################
@@ -206,6 +207,15 @@ if __name__ == '__main__':
         for i in range(Nplot_depo):
             depo_truth_plot[i, k] = depo(d_plot[i])  # Computing deposition rate
             depo_guess_plot[i, k] = guess_depo(d_plot[i])  # Computing deposition rate
+
+
+    #######################################################
+    # Computing norm difference between truth and estimates:
+    # Size distribution:
+    v_true = basic_tools.diameter_to_volume(d_true)
+    x_true = np.log(v_true)
+    _, _, n_x_estimate, sigma_n_x = F_alpha.get_nplot_discretisation(alpha, Gamma_alpha=Gamma_alpha, x_plot=x_true)  # Computing estimate on true discretisation
+    norm_diff = compute_norm_difference(n_x_true, n_x_estimate, sigma_n_x, compute_weighted_norm=compute_weighted_norm)  # Computing norm difference
 
 
     #######################################################
@@ -260,7 +270,7 @@ if __name__ == '__main__':
     delay_depo = delay_cond  # Delay between frames in milliseconds
 
     # Size distribution animation:
-    basic_tools.plot_1D_animation(d_plot, n_logDp_plot, n_Dp_plot_lower, n_Dp_plot_upper, plot_add=(d_true, n_logDp_true), xticks=xticks, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
+    basic_tools.plot_1D_animation(d_plot, n_logDp_plot, n_logDp_plot_lower, n_logDp_plot_upper, plot_add=(d_true, n_logDp_true), xticks=xticks, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
                                   delay=delay, location=location, legend=legend, time=time, timetext=timetext, line_color=line_color, line_style=line_style, doing_mainloop=False)
 
     # Condensation rate animation:
@@ -275,6 +285,23 @@ if __name__ == '__main__':
     if plot_animations:
         print('Plotting animations...')
         mainloop()  # Runs tkinter GUI for plots and animations
+
+
+    #######################################################
+    # Plotting norm difference between truth and estimates:
+    if plot_norm_difference:
+        print('Plotting norm difference between truth and estimates...')
+        plt.figure()
+        plt.plot(t, norm_diff)
+        plt.xlim([0, T])
+        plt.ylim([0, 24])
+        plt.xlabel('$t$', fontsize=15)
+        plt.ylabel(r'||$n_{est}(x, t) - n_{true}(x, t)$||$_W$', fontsize=14)
+        plt.grid()
+        plot_title = 'norm difference between truth and mean estimate'
+        if compute_weighted_norm:
+            plot_title = 'Weighted ' + plot_title
+        plt.title(plot_title, fontsize=12)
 
 
     #######################################################
@@ -306,3 +333,12 @@ if __name__ == '__main__':
     # Final print statements
     basic_tools.print_lines()  # Print lines in console
     print()  # Print space in console
+
+
+    #######################################################
+    # Temporary saving:
+    np.savez('state_est_13_data',
+             n_logDp_plot=n_logDp_plot,
+             n_logDp_plot_upper=n_logDp_plot_upper,
+             n_logDp_plot_lower=n_logDp_plot_lower,
+             norm_diff=norm_diff)

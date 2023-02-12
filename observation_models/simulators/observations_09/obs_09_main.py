@@ -24,7 +24,7 @@ from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_bas
 
 #######################################################
 # Importing parameter file:
-from observation_models.simulators.observations_06.obs_06_parameters import *
+from observation_models.simulators.observations_09.obs_09_parameters import *
 
 
 #######################################################
@@ -37,9 +37,9 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing evolution model:
-    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
-    F.add_process('condensation', cond)  # Adding condensation to evolution model
-    F.add_process('deposition', depo)  # Adding deposition to evolution model
+    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', print_status=False)  # Initialising evolution model
+    F.add_process('condensation', cond_time(0))  # Adding condensation to evolution model
+    F.add_process('deposition', depo_time(0))  # Adding deposition to evolution model
     F.add_process('source', sorc)  # Adding source to evolution model
     F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F.compile()  # Compiling evolution model
@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Function to compute evolution operator using Crank-Nicolson method:
-    def compute_evolution_operator(alpha_star, t_star):
+    def compute_evolution_operator(alpha_star, t_star, F, J_F):
         J_star = J_F.eval_d_alpha(alpha_star, t_star)  # Computing J_star
         F_star = F.eval(alpha_star, t_star) - np.matmul(J_star, alpha_star)  # Computing F_star
         matrix_multiplier = np.linalg.inv(np.eye(N) - (dt / 2) * J_star)  # Computing matrix multiplier for evolution operator and additive vector
@@ -71,9 +71,12 @@ if __name__ == '__main__':
     # Computing time evolution of model using Crank-Nicolson method:
     print('Computing time evolution...')
     t = np.zeros(NT)  # Initialising time array
-    F_evolution, b_evolution = compute_evolution_operator(alpha[:, 0], t[0])  # Computing evolution operator from initial condition
+    F_evolution, b_evolution = compute_evolution_operator(alpha[:, 0], t[0], F, J_F)  # Computing evolution operator from initial condition
     for k in tqdm(range(NT - 1)):  # Iterating over time
-        F_evolution, b_evolution = compute_evolution_operator(alpha[:, k], t[k])  # Computing evolution operator F and vector b
+        F.add_process('condensation', cond_time(t[k]))  # Update condensation to evolution model
+        F.add_process('deposition', depo_time(t[k]))  # Update condensation to evolution model
+        J_F = GDE_Jacobian(F)  # Update Jacobian
+        F_evolution, b_evolution = compute_evolution_operator(alpha[:, k], t[k], F, J_F)  # Computing evolution operator F and vector b
         alpha[:, k + 1] = np.matmul(F_evolution, alpha[:, k]) + b_evolution  # Time evolution computation
         t[k + 1] = (k + 1) * dt  # Time (hours)
 
@@ -118,8 +121,8 @@ if __name__ == '__main__':
     for k in range(NT):
         sorc_x_plot[k] = sorc(t[k])  # Computing ln(volume)-based nucleation rate
         for i in range(Nplot):
-            cond_Dp_plot[i, k] = cond(d_true[i])  # Computing ln(volume)-based condensation rate
-            depo_plot[i, k] = depo(d_true[i])  # Computing deposition rate
+            cond_Dp_plot[i, k] = cond_time(t[k])(d_true[i])  # Computing ln(volume)-based condensation rate
+            depo_plot[i, k] = depo_time(t[k])(d_true[i])  # Computing deposition rate
     sorc_logDp_plot = change_basis_x_to_logDp_sorc(sorc_x_plot, vmin, Dp_min)  # Computing log_10(D_p)-based nucleation rate
 
 
@@ -158,7 +161,7 @@ if __name__ == '__main__':
 
     # Parameters for condensation plot:
     yscale_cond = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_cond = [0, 0.12]  # Plot boundary limits for y-axis
+    ylimits_cond = [0, 0.04]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
     ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate'  # Title for plot
@@ -257,20 +260,31 @@ if __name__ == '__main__':
     ylabel_image = '$D_p$ ($\mu$m) \n'  # y-axis label for image
     ylabelcoords = (-0.06, 0.96)  # y-axis label coordinates
     title_image = 'Size distribution'  # Title for image
-    title_image_observations = 'Simulated observations'  # Title for image
     image_min = 10  # Minimum of image colour
     image_max = 10000  # Maximum of image colour
     cmap = 'jet'  # Colour map of image
     cbarlabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # Label of colour bar
     cbarticks = [10, 100, 1000, 10000]  # Ticks of colorbar
 
+    # Parameters for condensation image:
+    image_min_cond = 0.0003  # Minimum of image colour
+    image_max_cond = 0.04  # Maximum of image colour
+    cbarticks_cond = [0.001, 0.01]  # Ticks of colorbar
+
+    # Parameters for deposition image:
+    image_min_depo = 0.005  # Minimum of image colour
+    image_max_depo = 0.15  # Maximum of image colour
+    cbarticks_depo = [0.01, 0.1]  # Ticks of colorbar
+
     # Plotting images:
     if plot_images:
         print('Plotting images...')
         basic_tools.image_plot(time, d_true, n_logDp_true, xlabel=xlabel_image, ylabel=ylabel_image, title=title_image,
                                yscale=yscale_image, ylabelcoords=ylabelcoords, yticks=yticks_image, image_min=image_min, image_max=image_max, cmap=cmap, cbarlabel=cbarlabel, cbarticks=cbarticks)
-        basic_tools.image_plot(time, d_obs, Y, xlabel=xlabel_image, ylabel=ylabel_image, title=title_image_observations,
-                               yscale=yscale_image, ylabelcoords=ylabelcoords, yticks=yticks_image, image_min=image_min, image_max=image_max, cmap=cmap, cbarlabel=cbarlabel, cbarticks=cbarticks)
+        basic_tools.image_plot(time, d_true, cond_Dp_plot, xlabel=xlabel_image, ylabel=ylabel_image, title=title_cond,
+                               yscale=yscale_image, ylabelcoords=ylabelcoords, yticks=yticks_image, image_min=image_min_cond, image_max=image_max_cond, cmap=cmap, cbarlabel=ylabel_cond, cbarticks=cbarticks_cond)
+        basic_tools.image_plot(time, d_true, depo_plot, xlabel=xlabel_image, ylabel=ylabel_image, title=title_depo,
+                               yscale=yscale_image, ylabelcoords=ylabelcoords, yticks=yticks_image, image_min=image_min_depo, image_max=image_max_depo, cmap=cmap, cbarlabel=ylabel_depo, cbarticks=cbarticks_depo)
 
 
     # Final print statements
@@ -287,23 +301,47 @@ if __name__ == '__main__':
     })
 
     # Parameters:
+    image_min = 10
+    image_max = 10000
+    cbarticks = [10, 100, 1000, 10000]
     image_min_obs = 1
     image_max_obs = 500
-    cbarticks = [1, 10, 100, 500]
+    cbarticks_obs = [1, 10, 100, 500]
 
     # fig image:
+    fig5, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    n_logDp_true = n_logDp_true.clip(image_min, image_max)
+    im = plt.pcolor(time, d_true, n_logDp_true, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    cbar = fig5.colorbar(im, ticks=cbarticks, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks]
+    cbar.ax.set_yticklabels(tick_labels)
+    cbar.set_label(r'$\displaystyle\frac{dN}{dlogD_p}$ (cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('True size distribution', fontsize=14)
+    ax.set_xlim([0, T])
+    ax.set_ylim([Dp_min, Dp_max])
+    ax.set_yscale('log')
+    plt.setp(ax, yticks=xticks, yticklabels=xticks)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig5.savefig('image_truth')
+
+    # fig image observations:
     fig, ax = plt.subplots(figsize=(8, 4), dpi=200)
     Y = Y.clip(image_min_obs, image_max_obs)
     im = plt.pcolor(time, channels, Y, cmap=cmap, vmin=image_min_obs, vmax=image_max_obs, norm=LogNorm())
-    cbar = fig.colorbar(im, ticks=cbarticks, orientation='vertical')
-    tick_labels = [str(tick) for tick in cbarticks]
+    cbar = fig.colorbar(im, ticks=cbarticks_obs, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks_obs]
     cbar.ax.set_yticklabels(tick_labels)
     cbar.set_label('Counts per litre', fontsize=12, rotation=0, y=1.1, labelpad=-30)
     ax.set_xlabel('Time (hours)', fontsize=14)
     ax.set_ylabel('Channel', fontsize=14, rotation=0)
     ax.yaxis.set_label_coords(-0.05, 1.05)
     ax.set_title('Simulated observations', fontsize=14)
-    ax.set_xlim([4, 16])
+    ax.set_xlim([0, T])
     ax.set_ylim([1, N_channels])
     ax.set_yscale('linear')
     ax.tick_params(axis='both', which='major', labelsize=12)

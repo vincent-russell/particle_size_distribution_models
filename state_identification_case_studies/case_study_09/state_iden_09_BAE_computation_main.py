@@ -40,8 +40,8 @@ if __name__ == '__main__':
 
     #######################################################
     # Initialising evolution model and reduced evolution model:
-    F_alpha = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', print_status=False)  # Initialising evolution model
-    F_alpha_r = GDE_evolution_model(Ne_r, Np_r, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', print_status=False)  # Initialising reduced evolution model
+    F_alpha = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', print_status=False, discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
+    F_alpha_r = GDE_evolution_model(Ne_r, Np_r, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', print_status=False, discretise_with_diameter=discretise_with_diameter)  # Initialising reduced evolution model
 
 
     #######################################################

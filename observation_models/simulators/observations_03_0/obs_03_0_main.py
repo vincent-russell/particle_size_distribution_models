@@ -12,6 +12,7 @@ Date: June 22, 2022
 import numpy as np
 import time as tm
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 from tkinter import mainloop
 from tqdm import tqdm
 
@@ -241,3 +242,36 @@ if __name__ == '__main__':
     # Final print statements
     basic_tools.print_lines()  # Print lines in console
     print()  # Print space in console
+
+
+    #######################################################
+    # Temporary Plotting:
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "DejaVu Sans",
+    })
+
+    # Parameters:
+    image_min_obs = 100
+    image_max_obs = 10000
+
+    # fig image:
+    fig, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    Y = Y.clip(image_min_obs, image_max_obs)
+    im = plt.pcolor(time, channels, Y, cmap=cmap, vmin=image_min_obs, vmax=image_max_obs, norm=LogNorm())
+    cbar = fig.colorbar(im, ticks=cbarticks, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks]
+    cbar.ax.set_yticklabels(tick_labels)
+    cbar.set_label('Counts per litre', fontsize=12, rotation=0, y=1.1, labelpad=-30)
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel('Channel', fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('Simulated observations', fontsize=14)
+    ax.set_xlim([0, T])
+    ax.set_ylim([1, N_channels])
+    ax.set_yscale('linear')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig.savefig('image_observations')

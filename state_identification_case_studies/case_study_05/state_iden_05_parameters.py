@@ -16,13 +16,16 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
+compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
+plot_norm_difference = False  # Set to True to plot norm difference between truth and estimates
 smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
-plot_animations = True  # Set to True to plot animations
+plot_animations = False  # Set to True to plot animations
 plot_nucleation = True  # Set to True to plot nucleation plot
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
-coagulation_suffix = '1_to_11_micro_metres'  # Suffix of saved coagulation tensors file
-data_filename = 'observations_05'  # Filename for data of simulated observations
+coagulation_suffix = '1_to_11_micro_metres_diameter_true'  # Suffix of saved coagulation tensors file
+discretise_with_diameter = True  # Set to True to uniformally discretise with diameter instead of volume
+data_filename = 'observations_05_new'  # Filename for data of simulated observations
 
 # Spatial domain:
 Dp_min = 1  # Minimum diameter of particles (micro m)
@@ -36,17 +39,17 @@ T = 24  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
 # Size distribution discretisation:
-Ne = 50  # Number of elements
+Ne = 10  # Number of elements
 Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 
 # Condensation rate discretisation:
-Ne_gamma = 2  # Number of elements
+Ne_gamma = 5  # Number of elements
 Np_gamma = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N_gamma = Ne_gamma * Np_gamma  # Total degrees of freedom
 
 # Deposition rate discretisation:
-Ne_eta = 2  # Number of elements
+Ne_eta = 5  # Number of elements
 Np_eta = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N_eta = Ne_eta * Np_eta  # Total degrees of freedom
 
@@ -91,7 +94,7 @@ sigma_eta_prior_4 = 0
 sigma_eta_prior_5 = 0
 sigma_eta_prior_6 = 0
 # Prior uncertainty for J (Nucleation rate):
-sigma_J_prior = 500
+sigma_J_prior = 150
 
 # Model noise parameters:
 # Observation noise covariance parameters:
@@ -107,18 +110,18 @@ sigma_alpha_w_5 = 0
 sigma_alpha_w_6 = 0
 sigma_alpha_w_correlation = 2
 # Evolution noise covariance Gamma_gamma_w = sigma_gamma_w^2 * I_N_gamma (Condensation rate):
-sigma_gamma_w_0 = sigma_gamma_prior_0 / 1000
-sigma_gamma_w_1 = sigma_gamma_prior_1 / 1000
-sigma_gamma_w_2 = sigma_gamma_prior_2 / 1000
+sigma_gamma_w_0 = sigma_gamma_prior_0 / 10
+sigma_gamma_w_1 = sigma_gamma_prior_1 / 10
+sigma_gamma_w_2 = sigma_gamma_prior_2 / 10
 sigma_gamma_w_3 = 0
 sigma_gamma_w_4 = 0
 sigma_gamma_w_5 = 0
 sigma_gamma_w_6 = 0
 sigma_gamma_w_correlation = 2
 # Evolution noise covariance Gamma_eta_w = sigma_eta_w^2 * I_N_eta (Deposition rate):
-sigma_eta_w_0 = sigma_eta_prior_0 / 1000
-sigma_eta_w_1 = sigma_eta_prior_0 / 1000
-sigma_eta_w_2 = sigma_eta_prior_0 / 1000
+sigma_eta_w_0 = sigma_eta_prior_0 / 100
+sigma_eta_w_1 = sigma_eta_prior_0 / 100
+sigma_eta_w_2 = sigma_eta_prior_0 / 100
 sigma_eta_w_3 = 0
 sigma_eta_w_4 = 0
 sigma_eta_w_5 = 0
@@ -128,32 +131,36 @@ sigma_eta_w_correlation = 2
 sigma_J_w = sigma_J_prior
 
 # Condensation VAR(p) coefficients for model gamma_{t + 1} = A_1 gamma_t + ... + w_{gamma_t}:
-gamma_p = 1
-gamma_A1 = 1 * eye(N_gamma)
-gamma_A2 = 0 * eye(N_gamma)
-gamma_A3 = 0 * eye(N_gamma)
+gamma_loading_coefficients = False
+gamma_loading_name = 'gamma_2_coefficients'
+# If not loading coefficients can define here:
+gamma_p = 3
+gamma_A1 = 0.799 * eye(N_gamma)
+gamma_A2 = 0.4 * eye(N_gamma)
+gamma_A3 = -0.2 * eye(N_gamma)
 gamma_A4 = 0 * eye(N_gamma)
 gamma_A5 = 0 * eye(N_gamma)
 gamma_A6 = 0 * eye(N_gamma)
-gamma_A = array([gamma_A1, gamma_A2, gamma_A3, gamma_A4, gamma_A5, gamma_A6])  # Tensor of VAR(p) coefficients
 
 # Deposition VAR(p) coefficients for model eta_{t + 1} = A_1 eta_t + ... + w_{eta_t}:
-eta_p = 1
-eta_A1 = 1 * eye(N_eta)
-eta_A2 = 0 * eye(N_eta)
-eta_A3 = 0 * eye(N_eta)
+eta_loading_coefficients = False
+eta_loading_name = 'eta_2_coefficients'
+# If not loading coefficients can define here:
+eta_p = 3
+eta_A1 = 0.799 * eye(N_eta)
+eta_A2 = 0.4 * eye(N_eta)
+eta_A3 = -0.2 * eye(N_eta)
 eta_A4 = 0 * eye(N_eta)
 eta_A5 = 0 * eye(N_eta)
 eta_A6 = 0 * eye(N_eta)
-eta_A = array([eta_A1, eta_A2, eta_A3, eta_A4, eta_A5, eta_A6])  # Tensor of VAR(p) coefficients
 
 # Nucleation AR(p) coefficients for model J_{t + 1} = a_1 J_t + ... + w_{J_t}:
-J_p = 5  # Order of AR model
-J_a1 = 1.725
-J_a2 = 0.03
-J_a3 = -0.73
-J_a4 = -0.531
-J_a5 = 0.506
+J_p = 3  # Order of AR model
+J_a1 = 1.384
+J_a2 = 0.132
+J_a3 = -0.538
+J_a4 = 0
+J_a5 = 0
 J_a6 = 0
 J_a = array([J_a1, J_a2, J_a3, J_a4, J_a5, J_a6])  # Vector of AR(p) coefficients
 

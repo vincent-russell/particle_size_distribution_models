@@ -18,6 +18,7 @@ from evolution_models.tools import Fuchs_Brownian
 # Setup:
 load_coagulation = True  # Set to True to load coagulation tensors
 coagulation_suffix = '0004_to_1_1_micro_metres'  # Suffix of saved coagulation tensors file
+discretise_with_diameter = True  # Set to True to uniformally discretise with diameter instead of volume
 
 # Spatial domain:
 Dp_min = 0.004  # Minimum diameter of particles (micro m)
@@ -50,10 +51,10 @@ N_gamma = Ne_gamma * Np_gamma  # Total degrees of freedom
 gamma_p = 1  # Order of VAR model
 
 # Nucleation AR(p) coefficients for model J_{t + 1} = a_1 J_t + ... + w_{J_t}:
-J_p = 6  # Order of AR model
+J_p = 1  # Order of AR model
 
 # Loop parameters:
-filename_BAE = 'state_iden_09_BAE'  # Filename for BAE mean and covariance
+filename_BAE = 'state_iden_09_BAE_new'  # Filename for BAE mean and covariance
 N_iterations = 1000  # Number of samples from prior to compute BAE
 
 # Coagulation model:

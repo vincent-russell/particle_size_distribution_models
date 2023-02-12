@@ -11,6 +11,7 @@ Date: June 27, 2022
 # Modules:
 import numpy as np
 import time as tm
+from matplotlib.colors import LogNorm
 from tkinter import mainloop
 from tqdm import tqdm
 
@@ -302,3 +303,109 @@ if __name__ == '__main__':
     # Final print statements
     basic_tools.print_lines()  # Print lines in console
     print()  # Print space in console
+
+
+    #######################################################
+    # Temporary Loading:
+    state_est_01_data = np.load('state_est_01_data.npz')
+    n_Dp_plot_est_01 = state_est_01_data['n_Dp_plot']
+    n_Dp_plot_upper_est_01 = state_est_01_data['n_Dp_plot_upper']
+    n_Dp_plot_lower_est_01 = state_est_01_data['n_Dp_plot_lower']
+
+
+    #######################################################
+    # Temporary Plotting:
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "DejaVu Sans",
+    })
+
+
+    # fig 1:
+    times = [23.9]
+    fig1 = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig1.add_subplot(111)
+    for plot_time in times:
+        # ax.plot(d_plot, n_Dp_plot[:, int(plot_time / dt)], '-', color='blue', linewidth=2, label='Mean Estimate')
+        # ax.plot(d_plot, n_Dp_plot_upper[:, int(plot_time / dt)], '--', color='blue', linewidth=2, label='$\pm 2\sigma$')
+        # ax.plot(d_plot, n_Dp_plot_lower[:, int(plot_time / dt)], '--', color='blue', linewidth=2)
+        ax.plot(d_plot, n_Dp_plot_est_01[:, int(plot_time / dt)], '-', color='blue', linewidth=2, label='Mean Estimate')
+        ax.plot(d_plot, n_Dp_plot_upper_est_01[:, int(plot_time / dt)], '--', color='blue', linewidth=2, label='$\pm 2\sigma$')
+        ax.plot(d_plot, n_Dp_plot_lower_est_01[:, int(plot_time / dt)], '--', color='blue', linewidth=2)
+        ax.plot(d_true, n_Dp_true[:, int(plot_time / dt)], '-', color='green', linewidth=2, label='Truth')
+    ax.set_xlim([5, 10])
+    ax.set_ylim([0, 10000])
+    ax.set_xscale(xscale)
+    ax.set_xlabel(xlabel, fontsize=14)
+    ax.set_ylabel(r'$\displaystyle\frac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$', fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.025)
+    ax.set_title('Size distribution estimate at $t = 24$ hours \n using nonlinear Euler model', fontsize=14)
+    ax.legend(fontsize=12, loc='upper left')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig1.savefig('fig1_euler_24')
+
+
+    # fig 3:
+    fig3, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    n_Dp_plot_est_06 = n_Dp_plot_est_01.clip(image_min, image_max)
+    im = plt.pcolor(time, d_plot, n_Dp_plot_est_06, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    cbar = fig3.colorbar(im, ticks=cbarticks, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks]
+    cbar.ax.set_yticklabels(tick_labels)
+    cbar.set_label(r'$\displaystyle\frac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('Size distribution estimate \n using nonlinear Euler model', fontsize=14)
+    ax.set_xlim([0, T])
+    ax.set_ylim([Dp_min, Dp_max])
+    ax.set_yscale('linear')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig3.savefig('image_euler')
+
+
+    # fig 4:
+    fig4, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    n_Dp_plot = n_Dp_plot.clip(image_min, image_max)
+    im = plt.pcolor(time, d_plot, n_Dp_plot, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    cbar = fig4.colorbar(im, ticks=cbarticks, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks]
+    cbar.ax.set_yticklabels(tick_labels)
+    cbar.set_label(r'$\displaystyle\frac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('Size distribution estimate \n using linearised Crank-Nicolson model', fontsize=14)
+    ax.set_xlim([0, T])
+    ax.set_ylim([Dp_min, Dp_max])
+    ax.set_yscale('linear')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig4.savefig('image_crank')
+
+
+    # fig 5:
+    fig5, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    n_Dp_true = n_Dp_true.clip(image_min, image_max)
+    im = plt.pcolor(time, d_true, n_Dp_true, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    cbar = fig5.colorbar(im, ticks=cbarticks, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks]
+    cbar.ax.set_yticklabels(tick_labels)
+    cbar.set_label(r'$\displaystyle\frac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('True size distribution', fontsize=14)
+    ax.set_xlim([0, T])
+    ax.set_ylim([Dp_min, Dp_max])
+    ax.set_yscale('linear')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig5.savefig('image_truth')

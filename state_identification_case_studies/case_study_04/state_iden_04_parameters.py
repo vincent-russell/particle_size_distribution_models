@@ -16,17 +16,20 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
+compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
+plot_norm_difference = False  # Set to True to plot norm difference between truth and estimates
 smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
 plot_animations = True  # Set to True to plot animations
 plot_nucleation = True  # Set to True to plot nucleation plot
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
-coagulation_suffix = '1_to_11_micro_metres'  # Suffix of saved coagulation tensors file
+coagulation_suffix = '1_to_10_micro_metres_diameter_true'  # Suffix of saved coagulation tensors file
+discretise_with_diameter = True  # Set to True to uniformally discretise with diameter instead of volume
 data_filename = 'observations_05_identity'  # Filename for data of simulated observations
 
 # Spatial domain:
 Dp_min = 1  # Minimum diameter of particles (micro m)
-Dp_max = 11  # Maximum diameter of particles (micro m)
+Dp_max = 10  # Maximum diameter of particles (micro m)
 vmin = diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
 vmax = diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
 
@@ -36,7 +39,7 @@ T = 24  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
 # Size distribution discretisation:
-Ne = 50  # Number of elements
+Ne = 10  # Number of elements
 Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 
@@ -91,7 +94,7 @@ sigma_eta_prior_4 = 0
 sigma_eta_prior_5 = 0
 sigma_eta_prior_6 = 0
 # Prior uncertainty for J (Nucleation rate):
-sigma_J_prior = 500
+sigma_J_prior = 100
 
 # Model noise parameters:
 # Observation noise covariance parameters:
@@ -107,9 +110,9 @@ sigma_alpha_w_5 = 0
 sigma_alpha_w_6 = 0
 sigma_alpha_w_correlation = 2
 # Evolution noise covariance Gamma_gamma_w = sigma_gamma_w^2 * I_N_gamma (Condensation rate):
-sigma_gamma_w_0 = sigma_gamma_prior_0 / 1000
-sigma_gamma_w_1 = sigma_gamma_prior_1 / 1000
-sigma_gamma_w_2 = sigma_gamma_prior_2 / 1000
+sigma_gamma_w_0 = sigma_gamma_prior_0 / 100
+sigma_gamma_w_1 = sigma_gamma_prior_1 / 100
+sigma_gamma_w_2 = sigma_gamma_prior_2 / 100
 sigma_gamma_w_3 = 0
 sigma_gamma_w_4 = 0
 sigma_gamma_w_5 = 0

@@ -20,10 +20,11 @@ plot_animations = True  # Set to True to plot animations
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 save_coagulation = False  # Set to True to save coagulation tensors
-coagulation_suffix = 'CSTAR'  # Suffix of saved coagulation tensors file
+coagulation_suffix = 'CSTAR_Dpmin_0008_diameter_true'  # Suffix of saved coagulation tensors file
+discretise_with_diameter = True  # Set to True to uniformally discretise with diameter instead of volume
 
 # Spatial domain:
-Dp_min = 0.0146  # Minimum diameter of particles (micro m)
+Dp_min = 0.008  # Minimum diameter of particles (micro m)
 Dp_max = 0.6612  # Maximum diameter of particles (micro m)
 vmin = diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
 vmax = diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
@@ -51,17 +52,17 @@ data_filename = 'observations_08'  # Filename for data of simulated observations
 # Initial condition n_0(x) = n(x, 0):
 N_0 = 53  # Amplitude of initial condition gaussian
 x_0 = log(diameter_to_volume(0.023))  # Mean of initial condition gaussian
-sigma_0 = 3.5  # Standard deviation of initial condition gaussian
+sigma_0 = 3.25  # Standard deviation of initial condition gaussian
 skewness = 3  # Skewness factor for initial condition gaussian
 def initial_condition(x):
     return skewed_gaussian(x, N_0, x_0, sigma_0, skewness)
 
 # Set to True for imposing boundary condition n(xmin, t) = 0:
-boundary_zero = False
+boundary_zero = True
 
 # Condensation model I_Dp(Dp, t):
-I_cst = 0.0005  # Condensation parameter constant
-I_linear = 0.01  # Condensation parameter linear
+I_cst = 0.001  # Condensation parameter constant
+I_linear = 0.02  # Condensation parameter linear
 def cond(Dp):
     return I_cst + I_linear * Dp
 

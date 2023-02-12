@@ -14,11 +14,11 @@ from evolution_models.tools import Fuchs_Brownian
 
 # Setup and plotting:
 smoothing = False  # Set to True to compute fixed interval Kalman smoother estimates
-plot_animations = True  # Set to True to plot animations
+plot_animations = False  # Set to True to plot animations
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 coagulation_suffix = '1_to_10_micro_metres'  # Suffix of saved coagulation tensors file
-data_filename = 'observations_02'  # Filename for data of simulated observations
+data_filename = 'observations_01'  # Filename for data of simulated observations
 
 # Spatial domain:
 Dp_min = 1  # Minimum diameter of particles (micro m)
@@ -27,7 +27,7 @@ vmin = diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
 vmax = diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
 
 # Time domain:
-dt = (1 / 60) * 5  # Time step (hours)
+dt = (1 / 60) * 2  # Time step (hours)
 T = 24  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
@@ -53,7 +53,7 @@ cpc_count_time = 1  # Counting time for CPC inlet flow (seconds)
 
 # Prior noise parameters:
 # Prior covariance for alpha; Gamma_alpha_prior = sigma_alpha_prior^2 * I_N (Size distribution):
-sigma_alpha_prior_0 = 5
+sigma_alpha_prior_0 = 25
 sigma_alpha_prior_1 = sigma_alpha_prior_0 / 2
 sigma_alpha_prior_2 = sigma_alpha_prior_1 / 4
 sigma_alpha_prior_3 = 0
@@ -66,9 +66,9 @@ sigma_alpha_prior_6 = 0
 sigma_v = 2000  # Additive noise
 sigma_Y_multiplier = 0  # Noise multiplier proportional to Y
 # Evolution noise covariance Gamma_alpha_w = sigma_alpha_w^2 * I_N (Size distribution):
-sigma_alpha_w_0 = sigma_alpha_prior_0
-sigma_alpha_w_1 = sigma_alpha_prior_1
-sigma_alpha_w_2 = sigma_alpha_prior_2
+sigma_alpha_w_0 = sigma_alpha_prior_0 / 5
+sigma_alpha_w_1 = sigma_alpha_prior_1 / 5
+sigma_alpha_w_2 = sigma_alpha_prior_2 / 5
 sigma_alpha_w_3 = 0
 sigma_alpha_w_4 = 0
 sigma_alpha_w_5 = 0

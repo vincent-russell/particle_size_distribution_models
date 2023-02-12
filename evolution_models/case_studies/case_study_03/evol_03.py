@@ -26,11 +26,12 @@ if __name__ == '__main__':
     # Parameters:
 
     # Setup and plotting:
-    plot_animations = True  # Set to True to plot animations
+    plot_animations = False  # Set to True to plot animations
     plot_images = False  # Set to True to plot images
-    load_coagulation = True  # Set to True to load coagulation tensors
-    save_coagulation = False  # Set to True to save coagulation tensors
-    coagulation_suffix = '1_to_10_micro_metres'  # Suffix of saved coagulation tensors file
+    load_coagulation = False  # Set to True to load coagulation tensors
+    save_coagulation = True  # Set to True to save coagulation tensors
+    coagulation_suffix = '1_to_10_micro_metres_diameter_true'  # Suffix of saved coagulation tensors file
+    discretise_with_diameter = True  # Set to True to uniformally discretise with diameter instead of volume
 
     # Spatial domain:
     Dp_min = 1  # Minimum diameter of particles (micro m)
@@ -89,7 +90,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing evolution model:
-    F = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero)  # Initialising evolution model
+    F = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero, discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
     F.add_process('condensation', cond)  # Adding condensation to evolution model
     F.add_process('deposition', depo)  # Adding deposition to evolution model
     F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model

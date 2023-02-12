@@ -1,6 +1,6 @@
 """
 
-Title: Estimating VAR(2) coefficients from simulated data (in R^2)
+Title: Estimating VAR(2) coefficients from simulated data (in R^N)
 Author: Vincent Russell
 Date: August 10, 2021
 
@@ -25,21 +25,41 @@ if __name__ == '__main__':
     # Parameters:
     N = 2  # Dimension of state (x_t in R^N)
     Np = 2  # Order of model, i.e. AR(Np)
-    NT = 300  # Total number of time steps
-    x_0 = np.array([0, 0])  # Initial state (in R^2)
-    sigma_e = np.array([1, 100])  # Standard deviation (in R^2)
+    NT = 100000  # Total number of time steps
+    sigma_e = np.array([1, 1])  # Standard deviation (in R^2)
 
-    # Matrix A1 elements:
-    a1_11 = 0.3
-    a1_12 = 0.2
-    a1_21 = 0.3
-    a1_22 = 0.2
+    # Case 1:
+    # Matrix A1:
+    A1 = np.array([[0.3999, 0.1], [0.3, 0.2]])
 
-    # Matrix A2 elements:
-    a2_11 = 0.2
-    a2_12 = 0.3
-    a2_21 = 0.2
-    a2_22 = 0.3
+    # Matrix A2:
+    A2 = np.array([[0.0999, 0.4], [0.2, 0.3]])
+
+    # List of coefficient matrices:
+    A_list = [A1, A2]
+
+    # Case 2:
+    # # Matrix A1:
+    # A1 = np.array([[0.3, 0.2, 0.1], [0.25, 0.15, 0.05], [0.12, 0.08, 0.06]])
+    #
+    # # Matrix A2:
+    # A2 = np.array([[0.12, 0.08, 0.06], [0.25, 0.15, 0.05], [0.3, 0.2, 0.1]])
+    #
+    # # List of coefficient matrices:
+    # A_list = [A1, A2]
+    #
+    # Case 3:
+    # Matrix A1:
+    # A1 = np.array([[0.25, 0.2, 0.1], [0.25, 0.15, 0.05], [0.12, 0.08, 0.06]])
+    #
+    # # Matrix A2:
+    # A2 = np.array([[0.12, 0.08, 0.06], [0.25, 0.15, 0.05], [0.3, 0.2, 0.1]])
+    #
+    # # Matrix A3:
+    # A3 = np.array([[0.05, 0.05, 0.025], [0.05, 0.02, 0.075], [0.02, 0.08, 0.06]])
+    #
+    # List of coefficient matrices:
+    # A_list = [A1, A2, A3]
 
 
     #######################################################
@@ -50,13 +70,12 @@ if __name__ == '__main__':
 
     #######################################################
     # Creating matrix A:
-    print('Constructing matrices A1, A2, and matrix A...')
-    A1 = np.array([[a1_11, a1_12], [a1_21, a1_22]])
-    A2 = np.array([[a2_11, a2_12], [a2_21, a2_22]])
-    A = np.zeros([4, 4])
-    A[0: 2, 0: 2] = A1
-    A[0: 2, 2: 4] = A2
-    A[2: 4, 0: 2] = np.eye(2)
+    print('Constructing matrix A...')
+    A = np.zeros([Np * N, Np * N])  # Initialising
+    for p in range(Np - 1):
+        A[0: N, N * p: N * (p + 1)] = A_list[p]
+        A[N * (p + 1): N * (p + 2), N * p: N * (p + 1)] = np.eye(N)
+    A[0: N, N * (Np - 1): N * Np] = A_list[-1]  # Adding last
 
 
     #######################################################
@@ -74,31 +93,33 @@ if __name__ == '__main__':
     #######################################################
     # Simulating time series x_t for t = 0, 1, ..., NT - 1:
     print('Simulating time series...')
-    x_simulated = np.zeros([2, NT])  # Initialising
-    e_simulated = np.zeros(2)  # Initialising
-    x_simulated[0: 2, 0] = x_0  # Adding initial state
+    x_simulated = np.zeros([N, NT])  # Initialising
+    e_simulated = np.zeros(N)  # Initialising
     for t in tqdm(range(1, NT - 1)):
-        e_simulated[0: 2] = np.random.normal(scale=sigma_e)
-        x_simulated[:, t + 1] = np.matmul(A1, x_simulated[:, t]) + np.matmul(A2, x_simulated[:, t - 1]) + e_simulated
+        e_simulated[0: N] = np.random.normal(scale=sigma_e)  # Draw from normal distribution
+        x_sum = np.zeros(N)  # Initialising
+        for p in range(Np):
+            x_sum += np.matmul(A_list[p], x_simulated[:, t - p])
+        x_simulated[:, t + 1] = x_sum + e_simulated
 
 
     #######################################################
     # Constructing matrix Phi such that y = Phi * x, where x = [a1_11, a1_12, a1_21, a1_22, a2_11, a2_12, a2_21, a2_22]:
     print('Constructing matrix Phi...')
-    Phi = np.zeros([N * (NT - 3), (N ** 2) * Np])  # Initialising
-    for k in range(NT - 3):
+    Phi = np.zeros([N * (NT - Np), (N * N) * Np])  # Initialising
+    for k in range(NT - Np):
         for p in range(Np):
-            index = (k + 2) - p
-            Phi[2 * k, N * p + N * p: N * (p + 1) + N * p] = x_simulated[:, index]
-            Phi[2 * k + 1, N * p + N * (p + 1): N * (p + 1) + N * (p + 1)] = x_simulated[:, index]
+            index = (k + (Np - 1)) - p
+            for i in range(N):
+                Phi[N * k + i, i * N + N * N * p: i * N + N * N * p + N] = x_simulated[:, index]
 
 
     #######################################################
     # Constructing vector y such that y = Phi * x:
     print('Constructing vector y...')
-    y = np.zeros([N * (NT - 3)])
-    for k in range(NT - 3):
-        y[k * N: (k + 1) * N] = x_simulated[:, k + 3]
+    y = np.zeros([N * (NT - Np)])
+    for k in range(NT - Np):
+        y[k * N: (k + 1) * N] = x_simulated[:, k + Np]
 
 
     #######################################################
@@ -108,8 +129,9 @@ if __name__ == '__main__':
     inv_Phi_T_Phi = np.linalg.inv(np.matmul(Phi_T, Phi))
     Phi_T_y = np.matmul(Phi_T, y)
     A_estimate = np.matmul(inv_Phi_T_Phi, Phi_T_y)
-    A1_estimate = A_estimate.reshape(2, 2, 2)[0]
-    A2_estimate = A_estimate.reshape(2, 2, 2)[1]
+    A_estimate_list = list()
+    for p in range(Np):
+        A_estimate_list.append(A_estimate.reshape(Np, N, N)[p])
 
 
     #######################################################
@@ -121,8 +143,8 @@ if __name__ == '__main__':
 
     #######################################################
     # Printing results:
-    print('A1:         ', A1.reshape(1, 4)), print('A1 estimate:', A1_estimate.reshape(1, 4))
-    print('A2:         ', A2.reshape(1, 4)), print('A2 estimate:', A2_estimate.reshape(1, 4))
+    for p in range(Np):
+        print('A' + str(p + 1) +':         ', A_list[p].reshape(1, N * N)), print('A' + str(p + 1) + ' estimate:', A_estimate_list[p].reshape(1, N * N))
     basic_tools.print_lines()
 
 

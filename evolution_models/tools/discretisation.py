@@ -34,13 +34,14 @@ def get_discretisation(Ne, Np, xmin, xmax):
 # Compute plotting discretisation:
 def get_plotting_discretisation(alpha, Gamma_alpha, x_boundaries, h, phi, N, Ne, Np, scale_type, **kwargs):
     # Parameters:
+    time_varying = get_kwarg_value(kwargs, 'time_varying', True)  # Check if time varying
     return_Gamma = get_kwarg_value(kwargs, 'return_Gamma', False)  # Set to True to return Gamma matrix (covariance matrix)
     x_plot = get_kwarg_value(kwargs, 'x_plot', None)  # Return custom discretisation
     # x_plot computation:
     if x_plot is None:
         x_plot = np.zeros(N)  # Initialising
-        h_normalised = h / (Np + 1)  # Step size divided by order size
         for ell in range(Ne):  # Iterating over elements
+            h_normalised = h[ell] / (Np + 1)  # Step size divided by order size
             for j in range(Np):  # Iterating over degrees
                 i = j + ell * Np  # Getting total
                 x_plot[i] = x_boundaries[ell] + (j + 1) * h_normalised  # Computing points within element
@@ -56,9 +57,9 @@ def get_plotting_discretisation(alpha, Gamma_alpha, x_boundaries, h, phi, N, Ne,
     # Computing size distribution basis:
     Gamma_n, sigma_n = None, None  # Initialising
     if return_Gamma:
-        n_plot, Gamma_n = change_basis_operator(alpha, Gamma_alpha, phi_matrix, time_varying=True)
+        n_plot, Gamma_n = change_basis_operator(alpha, Gamma_alpha, phi_matrix, time_varying=time_varying)
     else:
-        n_plot, sigma_n = change_basis_operator(alpha, Gamma_alpha, phi_matrix, time_varying=True, return_sigma=True)
+        n_plot, sigma_n = change_basis_operator(alpha, Gamma_alpha, phi_matrix, time_varying=time_varying, return_sigma=True)
     # Volume transformation if in log-scale (nm^3):
     if scale_type == 'log':
         v_plot = np.exp(x_plot)
@@ -100,7 +101,7 @@ def change_basis_operator(x, Gamma_x, A, **kwargs):
         y = np.matmul(A, x)  # Computing y
         Gamma_y = np.matmul(A, np.matmul(Gamma_x, AT))  # Computing Gamma_y
         if return_sigma:
-            sigma_y = np.sqrt(Gamma_y)  # Computing sigma_y
+            sigma_y = np.sqrt(np.diag(Gamma_y))  # Computing sigma_y
             return y, sigma_y
         else:
             return y, Gamma_y

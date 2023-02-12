@@ -19,9 +19,9 @@ from evolution_models.tools import Fuchs_Brownian
 use_BAE = True  # Set to True to use BAE
 filename_BAE = 'state_est_12_BAE'  # Filename for BAE mean and covariance
 compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
-plot_norm_difference = True  # Set to True to plot norm difference between truth and estimates
+plot_norm_difference = False  # Set to True to plot norm difference between truth and estimates
 smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
-plot_animations = True  # Set to True to plot animations
+plot_animations = False  # Set to True to plot animations
 plot_nucleation = False  # Set to True to plot nucleation plot
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
@@ -42,8 +42,8 @@ T = 48  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
 # Size distribution discretisation:
-Ne = 25  # Number of elements
-Np = 1  # Np - 1 = degree of Legendre polynomial approximation in each element
+Ne = 10  # Number of elements
+Np = 2  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 
 # DMPS observation parameters:
@@ -63,7 +63,7 @@ cpc_count_time = 2  # Counting time for CPC inlet flow (seconds)
 
 # Prior noise parameters:
 # Prior covariance for alpha; Gamma_alpha_prior = sigma_alpha_prior^2 * I_N (Size distribution):
-sigma_alpha_prior_0 = 25
+sigma_alpha_prior_0 = 50
 sigma_alpha_prior_1 = sigma_alpha_prior_0 / 2
 sigma_alpha_prior_2 = sigma_alpha_prior_1 / 4
 sigma_alpha_prior_3 = 0
@@ -73,7 +73,7 @@ sigma_alpha_prior_6 = 0
 
 # Model noise parameters:
 # Observation noise covariance parameters:
-sigma_v = 50  # Additive noise
+sigma_v = 100  # Additive noise
 sigma_Y_multiplier = 0  # Noise multiplier proportional to Y
 # Evolution noise covariance Gamma_alpha_w = sigma_alpha_w^2 * I_N (Size distribution):
 sigma_alpha_w_0 = sigma_alpha_prior_0
@@ -103,14 +103,14 @@ def guess_cond(Dp):
     return I_cst_guess + I_linear_guess * Dp
 
 # Guess of the deposition rate d(Dp):
-d_cst_guess = 0.2  # Deposition parameter constant
+d_cst_guess = 0.3  # Deposition parameter constant
 d_linear_guess = 0 # Deposition parameter linear
 d_inverse_quadratic_guess = 0  # Deposition parameter inverse quadratic
 def guess_depo(Dp):
     return d_cst_guess + d_linear_guess * Dp + d_inverse_quadratic_guess * (1 / Dp ** 2)
 
 # Guess of the source (nucleation event) model:
-N_s_guess = 2e3  # Amplitude of gaussian nucleation event
+N_s_guess = 0e3  # Amplitude of gaussian nucleation event
 t_s_guess = 7  # Mean time of gaussian nucleation event
 sigma_s_guess = 1.25  # Standard deviation time of gaussian nucleation event
 def guess_sorc(t):  # Source (nucleation) at xmin

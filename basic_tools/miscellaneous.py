@@ -6,6 +6,7 @@ Miscellaneous functions
 #######################################################
 # Modules:
 import numpy as np
+from math import log10, floor
 from scipy.special import erf
 
 
@@ -127,3 +128,9 @@ def volume_to_diameter(v):
 # Returns values of volume to diameter of a sphere:
 def diameter_to_volume(d):
     return np.dot((np.pi / 6), (d ** 3))
+
+
+#######################################################
+# Rounds number x to given significant figures sf:
+def round_sf(x, sf):
+    return round(x, sf - int(floor(log10(abs(x)))) - 1)

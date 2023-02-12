@@ -11,12 +11,14 @@ Date: June 27, 2022
 # Modules:
 import numpy as np
 import time as tm
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 from tkinter import mainloop
 from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
+from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother, compute_norm_difference
 from observation_models.data.simulated import load_observations
 from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, change_basis_volume_to_diameter
 from observation_models.tools import get_DMA_transfer_function, compute_alpha_to_z_operator, Size_distribution_observation_model
@@ -45,10 +47,10 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing size distribution evolution model:
-    F_alpha = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero)  # Initialising evolution model
+    F_alpha = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero, discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
     F_alpha.add_process('condensation', guess_cond)  # Adding condensation to evolution model
     F_alpha.add_process('deposition', guess_depo)  # Adding deposition to evolution model
-    # F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
+    F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F_alpha.compile()  # Compiling evolution model
 
 
@@ -209,6 +211,14 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Computing norm difference between truth and estimates:
+    # Size distribution:
+    v_true = basic_tools.diameter_to_volume(d_true)
+    _, _, n_v_estimate, sigma_n_v = F_alpha.get_nplot_discretisation(alpha, Gamma_alpha=Gamma_alpha, x_plot=v_true)  # Computing estimate on true discretisation
+    norm_diff = compute_norm_difference(n_v_true, n_v_estimate, sigma_n_v, compute_weighted_norm=compute_weighted_norm)  # Computing norm difference
+
+
+    #######################################################
     # Printing total computation time:
     computation_time = round(tm.time() - initial_time, 3)  # Initial time stamp
     print('Total computation time:', str(computation_time), 'seconds.')  # Print statement
@@ -275,6 +285,23 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Plotting norm difference between truth and estimates:
+    if plot_norm_difference:
+        print('Plotting norm difference between truth and estimates...')
+        plt.figure()
+        plt.plot(t, norm_diff)
+        plt.xlim([0, T])
+        plt.ylim([0, np.max(norm_diff)])
+        plt.xlabel('$t$', fontsize=15)
+        plt.ylabel(r'||$n_{est}(x, t) - n_{true}(x, t)$||$_W$', fontsize=14)
+        plt.grid()
+        plot_title = 'norm difference between truth and mean estimate'
+        if compute_weighted_norm:
+            plot_title = 'Weighted ' + plot_title
+        plt.title(plot_title, fontsize=12)
+
+
+    #######################################################
     # Images:
 
     # Parameters for size distribution images:
@@ -302,3 +329,166 @@ if __name__ == '__main__':
     # Final print statements
     basic_tools.print_lines()  # Print lines in console
     print()  # Print space in console
+
+
+    #######################################################
+    # Temporary Loading:
+    state_est_06_data = np.load('state_est_06_data.npz')
+    n_Dp_plot_est_06 = state_est_06_data['n_Dp_plot']
+    n_Dp_plot_upper_est_06 = state_est_06_data['n_Dp_plot_upper']
+    n_Dp_plot_lower_est_06 = state_est_06_data['n_Dp_plot_lower']
+    norm_diff_est_06 = state_est_06_data['norm_diff']
+
+
+    #######################################################
+    # Temporary Plotting:
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "DejaVu Sans",
+    })
+
+
+    # fig 1:
+    times = [48]
+    fig1 = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig1.add_subplot(111)
+    for plot_time in times:
+        ax.plot(d_plot, n_Dp_plot[:, int(plot_time / dt)], '-', color='blue', linewidth=2, label='Mean Estimate')
+        ax.plot(d_plot, n_Dp_plot_upper[:, int(plot_time / dt)], '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+        ax.plot(d_plot, n_Dp_plot_lower[:, int(plot_time / dt)], '--', color='blue', linewidth=2)
+        # ax.plot(d_plot, n_Dp_plot_est_06[:, int(plot_time / dt)], '-', color='blue', linewidth=2, label='Mean Estimate')
+        # ax.plot(d_plot, n_Dp_plot_upper_est_06[:, int(plot_time / dt)], '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+        # ax.plot(d_plot, n_Dp_plot_lower_est_06[:, int(plot_time / dt)], '--', color='blue', linewidth=2)
+        ax.plot(d_true, n_Dp_true[:, int(plot_time / dt)], '-', color='green', linewidth=2, label='Truth')
+    # ax.text(0.31, 0.73, 't = 0', fontsize=11, transform=ax.transAxes)
+    # ax.text(0.62, 0.52, 't = 12', fontsize=11, transform=ax.transAxes)
+    ax.set_xlim([Dp_min, Dp_max])
+    ax.set_ylim([0, 3000])
+    ax.set_xscale(xscale)
+    ax.set_xlabel(xlabel, fontsize=14)
+    ax.set_ylabel(r'$\displaystyle\frac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$', fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.1, 1.025)
+    ax.set_title('Size distribution estimate using \n fixed interval Kalman smoother at $t = 48$ hours', fontsize=14)
+    ax.legend(fontsize=12, loc='upper left')
+    plt.tight_layout()
+    fig1.savefig('fig1_size_smooth')
+
+
+    # fig 1; condensation rate guess:
+    fig1_cond = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig1_cond.add_subplot(111)
+    ax.plot(d_plot, cond_Dp_guess_plot[:, 0], '-', color='blue', linewidth=2, label='Guess')
+    ax.plot(d_plot, cond_Dp_truth_plot[:, 0], '-', color='green', linewidth=2, label='Truth')
+    ax.set_xlim(xlimits)
+    ax.set_ylim([0, 0.25])
+    ax.set_xscale(xscale)
+    ax.set_xlabel(xlabel_cond, fontsize=14)
+    ax.set_ylabel(r'$I(D_p)$ ($\mu$m hour$^{-1}$)', fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.025)
+    ax.set_title('Condensation rate', fontsize=14)
+    ax.legend(fontsize=12, loc='upper right')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig1_cond.savefig('fig1_cond_guess')
+
+
+    # fig 1; deposition rate guess:
+    fig1_cond = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig1_cond.add_subplot(111)
+    ax.plot(d_plot, depo_guess_plot[:, 0], '-', color='blue', linewidth=2, label='Guess')
+    ax.plot(d_plot, depo_truth_plot[:, 0], '-', color='green', linewidth=2, label='Truth')
+    ax.set_xlim(xlimits)
+    ax.set_ylim([0, 0.07])
+    ax.set_xscale(xscale)
+    ax.set_xlabel(xlabel_depo, fontsize=14)
+    ax.set_ylabel(r'$d(D_p)$ (hour$^{-1}$)', fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.025)
+    ax.set_title('Deposition rate', fontsize=14)
+    ax.legend(fontsize=12, loc='upper right')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig1_cond.savefig('fig1_depo_guess')
+
+
+    # fig 2:
+    fig2 = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig2.add_subplot(111)
+    ax.plot(t, norm_diff_est_06, '-', color='blue', linewidth=2, label='Kalman filter')
+    ax.plot(t, norm_diff, '-', color='chocolate', linewidth=2, label='Fixed interval Kalman smoother')
+    ax.set_xlim([0, T])
+    ax.set_ylim([0, 14])
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(r'$||n_{est} - n_{truth}||$', fontsize=15, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('Mahalanobis norm between mean estimate and truth', fontsize=14)
+    ax.legend(fontsize=12, loc='upper right')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig2.savefig('fig2')
+
+
+    # fig 3:
+    fig3, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    n_Dp_plot_est_06 = n_Dp_plot_est_06.clip(image_min, image_max)
+    im = plt.pcolor(time, d_plot, n_Dp_plot_est_06, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    cbar = fig3.colorbar(im, ticks=cbarticks, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks]
+    cbar.ax.set_yticklabels(tick_labels)
+    cbar.set_label(r'$\displaystyle\frac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('Size distribution estimate using \n Kalman filter', fontsize=14)
+    ax.set_xlim([0, T])
+    ax.set_ylim([Dp_min, Dp_max])
+    ax.set_yscale('linear')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig3.savefig('image_filter')
+
+
+    # fig 4:
+    fig4, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    n_Dp_plot = n_Dp_plot.clip(image_min, image_max)
+    im = plt.pcolor(time, d_plot, n_Dp_plot, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    cbar = fig4.colorbar(im, ticks=cbarticks, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks]
+    cbar.ax.set_yticklabels(tick_labels)
+    cbar.set_label(r'$\displaystyle\frac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('Size distribution estimate using \n fixed interval Kalman smoother', fontsize=14)
+    ax.set_xlim([0, T])
+    ax.set_ylim([Dp_min, Dp_max])
+    ax.set_yscale('linear')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig4.savefig('image_smooth')
+
+
+    # fig 5:
+    fig5, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    n_Dp_true = n_Dp_true.clip(image_min, image_max)
+    im = plt.pcolor(time, d_true, n_Dp_true, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    cbar = fig5.colorbar(im, ticks=cbarticks, orientation='vertical')
+    tick_labels = [str(tick) for tick in cbarticks]
+    cbar.ax.set_yticklabels(tick_labels)
+    cbar.set_label(r'$\displaystyle\frac{dN}{dD_p}$ $(\mu$m$^{-1}$cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('True size distribution', fontsize=14)
+    ax.set_xlim([0, T])
+    ax.set_ylim([Dp_min, Dp_max])
+    ax.set_yscale('linear')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig5.savefig('image_truth')

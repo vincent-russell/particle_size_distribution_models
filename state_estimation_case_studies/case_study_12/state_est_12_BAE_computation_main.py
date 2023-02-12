@@ -119,7 +119,7 @@ if __name__ == '__main__':
 
         # True underlying condensation model I_Dp(Dp, t):
         I_cst = random.uniform(0.001, 0.003)  # Condensation parameter constant
-        I_linear = random.uniform(0, 0.1)  # Condensation parameter linear
+        I_linear = random.uniform(0, 0.12)  # Condensation parameter linear
         def cond(Dp):
             return I_cst + I_linear * Dp
 

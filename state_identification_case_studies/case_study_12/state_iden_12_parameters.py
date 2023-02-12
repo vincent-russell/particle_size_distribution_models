@@ -19,12 +19,13 @@ from evolution_models.tools import Fuchs_Brownian
 use_BAE = True  # Set to True to use BAE
 filename_BAE = 'state_iden_12_BAE'  # Filename for BAE mean and covariance
 compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
-plot_norm_difference = True  # Set to True to plot norm difference between truth and estimates
+plot_norm_difference = False  # Set to True to plot norm difference between truth and estimates
 smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
-plot_animations = True  # Set to True to plot animations
+plot_animations = False  # Set to True to plot animations
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 coagulation_suffix = '01_to_11_micro_metres'  # Suffix of saved coagulation tensors file
+discretise_with_diameter = False  # Set to True to uniformally discretise with diameter instead of volume
 data_filename = 'observations_07'  # Filename for data of simulated observations
 
 # Spatial domain:

@@ -37,8 +37,8 @@ Ne = 50  # Number of elements
 Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 # Size discretisation for reduced model:
-Ne_r = 25  # Number of elements (needs to be a multiple of Ne)
-Np_r = 1  # Np - 1 = degree of Legendre polynomial approximation in each element
+Ne_r = 10  # Number of elements (needs to be a multiple of Ne)
+Np_r = 2  # Np - 1 = degree of Legendre polynomial approximation in each element
 N_r = Ne_r * Np_r  # Total degrees of freedom
 
 # Loop parameters:
@@ -76,14 +76,14 @@ def guess_cond(Dp):
     return I_cst_guess + I_linear_guess * Dp
 
 # Guess of the deposition rate d(Dp):
-d_cst_guess = 0.2  # Deposition parameter constant
+d_cst_guess = 0.3  # Deposition parameter constant
 d_linear_guess = 0  # Deposition parameter linear
 d_inverse_quadratic_guess = 0  # Deposition parameter inverse quadratic
 def guess_depo(Dp):
     return d_cst_guess + d_linear_guess * Dp + d_inverse_quadratic_guess * (1 / Dp ** 2)
 
 # Guess of the source (nucleation event) model:
-N_s_guess = 2e3  # Amplitude of gaussian nucleation event
+N_s_guess = 0e3  # Amplitude of gaussian nucleation event
 t_s_guess = 7  # Mean time of gaussian nucleation event
 sigma_s_guess = 1.25  # Standard deviation time of gaussian nucleation event
 def guess_sorc(t):  # Source (nucleation) at xmin

@@ -33,6 +33,7 @@ if __name__ == '__main__':
     load_coagulation = True  # Set to True to load coagulation tensors
     save_coagulation = False  # Set to True to save coagulation tensors
     coagulation_suffix = '1_to_10_micro_metres'  # Suffix of saved coagulation tensors file
+    discretise_with_diameter = True  # Set to True to uniformally discretise with diameter instead of volume
 
     # Spatial domain:
     Dp_min = 1  # Minimum diameter of particles (micro m)
@@ -46,7 +47,7 @@ if __name__ == '__main__':
     NT = int(T / dt)  # Total number of time steps
 
     # Size distribution discretisation:
-    Ne = 50  # Number of elements
+    Ne = 9 * 6  # Number of elements
     Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
     N = Ne * Np  # Total degrees of freedom
 
@@ -95,7 +96,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing evolution model:
-    F = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero)  # Initialising evolution model
+    F = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero, discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
     F.add_process('condensation', cond)  # Adding condensation to evolution model
     F.add_process('deposition', depo)  # Adding deposition to evolution model
     F.add_process('source', sorc)  # Adding source to evolution model

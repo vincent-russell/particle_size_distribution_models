@@ -11,12 +11,13 @@ Date: June 27, 2022
 # Modules:
 import numpy as np
 import time as tm
+import matplotlib.pyplot as plt
 from tkinter import mainloop
 from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
+from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother, compute_norm_difference
 from observation_models.data.simulated import load_observations
 from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, compute_U, change_basis_x_to_logDp
 from observation_models.tools import get_DMA_transfer_function, compute_alpha_to_z_operator, Size_distribution_observation_model
@@ -45,7 +46,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing size distribution evolution model:
-    F_alpha = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
+    F_alpha = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
     F_alpha.add_process('condensation', guess_cond)  # Adding condensation to evolution model
     F_alpha.add_unknown('deposition', Ne_eta, Np_eta)  # Adding deposition as unknown to evolution model
     # F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
@@ -339,6 +340,18 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Computing norm difference between truth and estimates:
+
+    # Size distribution:
+    x_true = np.log(basic_tools.diameter_to_volume(d_true))
+    _, _, n_x_estimate, sigma_n_x = F_alpha.get_nplot_discretisation(alpha, Gamma_alpha=Gamma_alpha, x_plot=x_true)  # Computing estimate on true discretisation
+    norm_diff = compute_norm_difference(n_x_true, n_x_estimate, sigma_n_x, compute_weighted_norm=compute_weighted_norm, print_name='size distribution')  # Computing norm difference
+
+    # Deposition rate:
+    norm_diff_depo = compute_norm_difference(depo_true_plot, depo_plot, sigma_depo, compute_weighted_norm=compute_weighted_norm, print_name='deposition rate')  # Computing norm difference
+
+
+    #######################################################
     # Printing total computation time:
     computation_time = round(tm.time() - initial_time, 3)  # Initial time stamp
     print('Total computation time:', str(computation_time), 'seconds.')  # Print statement
@@ -408,6 +421,38 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Plotting norm difference between truth and estimates:
+    if plot_norm_difference:
+        print('Plotting norm difference between truth and estimates...')
+
+        # Size distribution:
+        plt.figure()
+        plt.plot(t, norm_diff)
+        plt.xlim([0, T])
+        plt.ylim([np.min(norm_diff), np.max(norm_diff)])
+        plt.xlabel('$t$', fontsize=15)
+        plt.ylabel(r'||$n_{est}(x, t) - n_{true}(x, t)$||$_W$', fontsize=14)
+        plt.grid()
+        plot_title = 'norm difference of size distribution estimate and truth'
+        if compute_weighted_norm:
+            plot_title = 'Weighted ' + plot_title
+        plt.title(plot_title, fontsize=11)
+
+        # Deposition rate:
+        plt.figure()
+        plt.plot(t, norm_diff_depo)
+        plt.xlim([0, T])
+        plt.ylim([np.min(norm_diff_depo), np.max(norm_diff_depo)])
+        plt.xlabel('$t$', fontsize=15)
+        plt.ylabel(r'||$I_{est}(x, t) - I_{true}(x, t)$||$_W$', fontsize=14)
+        plt.grid()
+        plot_title = 'norm difference of condensation rate estimate and truth'
+        if compute_weighted_norm:
+            plot_title = 'Weighted ' + plot_title
+        plt.title(plot_title, fontsize=11)
+
+
+    #######################################################
     # Images:
 
     # Parameters for size distribution images:
@@ -436,3 +481,17 @@ if __name__ == '__main__':
     # Final print statements
     basic_tools.print_lines()  # Print lines in console
     print()  # Print space in console
+
+
+    #######################################################
+    # Temporary saving:
+    np.savez('state_iden_11_data',
+             n_logDp_plot=n_logDp_plot,
+             n_logDp_plot_upper=n_logDp_plot_upper,
+             n_logDp_plot_lower=n_logDp_plot_lower,
+             depo_plot=depo_plot,
+             depo_plot_upper=depo_plot_upper,
+             depo_plot_lower=depo_plot_lower,
+             norm_diff=norm_diff,
+             norm_diff_depo=norm_diff_depo)
+

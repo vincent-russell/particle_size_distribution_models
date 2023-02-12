@@ -12,6 +12,7 @@ Date: June 22, 2022
 import numpy as np
 import time as tm
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 from tkinter import mainloop
 from tqdm import tqdm
 
@@ -36,7 +37,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing evolution model:
-    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
+    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
     F.add_process('condensation', cond)  # Adding condensation to evolution model
     F.add_process('deposition', depo)  # Adding deposition to evolution model
     F.add_process('source', sorc)  # Adding source to evolution model
@@ -103,8 +104,9 @@ if __name__ == '__main__':
         _, _, n_x_obs, _ = F.get_nplot_discretisation(alpha, x_plot=x_obs)  # Computing plotting discretisation
         n_logDp_obs = change_basis_x_to_logDp(n_x_obs, v_obs, d_obs)  # Computing log_10(D_p)-based size distribution
         Y = (1 / sample_volume) * basic_tools.get_poisson(sample_volume * n_logDp_obs)  # Drawing observations from Poisson distribution
-        Y += np.random.normal(additive_noise_mean, additive_noise_sigma, [M, NT])  # Adding random noise
-        Y[Y < 0] = 0  # Setting negative values to zero
+
+    Y += np.random.normal(additive_noise_mean, additive_noise_sigma, [N_channels, NT])  # Adding random noise
+    Y[Y < 0] = 0  # Setting negative values to zero
 
 
     #######################################################
@@ -221,21 +223,29 @@ if __name__ == '__main__':
     #######################################################
     # Plotting DMA transfer functions
     if plot_dma_transfer_functions:
-        N_plot = 1000
+
+        import matplotlib.pyplot as plt
+
+        plt.rcParams.update({
+            "text.usetex": True,
+            "font.family": "DejaVu Sans",
+        })
+
+        N_plot = 10000
+        efficiency = 1
         DMA_transfer_function = get_DMA_transfer_function(R_inner, R_outer, length, Q_aerosol, Q_sheath, efficiency)  # Computes DMA transfer function
         N_voltages_plot = N_channels
         Dp = np.linspace(Dp_min, Dp_max, N_plot)
         voltage_plot = np.exp(np.linspace(np.log(voltage_min), np.log(voltage_max), N_voltages_plot))
-        fig = plt.figure()
         # Setting axis variables:
-        ax = fig.add_subplot(111)  # Creating subplot in figure
+        fig, ax = plt.subplots(figsize=(8, 4), dpi=200)
         ax.set_xlim(xlimits)  # Sets limits in x-axis
         ax.set_ylim([0, efficiency])  # Sets limits in y-axis
         ax.set_xscale(xscale)  # Sets x-axis to log or linear
         ax.set_xlabel(xlabel, fontsize=14)  # Adds xlabel
         ax.set_ylabel('$k_j(D_p)$', fontsize=14, rotation=0)  # Adds ylabel
         ax.yaxis.set_label_coords(-0.08, 1.02)
-        ax.set_title('DMA Transfer Functions for channels $j = 1, \dots, M$', fontsize=14)  # Adds title
+        ax.set_title('DMA transfer functions for channels $j = 1, 2, \dots, 20$', fontsize=14)  # Adds title
         plt.setp(ax, xticks=xticks, xticklabels=xticks)  # Modifies x-tick labels
         ax.grid()  # Adds a grid to the figure
         for j in range(N_voltages_plot):
@@ -274,3 +284,37 @@ if __name__ == '__main__':
     # Final print statements
     basic_tools.print_lines()  # Print lines in console
     print()  # Print space in console
+
+
+    #######################################################
+    # Temporary Plotting:
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "DejaVu Sans",
+    })
+
+    # Parameters:
+    image_min_obs = 1
+    image_max_obs = 500
+    cbarticks = [1, 10, 100, 500]
+
+    # # # fig image:
+    # fig, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    # Y = Y.clip(image_min_obs, image_max_obs)
+    # im = plt.pcolor(time, channels, Y, cmap=cmap, vmin=image_min_obs, vmax=image_max_obs, norm=LogNorm())
+    # cbar = fig.colorbar(im, ticks=cbarticks, orientation='vertical')
+    # tick_labels = [str(tick) for tick in cbarticks]
+    # cbar.ax.set_yticklabels(tick_labels)
+    # cbar.set_label('Counts per litre', fontsize=12, rotation=0, y=1.1, labelpad=-30)
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel('Channel', fontsize=14, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('Simulated observations', fontsize=14)
+    # ax.set_xlim([0, T])
+    # ax.set_ylim([1, N_channels])
+    # ax.set_yscale('linear')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig.savefig('image_observations')

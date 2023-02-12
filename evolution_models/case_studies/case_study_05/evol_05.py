@@ -26,7 +26,7 @@ if __name__ == '__main__':
     # Parameters:
 
     # Setup and plotting:
-    plot_animations = True  # Set to True to plot animations
+    plot_animations = False  # Set to True to plot animations
     plot_images = False  # Set to True to plot images
     load_coagulation = True  # Set to True to load coagulation tensors
     save_coagulation = False  # Set to True to save coagulation tensors
@@ -85,6 +85,42 @@ if __name__ == '__main__':
         Dp_x = basic_tools.volume_to_diameter(v_x)  # Diameter of particle x (micro m)
         Dp_y = basic_tools.volume_to_diameter(v_y)  # Diameter of particle y (micro m)
         return Fuchs_Brownian(Dp_x, Dp_y)
+
+
+
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "DejaVu Sans",
+    })
+
+    N_plot = 500
+    d_plot = np.linspace(Dp_min, Dp_max, N_plot)
+    coag_plot = np.zeros(N_plot)
+    Dp_ref = [0.1, 1, 10]
+    colors = ['blue', 'green', 'chocolate']
+    xticks = [0.1, 1, 10]
+
+    fig1 = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig1.add_subplot(111)
+    for j in range(len(Dp_ref)):
+        for i in range(N_plot):
+            coag_plot[i] = Fuchs_Brownian(Dp_ref[j], d_plot[i])
+        ax.plot(d_plot, coag_plot, '-', color=colors[j], linewidth=2, label='$D_p = $' + str(Dp_ref[j]))
+    ax.set_xlim([0.1, 10])
+    ax.set_ylim([0, 0.0003])
+    ax.set_xscale('log')
+    ax.set_xlabel('$D_{p_2}$ ($\mu$m)', fontsize=15)
+    ax.set_ylabel(r'$\beta$ (cm$^{3}$ hour$^{-1}$)', fontsize=14, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('Fuchs form of the Brownain \n coagulation coefficient', fontsize=14)
+    ax.legend(fontsize=14, loc='upper right')
+    plt.setp(ax, xticks=xticks, xticklabels=xticks)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig1.savefig('fig_coag')
+
 
 
     #######################################################

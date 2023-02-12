@@ -16,17 +16,20 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
+compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
+plot_norm_difference = False  # Set to True to plot norm difference between truth and estimates
 smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
-plot_animations = True  # Set to True to plot animations
-plot_nucleation = True  # Set to True to plot nucleation plot
+plot_animations = False  # Set to True to plot animations
+plot_nucleation = False  # Set to True to plot nucleation plot
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
-coagulation_suffix = '1_to_11_micro_metres'  # Suffix of saved coagulation tensors file
-data_filename = 'observations_05_identity'  # Filename for data of simulated observations
+coagulation_suffix = '1_to_10_micro_metres_diameter_true'  # Suffix of saved coagulation tensors file
+discretise_with_diameter = True  # Set to True to uniformally discretise with diameter instead of volume
+data_filename = 'observations_05'  # Filename for data of simulated observations
 
 # Spatial domain:
 Dp_min = 1  # Minimum diameter of particles (micro m)
-Dp_max = 11  # Maximum diameter of particles (micro m)
+Dp_max = 10  # Maximum diameter of particles (micro m)
 vmin = diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
 vmax = diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
 
@@ -41,17 +44,17 @@ Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 
 # Condensation rate discretisation:
-Ne_gamma = 2  # Number of elements
+Ne_gamma = 10  # Number of elements
 Np_gamma = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N_gamma = Ne_gamma * Np_gamma  # Total degrees of freedom
 
 # Deposition rate discretisation:
-Ne_eta = 2  # Number of elements
+Ne_eta = 10  # Number of elements
 Np_eta = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N_eta = Ne_eta * Np_eta  # Total degrees of freedom
 
 # DMPS observation parameters:
-use_DMPS_observation_model = False  # Set to True to use DMPS observation model
+use_DMPS_observation_model = True  # Set to True to use DMPS observation model
 plot_dma_transfer_functions = False  # Set to True to plot DMA transfer functions
 N_channels = 20  # Number of channels in DMA
 R_inner = 0.937  # Inner radius of DMA (cm)
@@ -67,7 +70,7 @@ cpc_count_time = 0.2  # Counting time for CPC inlet flow (seconds)
 
 # Prior noise parameters:
 # Prior covariance for alpha; Gamma_alpha_prior = sigma_alpha_prior^2 * I_N (Size distribution):
-sigma_alpha_prior_0 = 1
+sigma_alpha_prior_0 = 5
 sigma_alpha_prior_1 = sigma_alpha_prior_0 / 2
 sigma_alpha_prior_2 = sigma_alpha_prior_1 / 4
 sigma_alpha_prior_3 = 0
@@ -75,7 +78,7 @@ sigma_alpha_prior_4 = 0
 sigma_alpha_prior_5 = 0
 sigma_alpha_prior_6 = 0
 # Prior covariance for gamma; Gamma_gamma_prior = sigma_gamma_prior^2 * I_N_gamma (Condensation rate):
-sigma_gamma_prior_0 = 0.3
+sigma_gamma_prior_0 = 0.001
 sigma_gamma_prior_1 = sigma_gamma_prior_0 / 2
 sigma_gamma_prior_2 = sigma_gamma_prior_1 / 4
 sigma_gamma_prior_3 = 0
@@ -83,7 +86,7 @@ sigma_gamma_prior_4 = 0
 sigma_gamma_prior_5 = 0
 sigma_gamma_prior_6 = 0
 # Prior covariance for eta; Gamma_eta_prior = sigma_eta_prior^2 * I_N_eta (Deposition rate):
-sigma_eta_prior_0 = 0.15
+sigma_eta_prior_0 = 0.001
 sigma_eta_prior_1 = sigma_eta_prior_0 / 2
 sigma_eta_prior_2 = sigma_eta_prior_1 / 4
 sigma_eta_prior_3 = 0
@@ -91,7 +94,7 @@ sigma_eta_prior_4 = 0
 sigma_eta_prior_5 = 0
 sigma_eta_prior_6 = 0
 # Prior uncertainty for J (Nucleation rate):
-sigma_J_prior = 500
+sigma_J_prior = 400
 
 # Model noise parameters:
 # Observation noise covariance parameters:
@@ -107,9 +110,9 @@ sigma_alpha_w_5 = 0
 sigma_alpha_w_6 = 0
 sigma_alpha_w_correlation = 2
 # Evolution noise covariance Gamma_gamma_w = sigma_gamma_w^2 * I_N_gamma (Condensation rate):
-sigma_gamma_w_0 = sigma_gamma_prior_0 / 1000
-sigma_gamma_w_1 = sigma_gamma_prior_1 / 1000
-sigma_gamma_w_2 = sigma_gamma_prior_2 / 1000
+sigma_gamma_w_0 = sigma_gamma_prior_0 / 100
+sigma_gamma_w_1 = sigma_gamma_prior_1 / 100
+sigma_gamma_w_2 = sigma_gamma_prior_2 / 100
 sigma_gamma_w_3 = 0
 sigma_gamma_w_4 = 0
 sigma_gamma_w_5 = 0
@@ -175,15 +178,15 @@ def initial_guess_size_distribution(v):
     return gaussian(v, N_0, v_0, sigma_0)
 
 # Initial guess of the condensation rate I_0(Dp) = I_Dp(Dp, 0):
-I_0_guess = 0.6  # Condensation parameter constant
-I_1_guess = 0  # Condensation parameter inverse quadratic
+I_0_guess = 0.2  # Condensation parameter constant
+I_1_guess = 1  # Condensation parameter inverse quadratic
 def initial_guess_condensation_rate(Dp):
     return I_0_guess + I_1_guess / (Dp ** 2)
 
 # Initial guess of the deposition rate d_0(Dp) = d(Dp, 0):
 depo_Dpmin_guess = 5  # Deposition parameter; diameter at which minimum
-d_0_guess = 0.3  # Deposition parameter constant
-d_1_guess = 0  # Deposition parameter linear
+d_0_guess = 0.4  # Deposition parameter constant
+d_1_guess = -0.15  # Deposition parameter linear
 d_2_guess = -d_1_guess / (2 * depo_Dpmin_guess)  # Deposition parameter quadratic
 def initial_guess_deposition_rate(Dp):
     return d_0_guess + d_1_guess * Dp + d_2_guess * Dp ** 2

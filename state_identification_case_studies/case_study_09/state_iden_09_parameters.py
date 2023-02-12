@@ -17,16 +17,17 @@ from evolution_models.tools import Fuchs_Brownian
 
 # Setup and plotting:
 use_BAE = True  # Set to True to use BAE
-filename_BAE = 'state_iden_09_BAE'  # Filename for BAE mean and covariance
+filename_BAE = 'state_iden_09_BAE_new'  # Filename for BAE mean and covariance
 compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
-plot_norm_difference = True  # Set to True to plot norm difference between truth and estimates
+plot_norm_difference = False  # Set to True to plot norm difference between truth and estimates
 smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
-plot_animations = True  # Set to True to plot animations
-plot_nucleation = True  # Set to True to plot nucleation plot
+plot_animations = False  # Set to True to plot animations
+plot_nucleation = False  # Set to True to plot nucleation plot
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 coagulation_suffix = '0004_to_1_1_micro_metres'  # Suffix of saved coagulation tensors file
-data_filename = 'observations_06'  # Filename for data of simulated observations
+discretise_with_diameter = True  # Set to True to uniformally discretise with diameter instead of volume
+data_filename = 'observations_06_diameter_true'  # Filename for data of simulated observations
 
 # Spatial domain:
 Dp_min = 0.004  # Minimum diameter of particles (micro m)
@@ -84,7 +85,7 @@ sigma_gamma_prior_4 = 0
 sigma_gamma_prior_5 = 0
 sigma_gamma_prior_6 = 0
 # Prior uncertainty for J (Nucleation rate):
-sigma_J_prior = 10
+sigma_J_prior = 100
 
 # Model noise parameters:
 # Observation noise covariance parameters:
@@ -122,13 +123,13 @@ gamma_A6 = 0 * eye(N_gamma)
 gamma_A = array([gamma_A1, gamma_A2, gamma_A3, gamma_A4, gamma_A5, gamma_A6])  # Tensor of VAR(p) coefficients
 
 # Nucleation AR(p) coefficients for model J_{t + 1} = a_1 J_t + ... + w_{J_t}:
-J_p = 6  # Order of AR model
-J_a1 = 1.648
-J_a2 = 0.088
-J_a3 = -0.551
-J_a4 = -0.435
-J_a5 = -0.084
-J_a6 = 0.335
+J_p = 1  # Order of AR model
+J_a1 = 1
+J_a2 = 0
+J_a3 = 0
+J_a4 = 0
+J_a5 = 0
+J_a6 = 0
 J_a = array([J_a1, J_a2, J_a3, J_a4, J_a5, J_a6])  # Vector of AR(p) coefficients
 
 # Modifying first element covariance for alpha (size distribution):

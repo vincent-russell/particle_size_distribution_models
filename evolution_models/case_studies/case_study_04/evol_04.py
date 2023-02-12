@@ -27,8 +27,8 @@ if __name__ == '__main__':
     # Parameters:
 
     # Setup and plotting:
-    plot_animations = True  # Set to True to plot animations
-    plot_nucleation = True  # Set to True to plot nucleation plot
+    plot_animations = False  # Set to True to plot animations
+    plot_nucleation = False  # Set to True to plot nucleation plot
     plot_images = True  # Set to True to plot images
     load_coagulation = True  # Set to True to load coagulation tensors
     save_coagulation = False  # Set to True to save coagulation tensors
@@ -48,8 +48,8 @@ if __name__ == '__main__':
     NT = int(T / dt)  # Total number of time steps
 
     # Size distribution discretisation:
-    Ne = 50  # Number of elements
-    Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
+    Ne = 10  # Number of elements
+    Np = 1  # Np - 1 = degree of Legendre polynomial approximation in each element
     N = Ne * Np  # Total degrees of freedom
 
     # Initial condition n_0(x) = n(x, 0):
@@ -103,7 +103,7 @@ if __name__ == '__main__':
     F.add_process('condensation', cond)  # Adding condensation to evolution model
     F.add_process('deposition', depo)  # Adding deposition to evolution model
     F.add_process('source', sorc)  # Adding source to evolution model
-    F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
+    # F.add_process('coagulation', coag, load_coagulation=save_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F.compile()  # Compiling evolution model
 
 

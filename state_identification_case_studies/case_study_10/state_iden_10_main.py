@@ -11,13 +11,14 @@ Date: June 27, 2022
 # Modules:
 import numpy as np
 import time as tm
+from matplotlib.colors import LogNorm
 import matplotlib.pyplot as plt
 from tkinter import mainloop
 from tqdm import tqdm
 
 # Local modules:
 import basic_tools
-from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother
+from basic_tools import Kalman_filter, compute_fixed_interval_Kalman_smoother, compute_norm_difference
 from observation_models.data.simulated import load_observations
 from evolution_models.tools import GDE_evolution_model, GDE_Jacobian, compute_U, change_basis_x_to_logDp, change_basis_x_to_logDp_sorc
 from observation_models.tools import get_DMA_transfer_function, compute_alpha_to_z_operator, Size_distribution_observation_model
@@ -46,11 +47,11 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing evolution model:
-    F_alpha = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
+    F_alpha = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
     F_alpha.add_unknown('condensation', Ne_gamma, Np_gamma)  # Adding condensation as unknown to evolution model
     F_alpha.add_unknown('deposition', Ne_eta, Np_eta)  # Adding deposition as unknown to evolution model
     F_alpha.add_unknown('source')  # Adding source as unknown to evolution model
-    F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
+    # F_alpha.add_process('coagulation', coag, load_coagulation=load_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F_alpha.compile()  # Compiling evolution model
 
 
@@ -485,6 +486,18 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Computing norm difference between truth and estimates:
+
+    # Size distribution:
+    x_true = np.log(basic_tools.diameter_to_volume(d_true))
+    _, _, n_x_estimate, sigma_n_x = F_alpha.get_nplot_discretisation(alpha, Gamma_alpha=Gamma_alpha, x_plot=x_true)  # Computing estimate on true discretisation
+    norm_diff = compute_norm_difference(n_x_true, n_x_estimate, sigma_n_x, compute_weighted_norm=compute_weighted_norm, print_name='size distribution')  # Computing norm difference
+
+    # Source rate:
+    norm_diff_sorc = compute_norm_difference(sorc_logDp_true_plot, J_logDp_plot, sigma_J_logDp, compute_weighted_norm=compute_weighted_norm, print_name='nucleation rate', is_1D=True, specific_NT=int(16 / dt))  # Computing norm difference
+
+
+    #######################################################
     # Printing total computation time:
     computation_time = round(tm.time() - initial_time, 3)  # Initial time stamp
     print('Total computation time:', str(computation_time), 'seconds.')  # Print statement
@@ -563,7 +576,7 @@ if __name__ == '__main__':
         plt.plot(time, J_logDp_plot_upper, 'b--')
         plt.plot(time, sorc_logDp_true_plot, 'g-', label='Truth')
         axJ.set_xlim([0, T])
-        axJ.set_ylim([0, 12000])
+        axJ.set_ylim([-3000, 12000])
         axJ.set_xlabel('$t$ (hour)', fontsize=12)
         axJ.set_ylabel('$J(t)$ \n (cm$^{-3}$ hour$^{-1}$)', fontsize=12, rotation=0)
         axJ.yaxis.set_label_coords(-0.015, 1.02)
@@ -601,3 +614,191 @@ if __name__ == '__main__':
     # Final print statements
     basic_tools.print_lines()  # Print lines in console
     print()  # Print space in console
+
+
+    # ####################################################
+    # Temporary saving:
+    # np.savez('with_coag_data',
+    #          n_logDp_plot=n_logDp_plot,
+    #          n_logDp_plot_upper=n_logDp_plot_upper,
+    #          n_logDp_plot_lower=n_logDp_plot_lower,
+    #          J_logDp_plot=J_logDp_plot,
+    #          J_logDp_plot_upper=J_logDp_plot_upper,
+    #          J_logDp_plot_lower=J_logDp_plot_lower,
+    #          norm_diff=norm_diff,
+    #          norm_diff_sorc=norm_diff_sorc)
+
+
+    # # #######################################################
+    # # # Temporary Loading:
+    # state_iden_with_coag_data = np.load('with_coag_data.npz')
+    # n_logDp_plot_iden_with_coag = state_iden_with_coag_data['n_logDp_plot']
+    # n_logDp_plot_upper_iden_with_coag = state_iden_with_coag_data['n_logDp_plot_upper']
+    # n_logDp_plot_lower_iden_with_coag = state_iden_with_coag_data['n_logDp_plot_lower']
+    # J_logDp_plot_iden_with_coag = state_iden_with_coag_data['J_logDp_plot']
+    # J_logDp_plot_upper_iden_with_coag = state_iden_with_coag_data['J_logDp_plot_upper']
+    # J_logDp_plot_lower_iden_with_coag = state_iden_with_coag_data['J_logDp_plot_lower']
+    # norm_diff_iden_with_coag = state_iden_with_coag_data['norm_diff']
+    # norm_diff_sorc_iden_with_coag = state_iden_with_coag_data['norm_diff_sorc']
+
+
+    ######################################################
+    # Temporary Loading:
+    state_iden_with_coag_no_initial_data = np.load('with_coag_no_initial_data.npz')
+    n_logDp_plot_iden_with_coag_no_initial = state_iden_with_coag_no_initial_data['n_logDp_plot']
+    n_logDp_plot_upper_iden_with_coag_no_initial = state_iden_with_coag_no_initial_data['n_logDp_plot_upper']
+    n_logDp_plot_lower_iden_with_coag_no_initial = state_iden_with_coag_no_initial_data['n_logDp_plot_lower']
+    J_logDp_plot_iden_with_coag_no_initial = state_iden_with_coag_no_initial_data['J_logDp_plot']
+    J_logDp_plot_upper_iden_with_coag_no_initial = state_iden_with_coag_no_initial_data['J_logDp_plot_upper']
+    J_logDp_plot_lower_iden_with_coag_no_initial = state_iden_with_coag_no_initial_data['J_logDp_plot_lower']
+    norm_diff_iden_with_coag_no_initial = state_iden_with_coag_no_initial_data['norm_diff']
+    norm_diff_sorc_iden_with_coag_no_initial = state_iden_with_coag_no_initial_data['norm_diff_sorc']
+
+
+    #######################################################
+    # Temporary Plotting:
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "DejaVu Sans",
+    })
+
+
+    # # fig 1; nucleation rate:
+    # fig1_sorc = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig1_sorc.add_subplot(111)
+    # ax.plot(time, J_logDp_plot, '-', color='blue', linewidth=2, label='Mean Estimate')
+    # ax.plot(time, J_logDp_plot_upper, '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    # ax.plot(time, J_logDp_plot_lower, '--', color='blue', linewidth=2)
+    # ax.plot(time, sorc_logDp_true_plot, '-', color='green', linewidth=2, label='Truth')
+    # ax.set_xlim([0, 16])
+    # ax.set_ylim([0, 14000])
+    # ax.set_xscale('linear')
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel(r'$s(t)$ (cm$^{-3}$ hour$^{-1}$)', fontsize=13, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.075)
+    # ax.set_title('Nucleation rate estimate \n without coagulation', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig1_sorc.savefig('fig1_sorc_without_coag')
+    #
+    # # fig 1; nucleation rate:
+    # fig1_sorc = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig1_sorc.add_subplot(111)
+    # ax.plot(time, J_logDp_plot_iden_with_coag, '-', color='blue', linewidth=2, label='Mean Estimate')
+    # ax.plot(time, J_logDp_plot_upper_iden_with_coag, '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    # ax.plot(time, J_logDp_plot_lower_iden_with_coag, '--', color='blue', linewidth=2)
+    # ax.plot(time, sorc_logDp_true_plot, '-', color='green', linewidth=2, label='Truth')
+    # ax.set_xlim([0, 16])
+    # ax.set_ylim([0, 14000])
+    # ax.set_xscale('linear')
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel(r'$s(t)$ (cm$^{-3}$ hour$^{-1}$)', fontsize=13, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.075)
+    # ax.set_title('Nucleation rate estimate \n with coagulation', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig1_sorc.savefig('fig1_sorc_with_coag')
+    #
+    # # fig 2; nucleation rate:
+    # specific_NT = int(16 / dt)
+    # fig2_sorc = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig2_sorc.add_subplot(111)
+    # ax.plot(t[0:specific_NT], norm_diff_sorc, '-', color='chocolate', linewidth=2, label='Without Coagulation')
+    # ax.plot(t[0:specific_NT], norm_diff_sorc_iden_with_coag, '-', color='blue', linewidth=2, label='With Coagulation')
+    # ax.set_xlim([0, 16])
+    # ax.set_ylim([0, 5])
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel(r'$||s_{est} - s_{truth}||$', fontsize=15, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('Nucleation rate Mahalanobis norm \n between mean estimate and truth', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig2_sorc.savefig('fig2_sorc')
+
+    # No initial size distribution:
+
+    # fig 1; nucleation rate:
+    fig1_sorc = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig1_sorc.add_subplot(111)
+    ax.plot(time, J_logDp_plot, '-', color='blue', linewidth=2, label='Mean Estimate')
+    ax.plot(time, J_logDp_plot_upper, '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    ax.plot(time, J_logDp_plot_lower, '--', color='blue', linewidth=2)
+    ax.plot(time, sorc_logDp_true_plot, '-', color='green', linewidth=2, label='Truth')
+    ax.set_xlim([0, 16])
+    ax.set_ylim([0, 14000])
+    ax.set_xscale('linear')
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(r'$s(t)$ (cm$^{-3}$ hour$^{-1}$)', fontsize=13, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.075)
+    ax.set_title('Nucleation rate estimate \n without coagulation and no initial distribution', fontsize=14)
+    ax.legend(fontsize=12, loc='upper right')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig1_sorc.savefig('fig1_sorc_without_coag_no_initial')
+
+    # fig 1; nucleation rate:
+    fig1_sorc = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig1_sorc.add_subplot(111)
+    ax.plot(time, J_logDp_plot_iden_with_coag_no_initial, '-', color='blue', linewidth=2, label='Mean Estimate')
+    ax.plot(time, J_logDp_plot_upper_iden_with_coag_no_initial, '--', color='blue', linewidth=2, label='$\pm 2 \sigma$')
+    ax.plot(time, J_logDp_plot_lower_iden_with_coag_no_initial, '--', color='blue', linewidth=2)
+    ax.plot(time, sorc_logDp_true_plot, '-', color='green', linewidth=2, label='Truth')
+    ax.set_xlim([0, 16])
+    ax.set_ylim([0, 14000])
+    ax.set_xscale('linear')
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(r'$s(t)$ (cm$^{-3}$ hour$^{-1}$)', fontsize=13, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.075)
+    ax.set_title('Nucleation rate estimate \n with coagulation and no initial distribution', fontsize=14)
+    ax.legend(fontsize=12, loc='upper right')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig1_sorc.savefig('fig1_sorc_with_coag_no_initial')
+
+    # fig 2; nucleation rate:
+    specific_NT = int(16 / dt)
+    fig2_sorc = plt.figure(figsize=(7, 5), dpi=200)
+    ax = fig2_sorc.add_subplot(111)
+    ax.plot(t[0:specific_NT], norm_diff_sorc, '-', color='chocolate', linewidth=2, label='Without Coagulation')
+    ax.plot(t[0:specific_NT], norm_diff_sorc_iden_with_coag_no_initial, '-', color='blue', linewidth=2, label='With Coagulation')
+    ax.set_xlim([0, 16])
+    ax.set_ylim([0, 5])
+    ax.set_xlabel('Time (hours)', fontsize=14)
+    ax.set_ylabel(r'$||s_{est} - s_{truth}||$', fontsize=15, rotation=0)
+    ax.yaxis.set_label_coords(-0.05, 1.05)
+    ax.set_title('Nucleation rate Mahalanobis norm between \n mean estimate and truth with no initial distribution', fontsize=14)
+    ax.legend(fontsize=12, loc='upper right')
+    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', which='minor', labelsize=10)
+    plt.tight_layout()
+    fig2_sorc.savefig('fig2_sorc_no_initial')
+
+    # fig 5:
+    # fig5, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    # n_logDp_true = n_logDp_true.clip(image_min, image_max)
+    # im = plt.pcolor(time, d_true, n_logDp_true, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    # cbar = fig5.colorbar(im, ticks=cbarticks, orientation='vertical')
+    # tick_labels = [str(tick) for tick in cbarticks]
+    # cbar.ax.set_yticklabels(tick_labels)
+    # cbar.set_label(r'$\displaystyle\frac{dN}{dlogD_p}$ (cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('Size distribution with no initial distribution', fontsize=14)
+    # ax.set_xlim([0, T])
+    # ax.set_ylim([0.004, 1])
+    # ax.set_yscale('log')
+    # plt.setp(ax, yticks=xticks, yticklabels=xticks)
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig5.savefig('image_truth')

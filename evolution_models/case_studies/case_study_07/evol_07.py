@@ -32,10 +32,10 @@ if __name__ == '__main__':
     plot_images = True  # Set to True to plot images
     load_coagulation = True  # Set to True to load coagulation tensors
     save_coagulation = False  # Set to True to save coagulation tensors
-    coagulation_suffix = '0004_to_1_micro_metres'  # Suffix of saved coagulation tensors file
+    coagulation_suffix = 'evol_07'  # Suffix of saved coagulation tensors file
 
     # Spatial domain:
-    Dp_min = 0.004  # Minimum diameter of particles (micro m)
+    Dp_min = 0.01  # Minimum diameter of particles (micro m)
     Dp_max = 1  # Maximum diameter of particles (micro m)
     vmin = basic_tools.diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
     vmax = basic_tools.diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
     # Initial condition n_0(x) = n(x, 0):
     N_0 = 2e3  # Amplitude of initial condition gaussian
-    x_0 = np.log(basic_tools.diameter_to_volume(0.01))  # Mean of initial condition gaussian
+    x_0 = np.log(basic_tools.diameter_to_volume(0.03))  # Mean of initial condition gaussian
     sigma_0 = 3  # Standard deviation of initial condition gaussian
     skewness = 3  # Skewness factor for initial condition gaussian
     def initial_condition(x):
@@ -64,17 +64,46 @@ if __name__ == '__main__':
     boundary_zero = True
 
     # Condensation model I_Dp(Dp, t):
-    I_cst = 0.001  # Condensation parameter constant
-    I_linear = 0.08  # Condensation parameter linear
-    def cond(Dp):
-        return I_cst + I_linear * Dp
+    I_cst = 0.0075  # Condensation parameter constant
+    I_linear = 0.04  # Condensation parameter linear
+    def cond_time(t):
+        # Constant multiplier:
+        cond_t_cst_amp = 1  # Amplitude
+        cond_t_cst_mean = 8  # Mean time
+        cond_t_cst_sigma = 3  # Standard deviation time
+        cond_t_cst_multiplier = basic_tools.gaussian(t, cond_t_cst_amp, cond_t_cst_mean, cond_t_cst_sigma)
+        # Linear multiplier:
+        cond_t_linear_amp = 1  # Amplitude
+        cond_t_linear_mean = 36  # Mean time
+        cond_t_linear_sigma = 18  # Standard deviation time
+        cond_t_linear_multiplier = basic_tools.gaussian(t, cond_t_linear_amp, cond_t_linear_mean, cond_t_linear_sigma)
+        def cond(Dp):
+            return cond_t_cst_multiplier * I_cst + cond_t_linear_multiplier * I_linear * Dp
+        return cond
 
     # Deposition model d(Dp, t):
     d_cst = 0.05  # Deposition parameter constant
-    d_linear = 0.05  # Deposition parameter linear
-    d_inverse_quadratic = 0.000002  # Deposition parameter inverse quadratic
-    def depo(Dp):
-        return d_cst + d_linear * Dp + d_inverse_quadratic * (1 / Dp ** 2)
+    d_linear = 0.1  # Deposition parameter linear
+    d_inverse_quadratic = 0.00001  # Deposition parameter inverse quadratic
+    def depo_time(t):
+        # Constant multiplier:
+        depo_t_cst_amp = 1  # Amplitude
+        depo_t_cst_mean = 18  # Mean time
+        depo_t_cst_sigma = 8  # Standard deviation time
+        depo_t_cst_multiplier = basic_tools.gaussian(t, depo_t_cst_amp, depo_t_cst_mean, depo_t_cst_sigma)
+        # Linear multiplier:
+        depo_t_linear_amp = 1  # Amplitude
+        depo_t_linear_mean = 36  # Mean time
+        depo_t_linear_sigma = 8  # Standard deviation time
+        depo_t_linear_multiplier = basic_tools.gaussian(t, depo_t_linear_amp, depo_t_linear_mean, depo_t_linear_sigma)
+        # Quadratic multiplier:
+        depo_t_quad_amp = 1  # Amplitude
+        depo_t_quad_mean = 8  # Mean time
+        depo_t_quad_sigma = 3  # Standard deviation time
+        depo_t_quad_multiplier = basic_tools.gaussian(t, depo_t_quad_amp, depo_t_quad_mean, depo_t_quad_sigma)
+        def depo(Dp):
+            return depo_t_cst_multiplier * d_cst + depo_t_linear_multiplier * d_linear * Dp + depo_t_quad_multiplier * d_inverse_quadratic * (1 / Dp ** 2)
+        return depo
 
     # Source (nucleation event) model:
     N_s = 1.5e3  # Amplitude of gaussian nucleation event
@@ -99,11 +128,11 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing evolution model:
-    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log')  # Initialising evolution model
-    F.add_process('condensation', cond)  # Adding condensation to evolution model
-    F.add_process('deposition', depo)  # Adding deposition to evolution model
+    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', print_status=False)  # Initialising evolution model
+    F.add_process('condensation', cond_time(0))  # Adding condensation to evolution model
+    F.add_process('deposition', depo_time(0))  # Adding deposition to evolution model
     F.add_process('source', sorc)  # Adding source to evolution model
-    # F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
+    F.add_process('coagulation', coag, load_coagulation=load_coagulation, save_coagulation=save_coagulation, coagulation_suffix=coagulation_suffix)  # Adding coagulation to evolution model
     F.compile()  # Compiling evolution model
 
 
@@ -120,7 +149,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Function to compute evolution operator using Crank-Nicolson method:
-    def compute_evolution_operator(alpha_star, t_star):
+    def compute_evolution_operator(alpha_star, t_star, F, J_F):
         J_star = J_F.eval_d_alpha(alpha_star, t_star)  # Computing J_star
         F_star = F.eval(alpha_star, t_star) - np.matmul(J_star, alpha_star)  # Computing F_star
         matrix_multiplier = np.linalg.inv(np.eye(N) - (dt / 2) * J_star)  # Computing matrix multiplier for evolution operator and additive vector
@@ -133,9 +162,12 @@ if __name__ == '__main__':
     # Computing time evolution of model using Crank-Nicolson method:
     print('Computing time evolution...')
     t = np.zeros(NT)  # Initialising time array
-    F_evolution, b_evolution = compute_evolution_operator(alpha[:, 0], t[0])  # Computing evolution operator from initial condition
+    F_evolution, b_evolution = compute_evolution_operator(alpha[:, 0], t[0], F, J_F)  # Computing evolution operator from initial condition
     for k in tqdm(range(NT - 1)):  # Iterating over time
-        F_evolution, b_evolution = compute_evolution_operator(alpha[:, k], t[k])  # Computing evolution operator F and vector b
+        F.add_process('condensation', cond_time(t[k]))  # Update condensation to evolution model
+        F.add_process('deposition', depo_time(t[k]))  # Update condensation to evolution model
+        J_F = GDE_Jacobian(F)  # Update Jacobian
+        F_evolution, b_evolution = compute_evolution_operator(alpha[:, k], t[k], F, J_F)  # Computing evolution operator F and vector b
         alpha[:, k + 1] = np.matmul(F_evolution, alpha[:, k]) + b_evolution  # Time evolution computation
         t[k + 1] = (k + 1) * dt  # Time (hours)
 
@@ -156,8 +188,8 @@ if __name__ == '__main__':
     for k in range(NT):
         sorc_x_plot[k] = sorc(t[k])  # Computing ln(volume)-based nucleation rate
         for i in range(Nplot):
-            cond_Dp_plot[i, k] = cond(d_plot[i])  # Computing ln(volume)-based condensation rate
-            depo_plot[i, k] = depo(d_plot[i])  # Computing deposition rate
+            cond_Dp_plot[i, k] = cond_time(t[k])(d_plot[i])  # Computing ln(volume)-based condensation rate
+            depo_plot[i, k] = depo_time(t[k])(d_plot[i])  # Computing deposition rate
     sorc_logDp_plot = change_basis_x_to_logDp_sorc(sorc_x_plot, vmin, Dp_min)  # Computing log_10(D_p)-based nucleation rate
 
 
@@ -188,21 +220,23 @@ if __name__ == '__main__':
 
     # Parameters for condensation plot:
     yscale_cond = 'linear'  # y-axis scaling ('linear' or 'log')
-    ylimits_cond = [0, 0.12]  # Plot boundary limits for y-axis
+    ylimits_cond = [0, 0.04]  # Plot boundary limits for y-axis
     xlabel_cond = '$D_p$ ($\mu$m)'  # x-axis label for plot
-    ylabel_cond = '$I(D_p)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
+    ylabel_cond = '$I(D_p, t)$ ($\mu$m hour$^{-1}$)'  # y-axis label for plot
     title_cond = 'Condensation rate'  # Title for plot
     location_cond = location + '2'  # Location for plot
     line_color_cond = ['blue']  # Colors of lines in plot
+    delay_cond = 10  # Delay between frames in milliseconds
 
     # Parameters for deposition plot:
     yscale_depo = 'linear'  # y-axis scaling ('linear' or 'log')
     ylimits_depo = [0, 0.2]  # Plot boundary limits for y-axis
     xlabel_depo = '$D_p$ ($\mu$m)'  # x-axis label for plot
-    ylabel_depo = '$d(D_p)$ (hour$^{-1}$)'  # y-axis label for plot
+    ylabel_depo = '$d(D_p, t)$ (hour$^{-1}$)'  # y-axis label for plot
     title_depo = 'Deposition rate'  # Title for plot
     location_depo = location + '3'  # Location for plot
     line_color_depo = ['blue']  # Colors of lines in plot
+    delay_depo = delay_cond  # Delay between frames in milliseconds
 
     # Size distribution animation:
     basic_tools.plot_1D_animation(d_plot, n_logDp_plot, xticks=xticks, xlimits=xlimits, ylimits=ylimits, xscale=xscale, xlabel=xlabel, ylabel=ylabel, title=title,
@@ -210,11 +244,11 @@ if __name__ == '__main__':
 
     # Condensation rate animation:
     basic_tools.plot_1D_animation(d_plot, cond_Dp_plot, xticks=xticks, xlimits=xlimits, ylimits=ylimits_cond, xscale=xscale, yscale=yscale_cond, xlabel=xlabel_cond, ylabel=ylabel_cond, title=title_cond,
-                                  location=location_cond, time=time, timetext=timetext, line_color=line_color_cond, doing_mainloop=False)
+                                  delay=delay_cond, location=location_cond, time=time, timetext=timetext, line_color=line_color_cond, doing_mainloop=False)
 
     # Deposition rate animation:
     basic_tools.plot_1D_animation(d_plot, depo_plot, xticks=xticks, xlimits=xlimits, ylimits=ylimits_depo, xscale=xscale, yscale=yscale_depo, xlabel=xlabel_depo, ylabel=ylabel_depo, title=title_depo,
-                                  location=location_depo, time=time, timetext=timetext, line_color=line_color_depo, doing_mainloop=False)
+                                  delay=delay_depo, location=location_depo, time=time, timetext=timetext, line_color=line_color_depo, doing_mainloop=False)
 
     # Mainloop and print:
     if plot_animations:
@@ -253,11 +287,25 @@ if __name__ == '__main__':
     cbarlabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # Label of colour bar
     cbarticks = [10, 100, 1000, 10000]  # Ticks of colorbar
 
+    # Parameters for condensation image:
+    image_min_cond = 0.0003  # Minimum of image colour
+    image_max_cond = 0.04  # Maximum of image colour
+    cbarticks_cond = [0.001, 0.01]  # Ticks of colorbar
+
+    # Parameters for deposition image:
+    image_min_depo = 0.005  # Minimum of image colour
+    image_max_depo = 0.15  # Maximum of image colour
+    cbarticks_depo = [0.01, 0.1]  # Ticks of colorbar
+
     # Plotting images:
     if plot_images:
         print('Plotting images...')
         basic_tools.image_plot(time, d_plot, n_logDp_plot, xlabel=xlabel_image, ylabel=ylabel_image, title=title_image,
                                yscale=yscale_image, ylabelcoords=ylabelcoords, yticks=yticks_image, image_min=image_min, image_max=image_max, cmap=cmap, cbarlabel=cbarlabel, cbarticks=cbarticks)
+        basic_tools.image_plot(time, d_plot, cond_Dp_plot, xlabel=xlabel_image, ylabel=ylabel_image, title=title_cond,
+                               yscale=yscale_image, ylabelcoords=ylabelcoords, yticks=yticks_image, image_min=image_min_cond, image_max=image_max_cond, cmap=cmap, cbarlabel=ylabel_cond, cbarticks=cbarticks_cond)
+        basic_tools.image_plot(time, d_plot, depo_plot, xlabel=xlabel_image, ylabel=ylabel_image, title=title_depo,
+                               yscale=yscale_image, ylabelcoords=ylabelcoords, yticks=yticks_image, image_min=image_min_depo, image_max=image_max_depo, cmap=cmap, cbarlabel=ylabel_depo, cbarticks=cbarticks_depo)
 
 
     # Final print statements

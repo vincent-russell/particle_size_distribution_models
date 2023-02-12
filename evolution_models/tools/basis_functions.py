@@ -106,7 +106,7 @@ def compute_coefficients(f, N, Np, phi, x_boundaries, h):
         GLorder = floor((i + 1) / 2) + 3  # Order of integration of Gauss-Legendre quadrature of integrand
         integral_approx = GLnpt(integrand, x_boundaries[ell], x_boundaries[ell + 1], GLorder)  # Computing integral in projection
         # Normalisation and alpha assimilation:
-        normalise_constant = (h / 2) * (2 / (2 * i + 1))
+        normalise_constant = (h[ell] / 2) * (2 / (2 * i + 1))
         coefficients[j] = integral_approx / normalise_constant
     return coefficients
 

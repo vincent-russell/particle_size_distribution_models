@@ -13,11 +13,14 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
-smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
-plot_animations = True  # Set to True to plot animations
+compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
+plot_norm_difference = False  # Set to True to plot norm difference between truth and estimates
+smoothing = False  # Set to True to compute fixed interval Kalman smoother estimates
+plot_animations = False  # Set to True to plot animations
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
-coagulation_suffix = '1_to_10_micro_metres'  # Suffix of saved coagulation tensors file
+coagulation_suffix = '1_to_10_micro_metres_diameter_true'  # Suffix of saved coagulation tensors file
+discretise_with_diameter = True  # Set to True to uniformally discretise with diameter instead of volume
 data_filename = 'observations_04'  # Filename for data of simulated observations
 
 # Spatial domain:
@@ -89,14 +92,14 @@ def initial_guess_size_distribution(v):
     return gaussian(v, N_0, v_0, sigma_0) + gaussian(v, N_1, v_1, sigma_1)
 
 # Guess of the condensation rate I(Dp):
-I_0_guess = 0.05  # Condensation parameter constant
+I_0_guess = 0.02  # Condensation parameter constant
 I_1_guess = 0  # Condensation parameter inverse quadratic
 def guess_cond(Dp):
     return I_0_guess + I_1_guess / (Dp ** 2)
 
 # Guess of the deposition rate d(Dp):
 depo_Dpmin_guess = 5  # Deposition parameter; diameter at which minimum
-d_0_guess = 0.04  # Deposition parameter constant
+d_0_guess = 0.01  # Deposition parameter constant
 d_1_guess = 0  # Deposition parameter linear
 d_2_guess = -d_1_guess / (2 * depo_Dpmin_guess)  # Deposition parameter quadratic
 def guess_depo(Dp):

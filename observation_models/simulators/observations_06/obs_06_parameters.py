@@ -16,12 +16,13 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
-plot_animations = True  # Set to True to plot animations
+plot_animations = False  # Set to True to plot animations
 plot_nucleation = False  # Set to True to plot nucleation plot
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 save_coagulation = False  # Set to True to save coagulation tensors
 coagulation_suffix = '0004_to_1_micro_metres'  # Suffix of saved coagulation tensors file
+discretise_with_diameter = True  # Set to True to uniformally discretise with diameter instead of volume
 
 # Spatial domain:
 Dp_min = 0.004  # Minimum diameter of particles (micro m)
@@ -45,13 +46,13 @@ N = Ne * Np  # Total degrees of freedom
 M = 50  # Observation dimension size
 logDp_obs = linspace(log(Dp_min), log(Dp_max), M)  # Log(Diameters) that observations are made
 sample_volume = 0.0005  # Volume of sample used in counting, y = (1 / sample_volume) * Pois(sample_volume * n)
-additive_noise_mean = 10  # Mean of additive noise
-additive_noise_sigma = 5  # Standard deviation of additive noise
+additive_noise_mean = 0  # Mean of additive noise
+additive_noise_sigma = 2  # Standard deviation of additive noise
 
 # DMPS observation parameters:
 use_DMPS_observation_model = True  # Set to True to use DMPS observation model
-plot_dma_transfer_functions = False  # Set to True to plot DMA transfer functions
-N_channels = 50  # Number of channels in DMA
+plot_dma_transfer_functions = True  # Set to True to plot DMA transfer functions
+N_channels = 20  # Number of channels in DMA
 R_inner = 0.937  # Inner radius of DMA (cm)
 R_outer = 1.961  # Outer radius of DMA (cm)
 length = 44.369 # Length of DMA (cm)
@@ -64,7 +65,7 @@ cpc_inlet_flow = 0.3  # CPC inlet flow (L/min)
 cpc_count_time = 2  # Counting time for CPC inlet flow (seconds)
 
 # Save data parameters:
-data_filename = 'observations_06'  # Filename for data of simulated observations
+data_filename = 'observations_06_diameter_true'  # Filename for data of simulated observations
 
 # Initial condition n_0(x) = n(x, 0):
 N_0 = 2e3  # Amplitude of initial condition gaussian

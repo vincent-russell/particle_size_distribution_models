@@ -16,12 +16,15 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
+compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
+plot_norm_difference = False  # Set to True to plot norm difference between truth and estimates
 smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
 plot_animations = True  # Set to True to plot animations
 plot_nucleation = True  # Set to True to plot nucleation plot
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 coagulation_suffix = '0004_to_1_1_micro_metres'  # Suffix of saved coagulation tensors file
+discretise_with_diameter = False  # Set to True to uniformally discretise with diameter instead of volume
 data_filename = 'observations_06'  # Filename for data of simulated observations
 
 # Spatial domain:
@@ -38,7 +41,7 @@ T = 48  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
 # Size distribution discretisation:
-Ne = 50  # Number of elements
+Ne = 10  # Number of elements
 Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 
@@ -64,7 +67,7 @@ cpc_count_time = 2  # Counting time for CPC inlet flow (seconds)
 
 # Prior noise parameters:
 # Prior covariance for alpha; Gamma_alpha_prior = sigma_alpha_prior^2 * I_N (Size distribution):
-sigma_alpha_prior_0 = 10
+sigma_alpha_prior_0 = 5
 sigma_alpha_prior_1 = sigma_alpha_prior_0 / 2
 sigma_alpha_prior_2 = sigma_alpha_prior_1 / 4
 sigma_alpha_prior_3 = 0
@@ -80,7 +83,7 @@ sigma_gamma_prior_4 = 0
 sigma_gamma_prior_5 = 0
 sigma_gamma_prior_6 = 0
 # Prior uncertainty for J (Nucleation rate):
-sigma_J_prior = 20
+sigma_J_prior = 10
 
 # Model noise parameters:
 # Observation noise covariance parameters:

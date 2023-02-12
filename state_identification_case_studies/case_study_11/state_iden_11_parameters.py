@@ -16,11 +16,14 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
-smoothing = False  # Set to True to compute fixed interval Kalman smoother estimates
+compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
+plot_norm_difference = False  # Set to True to plot norm difference between truth and estimates
+smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
 plot_animations = True  # Set to True to plot animations
 plot_images = False  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 coagulation_suffix = '01_to_11_micro_metres'  # Suffix of saved coagulation tensors file
+discretise_with_diameter = False  # Set to True to uniformally discretise with diameter instead of volume
 data_filename = 'observations_07'  # Filename for data of simulated observations
 
 # Spatial domain:
@@ -37,8 +40,8 @@ T = 1  # End time (hours)
 NT = int(T / dt)  # Total number of time steps
 
 # Size distribution discretisation:
-Ne = 50  # Number of elements
-Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
+Ne = 25  # Number of elements
+Np = 1  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 
 # Deposition rate discretisation:

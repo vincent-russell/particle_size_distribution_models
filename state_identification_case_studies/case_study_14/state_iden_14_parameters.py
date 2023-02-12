@@ -16,11 +16,16 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
-smoothing = False  # Set to True to compute fixed interval Kalman smoother estimates
+manual_plot = True  # Set to True to do manual plotting discretisation (only for size distribution)
+N_plot_manual = 200  # Plotting discretisation
+compute_weighted_norm = True  # Set to True to compute weighted norm difference (weighted by inverse of sigma_n)
+plot_norm_difference = True  # Set to True to plot norm difference between truth and estimates
+smoothing = True  # Set to True to compute fixed interval Kalman smoother estimates
 plot_animations = True  # Set to True to plot animations
-plot_images = False  # Set to True to plot images
+plot_images = True  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
-coagulation_suffix = 'CSTAR_Dpmin_0008'  # Suffix of saved coagulation tensors file
+coagulation_suffix = 'CSTAR_Dpmin_0008_diameter_true'  # Suffix of saved coagulation tensors file
+discretise_with_diameter = True  # Set to True to discretise with diameter
 data_filename = 'observations_08'  # Filename for data of simulated observations
 
 # Spatial domain:
@@ -37,7 +42,7 @@ NT = 167  # Total number of time steps
 T = dt * NT  # End time (hours)
 
 # Size distribution discretisation:
-Ne = 50  # Number of elements
+Ne = 5   # Number of elements
 Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
 N = Ne * Np  # Total degrees of freedom
 
@@ -53,7 +58,7 @@ N_eta = Ne_eta * Np_eta  # Total degrees of freedom
 
 # Prior noise parameters:
 # Prior covariance for alpha; Gamma_alpha_prior = sigma_alpha_prior^2 * I_N (Size distribution):
-sigma_alpha_prior_0 = 0.1
+sigma_alpha_prior_0 = 0.5
 sigma_alpha_prior_1 = sigma_alpha_prior_0 / 2
 sigma_alpha_prior_2 = sigma_alpha_prior_1 / 4
 sigma_alpha_prior_3 = 0
@@ -61,7 +66,7 @@ sigma_alpha_prior_4 = 0
 sigma_alpha_prior_5 = 0
 sigma_alpha_prior_6 = 0
 # Prior covariance for gamma; Gamma_gamma_prior = sigma_gamma_prior^2 * I_N_gamma (Condensation rate):
-sigma_gamma_prior_0 = 0.0025
+sigma_gamma_prior_0 = 0.005
 sigma_gamma_prior_1 = sigma_gamma_prior_0 / 2
 sigma_gamma_prior_2 = sigma_gamma_prior_1 / 4
 sigma_gamma_prior_3 = 0
@@ -137,13 +142,13 @@ eta_use_element_multipler = False
 # Initial guess of the size distribution n_0(x) = n(x, 0):
 N_0 = 53  # Amplitude of initial condition gaussian
 x_0 = log(diameter_to_volume(0.023))  # Mean of initial condition gaussian
-sigma_0 = 3.5  # Standard deviation of initial condition gaussian
+sigma_0 = 3.25  # Standard deviation of initial condition gaussian
 skewness = 3  # Skewness factor for initial condition gaussian
 def initial_guess_size_distribution(x):
     return skewed_gaussian(x, N_0, x_0, sigma_0, skewness)
 
 # Initial guess of the condensation rate I_0(Dp) = I_Dp(Dp, 0):
-I_cst_guess = 0.005  # Condensation parameter constant
+I_cst_guess = 0.01  # Condensation parameter constant
 I_linear_guess = 0  # Condensation parameter linear
 def initial_guess_condensation_rate(Dp):
     return I_cst_guess + I_linear_guess * Dp
@@ -155,11 +160,11 @@ def initial_guess_deposition_rate(Dp):
     return d_cst_guess + d_linear_guess * Dp
 
 # Set to True for imposing boundary condition n(xmin, t) = 0:
-boundary_zero = False
+boundary_zero = True
 
 # True underlying condensation model I_Dp(Dp, t):
-I_cst = 0.0005  # Condensation parameter constant
-I_linear = 0.01  # Condensation parameter linear
+I_cst = 0.001  # Condensation parameter constant
+I_linear = 0.02  # Condensation parameter linear
 def cond(Dp):
     return I_cst + I_linear * Dp
 

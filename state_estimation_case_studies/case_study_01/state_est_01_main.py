@@ -297,3 +297,11 @@ if __name__ == '__main__':
     # Final print statements
     basic_tools.print_lines()  # Print lines in console
     print()  # Print space in console
+
+
+    #######################################################
+    # Temporary saving:
+    np.savez('state_est_01_data',
+             n_Dp_plot=n_Dp_plot,
+             n_Dp_plot_upper=n_Dp_plot_upper,
+             n_Dp_plot_lower=n_Dp_plot_lower)

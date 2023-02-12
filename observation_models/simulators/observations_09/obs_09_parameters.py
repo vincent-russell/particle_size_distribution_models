@@ -16,16 +16,15 @@ from evolution_models.tools import Fuchs_Brownian
 # Parameters:
 
 # Setup and plotting:
-plot_animations = False  # Set to True to plot animations
-plot_nucleation = False  # Set to True to plot nucleation plot
-plot_images = False  # Set to True to plot images
+plot_animations = True  # Set to True to plot animations
+plot_nucleation = True  # Set to True to plot nucleation plot
+plot_images = True  # Set to True to plot images
 load_coagulation = True  # Set to True to load coagulation tensors
 save_coagulation = False  # Set to True to save coagulation tensors
-coagulation_suffix = '0004_to_1_micro_metres'  # Suffix of saved coagulation tensors file
-discretise_with_diameter = True  # Set to True to uniformally discretise with diameter instead of volume
+coagulation_suffix = 'evol_07'  # Suffix of saved coagulation tensors file
 
 # Spatial domain:
-Dp_min = 0.004  # Minimum diameter of particles (micro m)
+Dp_min = 0.01  # Minimum diameter of particles (micro m)
 Dp_max = 1  # Maximum diameter of particles (micro m)
 vmin = diameter_to_volume(Dp_min)  # Minimum volume of particles (micro m^3)
 vmax = diameter_to_volume(Dp_max)  # Maximum volume of particles (micro m^3)
@@ -58,18 +57,18 @@ R_outer = 1.961  # Outer radius of DMA (cm)
 length = 44.369 # Length of DMA (cm)
 Q_aerosol = 0.3  # Aerosol sample flow (L/min)
 Q_sheath = 3  # Sheath flow (L/min)
-efficiency = 0.08  # Efficiency of DMA (flat percentage applied to particles passing through DMA); ranges from 0 to 1
-voltage_min = 2  # Minimum voltage of DMA
-voltage_max = 10000  # Maximum voltage of DMA
+efficiency = 0.1  # Efficiency of DMA (flat percentage applied to particles passing through DMA); ranges from 0 to 1
+voltage_min = 6  # Minimum voltage of DMA
+voltage_max = 11000  # Maximum voltage of DMA
 cpc_inlet_flow = 0.3  # CPC inlet flow (L/min)
 cpc_count_time = 2  # Counting time for CPC inlet flow (seconds)
 
 # Save data parameters:
-data_filename = 'observations_06'  # Filename for data of simulated observations
+data_filename = 'observations_09'  # Filename for data of simulated observations
 
 # Initial condition n_0(x) = n(x, 0):
 N_0 = 2e3  # Amplitude of initial condition gaussian
-x_0 = log(diameter_to_volume(0.01))  # Mean of initial condition gaussian
+x_0 = log(diameter_to_volume(0.03))  # Mean of initial condition gaussian
 sigma_0 = 3  # Standard deviation of initial condition gaussian
 skewness = 3  # Skewness factor for initial condition gaussian
 def initial_condition(x):
@@ -79,17 +78,46 @@ def initial_condition(x):
 boundary_zero = True
 
 # Condensation model I_Dp(Dp, t):
-I_cst = 0.001  # Condensation parameter constant
-I_linear = 0.08  # Condensation parameter linear
-def cond(Dp):
-    return I_cst + I_linear * Dp
+I_cst = 0.0075  # Condensation parameter constant
+I_linear = 0.04  # Condensation parameter linear
+def cond_time(t):
+    # Constant multiplier:
+    cond_t_cst_amp = 1  # Amplitude
+    cond_t_cst_mean = 8  # Mean time
+    cond_t_cst_sigma = 3  # Standard deviation time
+    cond_t_cst_multiplier = gaussian(t, cond_t_cst_amp, cond_t_cst_mean, cond_t_cst_sigma)
+    # Linear multiplier:
+    cond_t_linear_amp = 1  # Amplitude
+    cond_t_linear_mean = 36  # Mean time
+    cond_t_linear_sigma = 18  # Standard deviation time
+    cond_t_linear_multiplier = gaussian(t, cond_t_linear_amp, cond_t_linear_mean, cond_t_linear_sigma)
+    def cond(Dp):
+        return cond_t_cst_multiplier * I_cst + cond_t_linear_multiplier * I_linear * Dp
+    return cond
 
 # Deposition model d(Dp, t):
-d_cst = 0.05  # Deposition parameter constant
-d_linear = 0.05  # Deposition parameter linear
-d_inverse_quadratic = 0.000002  # Deposition parameter inverse quadratic
-def depo(Dp):
-    return d_cst + d_linear * Dp + d_inverse_quadratic * (1 / Dp ** 2)
+d_cst = 0.1  # Deposition parameter constant
+d_linear = 0.1  # Deposition parameter linear
+d_inverse_quadratic = 0.00001  # Deposition parameter inverse quadratic
+def depo_time(t):
+    # Constant multiplier:
+    depo_t_cst_amp = 1  # Amplitude
+    depo_t_cst_mean = 18  # Mean time
+    depo_t_cst_sigma = 8  # Standard deviation time
+    depo_t_cst_multiplier = gaussian(t, depo_t_cst_amp, depo_t_cst_mean, depo_t_cst_sigma)
+    # Linear multiplier:
+    depo_t_linear_amp = 1  # Amplitude
+    depo_t_linear_mean = 36  # Mean time
+    depo_t_linear_sigma = 8  # Standard deviation time
+    depo_t_linear_multiplier = gaussian(t, depo_t_linear_amp, depo_t_linear_mean, depo_t_linear_sigma)
+    # Quadratic multiplier:
+    depo_t_quad_amp = 1  # Amplitude
+    depo_t_quad_mean = 8  # Mean time
+    depo_t_quad_sigma = 3  # Standard deviation time
+    depo_t_quad_multiplier = gaussian(t, depo_t_quad_amp, depo_t_quad_mean, depo_t_quad_sigma)
+    def depo(Dp):
+        return depo_t_cst_multiplier * d_cst + depo_t_linear_multiplier * d_linear * Dp + depo_t_quad_multiplier * d_inverse_quadratic * (1 / Dp ** 2)
+    return depo
 
 # Source (nucleation event) model:
 N_s = 1.5e3  # Amplitude of gaussian nucleation event

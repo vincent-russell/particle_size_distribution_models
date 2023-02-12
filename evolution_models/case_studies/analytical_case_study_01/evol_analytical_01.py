@@ -26,6 +26,7 @@ if __name__ == '__main__':
     # Parameters:
     # Setup and plotting:
     plot_animations = True  # Set to True to plot animations
+    discretise_with_diameter = False  # Set to True to discretise with diameter
 
     # Spatial domain:
     Dp_min = 0.1  # Minimum diameter of particles (micro m)
@@ -39,13 +40,13 @@ if __name__ == '__main__':
     NT = int(T / dt)  # Total number of time steps
 
     # Size distribution discretisation:
-    Ne = 100  # Number of elements
+    Ne = 50  # Number of elements
     Np = 3  # Np - 1 = degree of Legendre polynomial approximation in each element
     N = Ne * Np  # Total degrees of freedom
 
     # Initial condition n_Dp(Dp, 0):
     N_0 = 180  # Amplitude of initial condition gaussian
-    d_mean = 0.3  # Mean of initial condition gaussian
+    d_mean = 0.2  # Mean of initial condition gaussian
     sigma_g = 1.2  # Standard deviation of initial condition gaussian
     def initial_condition_Dp(Dp):
         amp = N_0 / (np.sqrt(2 * np.pi) * Dp * np.log(sigma_g))
@@ -72,7 +73,7 @@ if __name__ == '__main__':
 
     #######################################################
     # Constructing evolution model:
-    F = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero)  # Initialising evolution model
+    F = GDE_evolution_model(Ne, Np, vmin, vmax, dt, NT, boundary_zero=boundary_zero, discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
     F.add_process('condensation', cond)  # Adding condensation to evolution model
     F.compile(time_integrator='rk4')  # Compiling evolution model and adding time integrator
 
@@ -99,13 +100,16 @@ if __name__ == '__main__':
     #######################################################
     # Computing analytical solution:
     print('Computing analytical solution...')
-    v_analytical = np.linspace(vmin, vmax, 200)  # Volume discretisation
+    x_analytical = np.linspace(np.log(vmin), np.log(vmax), 200)  # Log-discretisation
+    v_analytical = np.exp(x_analytical)  # Volume discretisation
     Dp_analytical = basic_tools.volume_to_diameter(v_analytical)  # Diameter discretisation
     n_Dp_analytical = np.zeros([len(v_analytical), NT])  # Initialising
     n_logDp_analytical = np.zeros([len(v_analytical), NT])  # Initialising
     for k in range(1, NT):  # Iterating over time
         for i in range(len(v_analytical)):  # Iterating over volume
             cst = (Dp_analytical[i] ** 2) - (2 * A * t[k])
+            if cst < 0:
+                cst = 1e-15
             B = (Dp_analytical[i] * N_0) / (np.sqrt(2 * np.pi) * np.log(sigma_g) * cst)
             C = (np.log(np.sqrt(cst) / d_mean) ** 2) / (2 * np.log(sigma_g) ** 2)
             n_Dp_analytical[i, k] = B * np.exp(-C)
@@ -128,7 +132,7 @@ if __name__ == '__main__':
     xscale = 'log'  # x-axis scaling ('linear' or 'log')
     xticks = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]  # Plot x-tick labels
     xlimits = [d_plot[0], d_plot[-1]]  # Plot boundary limits for x-axis
-    ylimits = [0, 3000]  # Plot boundary limits for y-axis
+    ylimits = [-500, 6000]  # Plot boundary limits for y-axis
     xlabel = '$D_p$ ($\mu$m)'  # x-axis label for 1D animation plot
     ylabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # y-axis label for 1D animation plot
     title = 'Size distribution'  # Title for 1D animation plot

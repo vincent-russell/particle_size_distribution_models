@@ -12,6 +12,7 @@ Date: June 7, 2022
 # Modules:
 import numpy as np
 import time as tm
+from matplotlib.colors import LogNorm
 from tkinter import mainloop
 from tqdm import tqdm
 
@@ -27,8 +28,9 @@ if __name__ == '__main__':
     # Parameters:
 
     # Setup and plotting:
-    N_plot = 50  # Plotting discretisation
-    plot_animations = True  # Set to True to plot animations
+    N_plot = 65  # Plotting discretisation
+    plot_animations = False  # Set to True to plot animations
+    discretise_with_diameter = False  # Set to True to discretise with diameter
 
     # Spatial domain:
     Dp_min = 0.1  # Minimum diameter of particles (micro m)
@@ -39,17 +41,17 @@ if __name__ == '__main__':
     xmax = np.log(vmax)  # Upper limit in log-size
 
     # Time domain:
-    dt = 0.05  # Time step (hours)
+    dt = 0.01  # Time step (hours)
     T = 96  # End time (hours)
     NT = int(T / dt)  # Total number of time steps
 
     # Size distribution discretisation:
-    Ne = 50  # Number of elements
+    Ne = 2  # Number of elements
     Np = 2  # Np - 1 = degree of Legendre polynomial approximation in each element
     N = Ne * Np  # Total degrees of freedom
 
     # Standard FEM size distribution discretisation:
-    N_standard = 50  # Number of nodes in finite element mesh
+    N_standard = 65  # Number of nodes in finite element mesh
 
     # PGFEM parameters:
     do_pgfem = True  # Set to True to do PGFEM, else False for FEM
@@ -81,7 +83,6 @@ if __name__ == '__main__':
     #######################################################
     # Initialising timer for total computation:
     basic_tools.print_lines()  # Print lines in console
-    initial_time = tm.time()  # Initial time stamp
 
 
     #######################################################
@@ -97,9 +98,14 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Computation time of proposed model:
+    initial_time_proposed = tm.time()  # Time stamp
+
+
+    #######################################################
     # Constructing evolution model:
     print('Constructing proposed model...')
-    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', print_status=False)  # Initialising evolution model
+    F = GDE_evolution_model(Ne, Np, xmin, xmax, dt, NT, boundary_zero=boundary_zero, scale_type='log', print_status=False, discretise_with_diameter=discretise_with_diameter)  # Initialising evolution model
     F.add_process('condensation', cond)  # Adding condensation to evolution model
     F.compile(time_integrator='euler')  # Compiling evolution model and adding time integrator
 
@@ -116,6 +122,12 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Printing computation time of proposed model:
+    computation_time_proposed = round(tm.time() - initial_time_proposed, 3)  # Time stamp
+    print('Proposed computation time:', str(computation_time_proposed), 'seconds.')  # Print statement
+
+
+    #######################################################
     # Computing plotting discretisation:
     _, _, n_x_plot, _ = F.get_nplot_discretisation(alpha, x_plot=x_plot)  # Computing plotting discretisation
     n_v_plot = change_basis_ln_to_linear(n_x_plot, v_plot)
@@ -127,6 +139,11 @@ if __name__ == '__main__':
     # NOTE: The following is the standard FEM (or PGFEM) model.
     # =========================================================#
     print('Constructing standard model...')
+
+
+    #######################################################
+    # Computation time of standard model:
+    initial_time_standard = tm.time()  # Time stamp
 
 
     #######################################################
@@ -279,6 +296,12 @@ if __name__ == '__main__':
 
 
     #######################################################
+    # Printing computation time of standard model:
+    computation_time_standard = round(tm.time() - initial_time_standard, 3)  # Time stamp
+    print('Standard computation time:', str(computation_time_standard), 'seconds.')  # Print statement
+
+
+    #######################################################
     # Computing plotting discretisation:
     n_v_standard = change_basis_ln_to_linear(n_x_standard, v_standard)
     n_Dp_standard = change_basis_volume_to_diameter(n_v_standard, d_standard)
@@ -320,12 +343,6 @@ if __name__ == '__main__':
 
 
     #######################################################
-    # Printing total computation time:
-    computation_time = round(tm.time() - initial_time, 3)  # Initial time stamp
-    print('Total computation time:', str(computation_time), 'seconds.')  # Print statement
-
-
-    #######################################################
     # Plotting size distribution animation and function parameters:
 
     # General parameters:
@@ -362,4 +379,199 @@ if __name__ == '__main__':
     # Final print statements
     basic_tools.print_lines()  # Print lines in console
     print()  # Print space in console
+
+
+    #######################################################
+    # Temporary saving:
+    # np.savez('pgfem',
+    #          n_logDp_plot=n_logDp_standard,
+    #          norm_diff=norm_diff_standard)
+
+
+    #######################################################
+    # Temporary Loading:
+    # pgfem_data = np.load('pgfem.npz')
+    # n_logDp_pgfem = pgfem_data['n_logDp_plot']
+    # norm_diff_pgfem = pgfem_data['norm_diff']
+
+
+    #######################################################
+    # Temporary Data:
+    error_FEM = np.array([
+
+    ])
+    error_PGFEM = np.array([
+        1014352.0,
+        574665.0
+    ])
+    error_DGFEM = np.array([
+        164137.0,
+        60835.0,
+        41777.0,
+        51384.0
+    ])
+    time_FEM = np.array([
+
+    ])
+    time_PGFEM = np.array([
+        1.87,
+        3.773
+    ])
+    time_DGFEM = np.array([
+        1.75,
+        3.714,
+        6.473,
+        14.411
+    ])
+
+
+    #######################################################
+    # Temporary Plotting:
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "DejaVu Sans",
+    })
+
+    # # fig 4; size distribution:
+    # fig4 = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig4.add_subplot(111)
+    # ax.plot(time_FEM, error_FEM, '-', color='purple', linewidth=2, label='FEM')
+    # ax.plot(time_PGFEM, error_PGFEM, '-', color='cyan', linewidth=2, label='PGFEM with $\epsilon = 0.2$')
+    # ax.plot(time_DGFEM, error_DGFEM, '-', color='blue', linewidth=2, label='DGFEM')
+    # # ax.set_xlim([10, 50])
+    # # ax.set_ylim([0, 1e6])
+    # ax.set_xscale('linear')
+    # ax.set_yscale('linear')
+    # ax.set_xlabel(r'Computation time (seconds)', fontsize=13)
+    # ax.set_ylabel(r'Total error', fontsize=13, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('Error estimate comparisons', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper right')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig4.savefig('fig4')
+
+    # # fig 1; size distribution:
+    # times = [0.1]
+    # fig1 = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig1.add_subplot(111)
+    # for plot_time in times:
+    #     ax.plot(d_plot, n_logDp_analytical[:, int(plot_time / dt)] - 100, '-', linestyle='solid', color='green', linewidth=2, label='Analytical Solution')
+    #     ax.plot(d_plot, n_logDp_plot[:, int(plot_time / dt)] - 100, '-', linestyle='dashed', color='blue', linewidth=2, label='Numerical Solution')
+    #     # ax.plot(d_plot, n_logDp_standard[:, int(plot_time / dt)] - 100, '-', linestyle='dashed', color='blue', linewidth=2, label='Numerical Solution')
+    # ax.set_xlim([Dp_min, Dp_max])
+    # ax.set_ylim([-500, 3000])
+    # ax.set_xscale(xscale)
+    # ax.set_xlabel(xlabel, fontsize=14)
+    # ax.set_ylabel(r'$\displaystyle\frac{dN}{dlogD_p}$ (cm$^{-3})$', fontsize=14, rotation=0)
+    # plt.setp(ax, xticks=xticks, xticklabels=xticks)  # Modifies x-tick labels
+    # ax.yaxis.set_label_coords(-0.05, 1.025)
+    # ax.set_title('Size distribution at $t = 0$ hours', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper left')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig1.savefig('fig1_0')
+
+
+    # fig 2; size distribution:
+    # fig2 = plt.figure(figsize=(7, 5), dpi=200)
+    # ax = fig2.add_subplot(111)
+    # ax.plot(t, norm_diff_standard, '-', color='purple', linewidth=2, label='FEM')
+    # ax.plot(t, norm_diff_pgfem, '-', color='chocolate', linewidth=2, label='PGFEM')
+    # ax.plot(t, norm_diff_proposed, '-', color='blue', linewidth=2, label='DGFEM')
+    # ax.set_xlim([1, T])
+    # ax.set_ylim([0, 2000])
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel(r'$||n_{est} - n_{truth}||$', fontsize=15, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('Size distribution norm \n between estimates and truth', fontsize=14)
+    # ax.legend(fontsize=12, loc='upper left')
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig2.savefig('fig2')
+
+
+    # # Parameters for size distribution images:
+    # yscale_image = 'log'  # Change scale of y-axis (linear or log)
+    # yticks_image = [0.1, 0.2, 0.3, 0.4, 0.6, 1]  # Plot y-tick labels
+    # xlabel_image = 'Time (hours)'  # x-axis label for image
+    # ylabel_image = '$D_p$ ($\mu$m) \n'  # y-axis label for image
+    # ylabelcoords = (-0.06, 0.96)  # y-axis label coordinates
+    # title_image = 'Size distribution estimation'  # Title for image
+    # title_image_observations = 'CSTAR observations'  # Title for image
+    # image_min = 10  # Minimum of image colour
+    # image_max = 10000  # Maximum of image colour
+    # cmap = 'jet'  # Colour map of image
+    # cbarlabel = '$\dfrac{dN}{dlogD_p}$ (cm$^{-3})$'  # Label of colour bar
+    # cbarticks = [10, 100, 1000, 10000]  # Ticks of colorbar
+    #
+    #
+    # # fig 4:
+    # fig4, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    # n_logDp_plot = n_logDp_plot.clip(image_min, image_max)
+    # im = plt.pcolor(time, d_plot, n_logDp_plot, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    # cbar = fig4.colorbar(im, ticks=cbarticks, orientation='vertical')
+    # tick_labels = [str(tick) for tick in cbarticks]
+    # cbar.ax.set_yticklabels(tick_labels)
+    # cbar.set_label(r'$\displaystyle\frac{dN}{dlogD_p}$ (cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('Size distribution estimate using DGFEM', fontsize=14)
+    # ax.set_xlim([0, T])
+    # ax.set_ylim(xlimits)
+    # ax.set_yscale('log')
+    # plt.setp(ax, yticks=yticks_image, yticklabels=yticks_image)
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig4.savefig('image_estimate')
+    #
+    #
+    # # fig 4:
+    # fig4_pgfem, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    # n_logDp_pgfem = n_logDp_pgfem.clip(image_min, image_max)
+    # im = plt.pcolor(time, d_plot, n_logDp_pgfem, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    # cbar = fig4_pgfem.colorbar(im, ticks=cbarticks, orientation='vertical')
+    # tick_labels = [str(tick) for tick in cbarticks]
+    # cbar.ax.set_yticklabels(tick_labels)
+    # cbar.set_label(r'$\displaystyle\frac{dN}{dlogD_p}$ (cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('Size distribution estimate using PGFEM', fontsize=14)
+    # ax.set_xlim([0, T])
+    # ax.set_ylim(xlimits)
+    # ax.set_yscale('log')
+    # plt.setp(ax, yticks=yticks_image, yticklabels=yticks_image)
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig4_pgfem.savefig('image_estimate_pgfem')
+    #
+    #
+    # # fig 5:
+    # fig5, ax = plt.subplots(figsize=(8, 4), dpi=200)
+    # n_logDp_analytical = n_logDp_analytical.clip(image_min, image_max)
+    # im = plt.pcolor(time, d_plot, n_logDp_analytical, cmap=cmap, vmin=image_min, vmax=image_max, norm=LogNorm())
+    # cbar = fig5.colorbar(im, ticks=cbarticks, orientation='vertical')
+    # tick_labels = [str(tick) for tick in cbarticks]
+    # cbar.ax.set_yticklabels(tick_labels)
+    # cbar.set_label(r'$\displaystyle\frac{dN}{dlogD_p}$ (cm$^{-3})$', fontsize=12, rotation=0, y=1.2, labelpad=-10)
+    # ax.set_xlabel('Time (hours)', fontsize=14)
+    # ax.set_ylabel(xlabel, fontsize=14, rotation=0)
+    # ax.yaxis.set_label_coords(-0.05, 1.05)
+    # ax.set_title('True size distribution', fontsize=14)
+    # ax.set_xlim([0, T])
+    # ax.set_ylim(xlimits)
+    # ax.set_yscale('log')
+    # plt.setp(ax, yticks=yticks_image, yticklabels=yticks_image)
+    # ax.tick_params(axis='both', which='major', labelsize=12)
+    # ax.tick_params(axis='both', which='minor', labelsize=10)
+    # plt.tight_layout()
+    # fig5.savefig('image_analytical')
 
